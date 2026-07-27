@@ -332,10 +332,10 @@
   </div><!-- /col izquierda -->
 
   <!-- ══ COLUMNA DERECHA ════════════════════════════════════════════════════ -->
-  <div>
+  <div style="position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent">
 
-    <!-- Resumen Económico (sticky) -->
-    <div class="builder-card" style="position:sticky;top:16px">
+    <!-- Resumen Económico -->
+    <div class="builder-card">
       <div class="section-title">💰 Resumen Económico</div>
 
       <!-- Equipos -->
@@ -429,7 +429,7 @@
     </div>
 
     <!-- KPIs Solares -->
-    <div class="builder-card" id="solarKpisCard" style="display:none;margin-top:0">
+    <div class="builder-card" id="solarKpisCard" style="display:none">
       <div class="section-title">☀️ Retorno Solar</div>
       <div class="kpi-solar"><span style="color:var(--gray1)">Generación anual</span><span class="val" id="kGenAnual">—</span></div>
       <div class="kpi-solar"><span style="color:var(--gray1)">Payback estimado</span><span class="val green" style="font-size:16px" id="kPayback">—</span></div>
