@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VTA — Iniciar Sesión</title>
+<title>Corze — Iniciar Sesión</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-<link rel="icon" href="{{ url_for('static', filename='assets/logo.png') }}" type="image/png">
+<link rel="icon" href="{{ url_for('static', filename='assets/logo_corze.png') }}" type="image/png">
 <style>
   /* ── Particles background ────────────────────────────────────────────── */
   #particles-js {
@@ -43,7 +43,7 @@
     max-width: 220px;
     max-height: 80px;
     object-fit: contain;
-    filter: drop-shadow(0 0 20px rgba(0, 174, 239, 0.4));
+    filter: drop-shadow(0 0 20px rgba(245, 166, 35, 0.4));
   }
 
   /* Card con efecto glassmorphism */
@@ -51,12 +51,12 @@
     background: rgba(19, 25, 32, 0.85);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 174, 239, 0.2);
+    border: 1px solid rgba(245, 166, 35, 0.2);
     border-radius: 20px;
     padding: 28px 28px 20px;
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.6),
-      0 0 0 1px rgba(0, 174, 239, 0.08),
+      0 0 0 1px rgba(245, 166, 35, 0.08),
       inset 0 1px 0 rgba(255,255,255,0.04);
   }
 
@@ -97,7 +97,7 @@
   .user-card.selected {
     border-color: var(--user-color);
     background: rgba(31, 42, 58, 0.95);
-    box-shadow: 0 0 20px rgba(0,174,239,0.15);
+    box-shadow: 0 0 20px rgba(245,166,35,0.15);
   }
 
   .user-card-avatar {
@@ -159,14 +159,15 @@
     transition: all .12s;
     backdrop-filter: blur(4px);
   }
-  .pin-btn:hover  { background: rgba(31,42,58,0.95); border-color: rgba(0,174,239,0.3); }
+  .pin-btn:hover  { background: rgba(31,42,58,0.95); border-color: rgba(245,166,35,0.3); }
   .pin-btn:active { transform: scale(0.95); }
 
   .pin-btn-ok {
-    background: rgba(0, 174, 239, 0.85);
-    border-color: #00AEEF;
+    background: rgba(245, 166, 35, 0.85);
+    border-color: #F5A623;
+    color: #0D1F3C;
   }
-  .pin-btn-ok:hover { background: rgba(0, 144, 201, 0.95); }
+  .pin-btn-ok:hover { background: rgba(245, 166, 35, 0.95); }
 
   .pin-btn-del {
     background: rgba(31, 42, 58, 0.7);
@@ -198,8 +199,8 @@
   <div class="login-container">
 
     <div class="login-logo">
-      <img src="{{ url_for('static', filename='assets/logo.png') }}"
-           alt="VTA" class="login-logo-img">
+      <img src="{{ url_for('static', filename='assets/logo_corze.png') }}"
+           alt="Corze" class="login-logo-img">
     </div>
 
     <div class="login-card">
@@ -247,17 +248,17 @@
 <!-- particles.js desde CDN -->
 <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 <script>
-// ── Particles config — colores VTA ─────────────────────────────────────────
+// ── Particles config — colores Corze ───────────────────────────────────────
 particlesJS('particles-js', {
   particles: {
     number:    { value: 60, density: { enable: true, value_area: 900 } },
-    color:     { value: ['#00AEEF', '#0090C9', '#FFFFFF', '#003D5C'] },
+    color:     { value: ['#F5A623', '#FFD166', '#FFFFFF', '#1C3A6B'] },
     shape:     { type: 'circle' },
     opacity:   { value: 0.35, random: true,
                  anim: { enable: true, speed: 0.6, opacity_min: 0.05, sync: false } },
     size:      { value: 3, random: true,
                  anim: { enable: false, speed: 4, size_min: 0.3, sync: false } },
-    line_linked:{ enable: true, distance: 160, color: '#00AEEF',
+    line_linked:{ enable: true, distance: 160, color: '#F5A623',
                   opacity: 0.12, width: 1 },
     move: {
       enable: true, speed: 1.4, direction: 'none',

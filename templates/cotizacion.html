@@ -9,18 +9,18 @@
 body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1a2e; font-size: 13px; }
 .page { max-width: 780px; margin: 0 auto; padding: 30px 32px; }
 
-.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #00AEEF; padding-bottom: 18px; margin-bottom: 22px; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #F5A623; padding-bottom: 18px; margin-bottom: 22px; }
 .logo-wrap img { height: 54px; object-fit: contain; }
 .empresa-info { text-align: right; }
-.empresa-info h2 { font-size: 18px; font-weight: 800; color: #00AEEF; }
+.empresa-info h2 { font-size: 18px; font-weight: 800; color: #F5A623; }
 .empresa-info p { font-size: 11px; color: #555; margin-top: 2px; }
 
-.cot-title { background: linear-gradient(135deg, #00AEEF, #0090C9); color: #fff; padding: 12px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.cot-title { background: linear-gradient(135deg, #F5A623, #D4891A); color: #fff; padding: 12px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .cot-title h1 { font-size: 18px; font-weight: 800; }
 .cot-folio { font-size: 11px; opacity: .8; }
 
-.vehicle-card { background: #f0f8ff; border: 1.5px solid #00AEEF; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
-.vehicle-card h3 { font-size: 20px; font-weight: 800; color: #00AEEF; margin-bottom: 8px; }
+.vehicle-card { background: #f0f8ff; border: 1.5px solid #F5A623; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
+.vehicle-card h3 { font-size: 20px; font-weight: 800; color: #F5A623; margin-bottom: 8px; }
 .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
 .spec-item { background: #fff; border: 1px solid #d0e8f5; border-radius: 8px; padding: 8px 12px; }
 .spec-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: .04em; }
@@ -28,7 +28,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1
 
 .precio-section { background: #1a2e3b; color: #fff; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
 .precio-label { font-size: 12px; color: #8ab; text-transform: uppercase; letter-spacing: .06em; }
-.precio-val { font-size: 32px; font-weight: 900; color: #00AEEF; }
+.precio-val { font-size: 32px; font-weight: 900; color: #F5A623; }
 .pie-info { font-size: 11px; color: #8ab; margin-top: 4px; }
 
 .validez { background: #fff8e1; border: 1px solid #f1c40f; border-radius: 8px; padding: 10px 16px; font-size: 11px; color: #7a6000; margin-bottom: 20px; }
@@ -37,14 +37,14 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1
 .condiciones { font-size: 11px; color: #555; line-height: 1.7; border-top: 1px solid #e0e0e0; padding-top: 16px; }
 .condiciones h4 { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
 
-.footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 16px; border-top: 2px solid #00AEEF; }
+.footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 16px; border-top: 2px solid #F5A623; }
 .firma-area { text-align: center; }
 .firma-line { border-top: 1px solid #333; width: 200px; margin: 30px auto 6px; }
 .footer-brand { font-size: 10px; color: #888; text-align: right; }
-.footer-brand strong { color: #00AEEF; }
+.footer-brand strong { color: #F5A623; }
 
 .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.badge { display: inline-block; background: #e8f4fd; color: #00AEEF; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1px solid #00AEEF33; }
+.badge { display: inline-block; background: #e8f4fd; color: #F5A623; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1px solid #F5A62333; }
 
 @media print {
   body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -60,14 +60,14 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1
   <div class="header">
     <div class="logo-wrap">
       {% if logo_b64 %}
-      <img src="{{ logo_b64 }}" alt="VTA Automotora">
+      <img src="{{ logo_b64 }}" alt="Corze">
       {% else %}
-      <div style="font-size:22px;font-weight:900;color:#00AEEF">VTA Automotora</div>
+      <div style="font-size:22px;font-weight:900;color:#F5A623">Corze</div>
       {% endif %}
     </div>
     <div class="empresa-info">
-      <h2>VTA Automotora</h2>
-      <p>+56 9 5608 6490 · automotoravta.cl</p>
+      <h2>Corze</h2>
+      <p>+56 9 5608 6490 · corze.cl</p>
       <p>Santiago, Chile</p>
     </div>
   </div>
@@ -149,11 +149,11 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1
     <h4>Condiciones de Venta</h4>
     <p>
       · Precio indicado en pesos chilenos (CLP), incluye IVA cuando aplica.<br>
-      · La compraventa queda perfeccionada con la firma del contrato y el pago del pie acordado.<br>
-      · VTA Automotora se reserva el derecho de revisar la cotización ante variaciones de precio de mercado.<br>
-      · Aplica revisión y certificación del vehículo previo a la entrega.<br>
-      · Acepta parte de pago (vehículo usado) sujeto a peritaje previo.<br>
-      · Financiamiento disponible según banco y situación crediticia del comprador.
+      · La propuesta queda perfeccionada con la firma del contrato y la aprobación del proyecto.<br>
+      · Corze se reserva el derecho de revisar la cotización ante variaciones de precio de mercado.<br>
+      · Aplica visita técnica e inspección del sitio previo a la instalación.<br>
+      · Los equipos incluyen garantía según fabricante y servicio post-venta.<br>
+      · Financiamiento disponible según banco y situación crediticia del solicitante.
     </p>
   </div>
 
@@ -162,11 +162,11 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1
     <div class="firma-area">
       <div class="firma-line"></div>
       <div style="font-size:11px;color:#555">Asesor de Ventas: <strong>{{ agente }}</strong></div>
-      <div style="font-size:10px;color:#888">VTA Automotora</div>
+      <div style="font-size:10px;color:#888">Corze</div>
     </div>
     <div class="footer-brand">
-      <div><strong>VTA Automotora</strong></div>
-      <div>automotoravta.cl · +56 9 5608 6490</div>
+      <div><strong>Corze</strong></div>
+      <div>corze.cl · +56 9 5608 6490</div>
       <div>Santiago, Chile</div>
     </div>
   </div>
@@ -176,7 +176,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1
 <!-- Botón imprimir -->
 <div class="no-print" style="position:fixed;bottom:24px;right:24px;display:flex;gap:10px">
   <button onclick="window.print()"
-    style="background:#00AEEF;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px #00AEEF44">
+    style="background:#F5A623;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px #F5A62344">
     🖨️ Imprimir / Guardar PDF
   </button>
   <button onclick="window.close()"

@@ -28,7 +28,7 @@ class FirestoreJSONProvider(DefaultJSONProvider):
 app = Flask(__name__)
 app.json_provider_class = FirestoreJSONProvider
 app.json = FirestoreJSONProvider(app)
-app.secret_key = os.environ.get('SECRET_KEY', 'vta-secret-2024')
+app.secret_key = os.environ.get('SECRET_KEY', 'corze-secret-2024')
 app.config['SESSION_PERMANENT'] = False
 db = FirebaseDB()
 
@@ -155,8 +155,8 @@ def _build_vitrina_cars():
 # ── AUTH ──────────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    # automotoravta.cl → vitrina pública
-    # admin.automotoravta.cl → panel admin
+    # corze.cl → vitrina pública
+    # admin.corze.cl → panel admin
     host = request.host.lower()
     if 'admin.' in host:
         return redirect(url_for('dashboard') if 'usuario' in session else url_for('login'))
@@ -370,7 +370,7 @@ def api_export_inv():
     rows = db.get_all_inventario()
     wb   = openpyxl.Workbook()
     ws   = wb.active
-    ws.title = "VTA Inventario"
+    ws.title = "Corze Inventario"
 
     headers = [
         'Tipo','Patente','Marca','Año','Tipo Vehículo','Modelo','Motor','Chasis','Color',
@@ -446,7 +446,7 @@ def api_export_inv():
     return Response(
         output.getvalue(),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={'Content-Disposition': f'attachment;filename=VTA_Inventario_{ts}.xlsx'}
+        headers={'Content-Disposition': f'attachment;filename=CORZE_Inventario_{ts}.xlsx'}
     )
 
 @app.route('/api/stats')
@@ -565,7 +565,7 @@ def _enviar_messenger(sender_id: str, mensaje: str):
 # ══════════════════════════════════════════════════════════════════════════════
 @app.route('/webhook/meta', methods=['GET'])
 def webhook_verify():
-    verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN', 'vta2024webhook')
+    verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN', 'corze2024webhook')
     mode      = request.args.get('hub.mode')
     token     = request.args.get('hub.verify_token')
     challenge = request.args.get('hub.challenge')
@@ -714,7 +714,7 @@ def clp_fmt_filter(n):
 def get_logo_b64():
     """Devuelve el logo como base64 para embeber en HTML imprimible."""
     import base64, os
-    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'assets', 'logo.png')
+    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'assets', 'logo_corze.png')
     try:
         with open(logo_path, 'rb') as f:
             return 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
@@ -770,7 +770,7 @@ def consignacion_contrato():
     if not car:
         return '<h2>Contrato no encontrado</h2>', 404
     import random
-    folio = f'VTA-{datetime.now().strftime("%Y%m")}-{random.randint(1000,9999)}'
+    folio = f'CORZE-{datetime.now().strftime("%Y%m")}-{random.randint(1000,9999)}'
     # Override precio/comision si se pasan como parámetros (regeneración)
     kwargs = {}
     if request.args.get('precio_pub'):
@@ -793,7 +793,7 @@ def api_enviar_email_contrato():
     if not email_to:
         return jsonify({'ok': False, 'error': 'El propietario no tiene email registrado'})
     import random
-    folio = f'VTA-{datetime.now().strftime("%Y%m")}-{random.randint(1000,9999)}'
+    folio = f'CORZE-{datetime.now().strftime("%Y%m")}-{random.randint(1000,9999)}'
     html_contrato = render_contrato(car, folio, datetime.now().strftime('%d/%m/%Y %H:%M'))
     html_email = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
@@ -803,7 +803,7 @@ def api_enviar_email_contrato():
       <div style="background:#f9f9f9;padding:24px;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px">
         <p style="font-size:15px;color:#333">Estimado/a <strong>{car.get('nombre_propietario','')}</strong>,</p>
         <p style="font-size:14px;color:#555;margin-top:12px;line-height:1.6">
-          Le informamos que su contrato de consignación con <strong>VTA Automotora</strong> 
+          Le informamos que su contrato de consignación con <strong>Corze</strong> 
           ha sido generado exitosamente para el vehículo:
         </p>
         <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin:16px 0;text-align:center">
@@ -823,7 +823,7 @@ def api_enviar_email_contrato():
           </a>
         </div>
         <p style="font-size:11px;color:#aaa;margin-top:20px;text-align:center">
-          VTA Automotora · Santiago, Chile · automotoravta.cl
+          Corze · Santiago, Chile · corze.cl
         </p>
       </div>
     </div>"""
@@ -831,7 +831,7 @@ def api_enviar_email_contrato():
         resp = http_requests.post('https://api.resend.com/emails',
             headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
             json={
-                'from':    'VTA Automotora <noreply@automotoravta.cl>',
+                'from':    'Corze <noreply@corze.cl>',
                 'to':      [email_to],
                 'subject': f'Contrato de Consignación VTA — {car.get("marca","")} {car.get("modelo","")} {car.get("anio","")}',
                 'html':    html_email,
@@ -1003,7 +1003,7 @@ def api_finanzas_comprobante(doc_id):
         return jsonify({'comprobante': '', 'error': str(e)})
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  VITRINA PÚBLICA — automotoravta.cl
+#  VITRINA PÚBLICA — corze.cl
 # ══════════════════════════════════════════════════════════════════════════════
 @app.after_request
 def add_cache_headers(response):
@@ -1217,13 +1217,13 @@ def api_calendar_agendar():
                             'auth_url': url_for('google_oauth_start')})
 
     data       = request.get_json()
-    titulo     = data.get('titulo', 'Visita VTA Automotora')
+    titulo     = data.get('titulo', 'Visita Corze')
     fecha      = data.get('fecha')        # YYYY-MM-DD
     hora_ini   = data.get('hora_ini', '10:00')
     hora_fin   = data.get('hora_fin', '11:00')
     descripcion= data.get('descripcion', '')
     email_inv  = data.get('email_cliente', '')
-    ubicacion  = data.get('ubicacion', 'VTA Automotora, Santiago, Chile')
+    ubicacion  = data.get('ubicacion', 'Corze, Santiago, Chile')
 
     evento = {
         'summary':     titulo,
@@ -1301,7 +1301,7 @@ Tono: {tono}. Sin encabezados, solo el texto.
 Resalta puntos fuertes. Menciona que acepta parte de pago si aplica. Termina con llamada a la acción."""
     txt, err = _claude_call(
         prompt,
-        system='Eres redactor experto en ventas de vehículos para VTA Automotora, Chile.',
+        system='Eres redactor experto en ventas de vehículos para Corze, Chile.',
         max_tokens=400,
     )
     if err:
@@ -1977,7 +1977,7 @@ VEHÍCULO:
 Resalta puntos fuertes. Termina con llamada a la acción."""
     txt, err = _claude_call(
         prompt,
-        system='Eres redactor experto en ventas de vehículos para VTA Automotora, Chile.',
+        system='Eres redactor experto en ventas de vehículos para Corze, Chile.',
         max_tokens=400,
     )
     if err:
