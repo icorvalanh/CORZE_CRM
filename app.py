@@ -276,13 +276,11 @@ def logout():
 @login_required
 def dashboard():
     try:
-        stats = db.get_dashboard_stats()
+        stats = db.get_corze_dashboard_stats()
     except Exception as e:
         stats = {}
         flash(str(e), 'error')
-    mes  = datetime.now().strftime('%Y-%m')
-    meta = db.get_meta(mes)
-    return render_template('dashboard.html', stats=stats, meta=meta, page='dashboard')
+    return render_template('dashboard.html', stats=stats, page='dashboard')
 
 @app.route('/admin/inventario')
 @login_required

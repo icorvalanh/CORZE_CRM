@@ -1334,3 +1334,93 @@ class FirebaseDB:
             return True
         except:
             return False
+
+    # ── DASHBOARD CORZE ───────────────────────────────────────────────────────
+    def get_corze_dashboard_stats(self) -> dict:
+        from config import ETAPAS_PIPELINE
+        s = {
+            'leads_activos': 0,
+            'leads_mes': 0,
+            'contratos_mes': 0,
+            'contratos_total': 0,
+            'ingresos_aprobados': 0,
+            'ingresos_mes': 0,
+            'presupuestos_mes': 0,
+            'presupuestos_total': 0,
+            'valor_pipeline': 0,
+            'tasa_conversion': 0.0,
+            'leads_por_etapa': [],
+            'ingresos_por_mes': [],
+            'tareas_pendientes': 0,
+        }
+        try:
+            mes = datetime.now().strftime('%Y-%m')
+            etapas_ganadas = {'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado', 'Post Venta'}
+            etapas_activas = set(ETAPAS_PIPELINE) - {'Proyecto Finalizado', 'Post Venta'}
+
+            leads = self.get_all_leads()
+            etapa_count: Dict[str, int] = {e: 0 for e in ETAPAS_PIPELINE}
+            for lead in leads:
+                etapa = lead.get('etapa', '')
+                if etapa in etapa_count:
+                    etapa_count[etapa] += 1
+                if etapa in etapas_activas:
+                    s['leads_activos'] += 1
+                if etapa in etapas_ganadas:
+                    s['contratos_total'] += 1
+                created = str(lead.get('created_at', ''))[:7]
+                if created == mes:
+                    s['leads_mes'] += 1
+                    if etapa in etapas_ganadas:
+                        s['contratos_mes'] += 1
+
+            s['leads_por_etapa'] = [
+                {'etapa': e, 'cantidad': etapa_count[e]} for e in ETAPAS_PIPELINE
+            ]
+
+            total_leads = len(leads)
+            if total_leads > 0:
+                s['tasa_conversion'] = round(s['contratos_total'] / total_leads * 100, 1)
+
+            presupuestos = self.get_all_presupuestos()
+            ingresos_mes_map: Dict[str, float] = {}
+            for p in presupuestos:
+                total = p.get('total', 0) or 0
+                estado = p.get('estado', '')
+                created = str(p.get('created_at', ''))[:7]
+                if created == mes:
+                    s['presupuestos_mes'] += 1
+                s['presupuestos_total'] += 1
+                if estado == 'aprobado':
+                    s['ingresos_aprobados'] += total
+                    if created == mes:
+                        s['ingresos_mes'] += total
+                if estado in ('enviado', 'aprobado'):
+                    s['valor_pipeline'] += total
+                if created:
+                    ingresos_mes_map[created] = ingresos_mes_map.get(created, 0) + (
+                        total if estado == 'aprobado' else 0)
+
+            meses_sorted = sorted(ingresos_mes_map.keys())[-12:]
+            def _fmt_mes(m):
+                if not m: return m
+                y, mo = m.split('-')
+                nombres = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+                return nombres[int(mo)] + ' ' + y[2:]
+            s['ingresos_por_mes'] = [
+                {'mes': m, 'mes_label': _fmt_mes(m), 'ingresos': ingresos_mes_map[m]}
+                for m in meses_sorted
+            ]
+
+            try:
+                tareas = list(self.db.collection('tareas').stream())
+                s['tareas_pendientes'] = sum(
+                    1 for t in tareas
+                    if (t.to_dict() or {}).get('estado', '') not in ('completada', 'cancelada')
+                )
+            except:
+                pass
+
+        except Exception as e:
+            print(f'Error get_corze_dashboard_stats: {e}')
+        return s

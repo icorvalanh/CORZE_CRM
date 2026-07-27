@@ -227,7 +227,7 @@ function abrirModalProducto(p = null) {
   document.getElementById('fDescripcion').value= p?.descripcion || '';
   document.getElementById('fNotas').value      = p?.notas      || '';
   document.getElementById('fActivo').checked   = p ? !!p.activo : true;
-  document.getElementById('modalProducto').classList.remove('hidden');
+  document.getElementById('modalProducto').classList.add('open');
 }
 
 async function editarProducto(id) {
@@ -239,7 +239,7 @@ async function editarProducto(id) {
 }
 
 function cerrarModal() {
-  document.getElementById('modalProducto').classList.add('hidden');
+  document.getElementById('modalProducto').classList.remove('open');
   editId = null;
 }
 

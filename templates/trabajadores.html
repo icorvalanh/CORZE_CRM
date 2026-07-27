@@ -61,7 +61,7 @@
 </div>
 
 <!-- ══ MODAL TRABAJADOR ══ -->
-<div class="modal-overlay hidden" id="modalTrabajador" onclick="if(event.target===this)cerrarModal()">
+<div class="modal-overlay" id="modalTrabajador" onclick="if(event.target===this)cerrarModal()">
  <div class="modal-box" style="max-width:580px" onclick="event.stopPropagation()">
   <div class="modal-header">
     <span id="modalTitle">Nuevo Trabajador</span>
@@ -144,7 +144,7 @@ function abrirModal(data = null) {
   document.getElementById('tColor').value       = data?.color      || '#F5A623';
   document.getElementById('tNotas').value       = data?.notas      || '';
   document.getElementById('tActivo').checked    = data ? !!data.activo : true;
-  document.getElementById('modalTrabajador').classList.remove('hidden');
+  document.getElementById('modalTrabajador').classList.add('open');
 }
 
 async function editarTrabajador(id) {
@@ -155,7 +155,7 @@ async function editarTrabajador(id) {
 }
 
 function cerrarModal() {
-  document.getElementById('modalTrabajador').classList.add('hidden');
+  document.getElementById('modalTrabajador').classList.remove('open');
   editId = null;
 }
 

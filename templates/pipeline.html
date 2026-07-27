@@ -128,7 +128,7 @@
      style="display:none;position:fixed;inset:0;background:#00000066;z-index:199"></div>
 
 <!-- Modal Nuevo Lead -->
-<div class="modal-overlay hidden" id="modalLead" onclick="if(event.target===this)cerrarModalLead()">
+<div class="modal-overlay" id="modalLead" onclick="if(event.target===this)cerrarModalLead()">
  <div class="modal-box" style="max-width:600px" onclick="event.stopPropagation()">
   <div class="modal-header">
     <span id="modalLeadTitle">Nuevo Lead</span>
@@ -372,7 +372,7 @@ function abrirModalNuevoLead() {
   document.getElementById('lOrigen').value = 'manual';
   document.getElementById('lTipoProyecto').value = '';
   document.getElementById('lAsignado').value = '';
-  document.getElementById('modalLead').classList.remove('hidden');
+  document.getElementById('modalLead').classList.add('open');
 }
 
 async function editarLead(id) {
@@ -392,11 +392,11 @@ async function editarLead(id) {
   document.getElementById('lRegion').value      = lead.region || '';
   document.getElementById('lNotas').value       = lead.notas || '';
   cerrarPanel();
-  document.getElementById('modalLead').classList.remove('hidden');
+  document.getElementById('modalLead').classList.add('open');
 }
 
 function cerrarModalLead() {
-  document.getElementById('modalLead').classList.add('hidden');
+  document.getElementById('modalLead').classList.remove('open');
 }
 
 async function guardarLead() {

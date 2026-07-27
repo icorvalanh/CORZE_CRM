@@ -219,6 +219,8 @@ body {
 .btn-purple:hover { background: var(--purple); color: #fff; }
 .btn-green     { background: #0D3B22; color: var(--green); }
 .btn-green:hover { background: var(--green); color: #fff; }
+.btn-icon      { background: var(--card2); border: 1px solid var(--border2); color: var(--gray1); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 13px; transition: all .15s; }
+.btn-icon:hover { background: var(--card3); color: var(--white); }
 
 /* ── SEARCH & FILTER ──────────────────────────────────────────────────── */
 .search-input {
