@@ -2454,3 +2454,427 @@ def api_carhunter_clear_kr():
         if db.delete_carhunter(r['id'], session.get('usuario', '')):
             eliminados += 1
     return jsonify({'ok': True, 'eliminados': eliminados})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  INVENTARIO SOLAR
+# ══════════════════════════════════════════════════════════════════════════════
+
+CATEGORIAS_SOLAR = [
+    'Panel Solar', 'Inversor', 'Batería', 'Estructura/Mounting',
+    'Cable/Conector', 'Medidor/Monitoreo', 'Accesorio', 'Kit Completo',
+]
+
+@app.route('/admin/inventario-solar')
+@login_required
+def inventario_solar():
+    return render_template('inventario_solar.html', page='inventario_solar',
+                           categorias=CATEGORIAS_SOLAR)
+
+@app.route('/api/productos', methods=['GET'])
+@login_required
+def api_productos_list():
+    categoria   = request.args.get('categoria', '')
+    q           = request.args.get('q', '')
+    solo_activos = request.args.get('solo_activos', 'true').lower() != 'false'
+    rows = db.get_all_productos(categoria=categoria, query=q, solo_activos=solo_activos)
+    return jsonify(rows)
+
+@app.route('/api/productos/add', methods=['POST'])
+@login_required
+def api_productos_add():
+    data = request.get_json()
+    data['creado_por'] = session.get('usuario', '')
+    ok, err = db.add_producto(data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+
+@app.route('/api/productos/<doc_id>', methods=['GET'])
+@login_required
+def api_productos_get(doc_id):
+    return jsonify(db.get_producto_by_id(doc_id) or {})
+
+@app.route('/api/productos/<doc_id>/edit', methods=['POST'])
+@login_required
+def api_productos_edit(doc_id):
+    data = request.get_json()
+    data['editado_por'] = session.get('usuario', '')
+    ok, err = db.update_producto(doc_id, data)
+    return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/productos/<doc_id>/delete', methods=['POST'])
+@login_required
+def api_productos_delete(doc_id):
+    ok = db.delete_producto(doc_id)
+    return jsonify({'ok': ok})
+
+@app.route('/api/productos/import-excel', methods=['POST'])
+@login_required
+def api_productos_import_excel():
+    try:
+        import openpyxl
+    except ImportError:
+        return jsonify({'ok': False, 'error': 'openpyxl no instalado'}), 500
+
+    file = request.files.get('file')
+    if not file or not file.filename.endswith('.xlsx'):
+        return jsonify({'ok': False, 'error': 'Archivo .xlsx requerido'})
+
+    try:
+        import io
+        wb = openpyxl.load_workbook(io.BytesIO(file.read()))
+        ws = wb.active
+        headers = [str(c.value or '').strip().lower() for c in ws[1]]
+
+        col_map = {
+            'codigo':       ['codigo', 'código'],
+            'nombre':       ['nombre'],
+            'categoria':    ['categoria', 'categoría'],
+            'descripcion':  ['descripcion', 'descripción'],
+            'marca':        ['marca'],
+            'modelo':       ['modelo'],
+            'precio_costo': ['precio costo', 'costo', 'precio_costo'],
+            'precio_venta': ['precio venta', 'precio_venta', 'venta'],
+            'stock_actual': ['stock', 'stock actual', 'stock_actual'],
+            'unidad':       ['unidad'],
+            'potencia_w':   ['potencia w', 'potencia_w', 'potencia'],
+        }
+
+        def get_col(h_list):
+            for h in h_list:
+                for i, header in enumerate(headers):
+                    if h in header:
+                        return i
+            return None
+
+        idx = {k: get_col(v) for k, v in col_map.items()}
+
+        creados = 0
+        actualizados = 0
+        errores = []
+        usuario = session.get('usuario', '')
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not any(row):
+                continue
+            try:
+                def val(k):
+                    i = idx.get(k)
+                    return str(row[i] or '').strip() if i is not None and i < len(row) else ''
+
+                codigo = val('codigo')
+                nombre = val('nombre')
+                if not nombre:
+                    continue
+
+                data = {
+                    'codigo':       codigo,
+                    'nombre':       nombre,
+                    'categoria':    val('categoria') or 'Accesorio',
+                    'descripcion':  val('descripcion'),
+                    'marca':        val('marca'),
+                    'modelo':       val('modelo'),
+                    'precio_costo': int(float(val('precio_costo') or 0)),
+                    'precio_venta': int(float(val('precio_venta') or 0)),
+                    'stock_actual': int(float(val('stock_actual') or 0)),
+                    'stock_minimo': 0,
+                    'unidad':       val('unidad') or 'unidad',
+                    'potencia_w':   int(float(val('potencia_w') or 0)),
+                    'activo':       True,
+                    'creado_por':   usuario,
+                }
+
+                # Upsert por código si existe
+                if codigo:
+                    existentes = db.get_all_productos(solo_activos=False)
+                    match = next((r for r in existentes if r.get('codigo') == codigo), None)
+                    if match:
+                        ok, err = db.update_producto(match['id'], data)
+                        if ok:
+                            actualizados += 1
+                        else:
+                            errores.append(f'Error actualizando {codigo}: {err}')
+                        continue
+
+                ok, err = db.add_producto(data)
+                if ok:
+                    creados += 1
+                else:
+                    errores.append(f'Error creando {nombre}: {err}')
+            except Exception as e:
+                errores.append(f'Fila error: {str(e)}')
+
+        return jsonify({'ok': True, 'creados': creados,
+                        'actualizados': actualizados, 'errores': errores})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  PRESUPUESTOS
+# ══════════════════════════════════════════════════════════════════════════════
+
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USER = os.environ.get('EMAIL_USER', 'contacto@corze.cl')
+EMAIL_PASS = os.environ.get('EMAIL_PASS', '')
+
+@app.route('/admin/presupuestos')
+@login_required
+def presupuestos():
+    rows = db.get_all_presupuestos()
+    return render_template('presupuestos.html', page='presupuestos', presupuestos=rows)
+
+@app.route('/admin/presupuestos/nuevo')
+@login_required
+def presupuesto_nuevo():
+    trabajadores = db.get_all_trabajadores(solo_activos=True)
+    return render_template('presupuesto_builder.html', page='presupuestos',
+                           presupuesto=None, trabajadores=trabajadores)
+
+@app.route('/admin/presupuestos/<doc_id>')
+@login_required
+def presupuesto_ver(doc_id):
+    p = db.get_presupuesto_by_id(doc_id)
+    if not p:
+        return redirect(url_for('presupuestos'))
+    trabajadores = db.get_all_trabajadores(solo_activos=True)
+    return render_template('presupuesto_builder.html', page='presupuestos',
+                           presupuesto=p, trabajadores=trabajadores)
+
+@app.route('/api/presupuestos/add', methods=['POST'])
+@login_required
+def api_presupuestos_add():
+    data = request.get_json()
+    data['creado_por'] = session.get('usuario', '')
+    ok, err = db.add_presupuesto(data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+
+@app.route('/api/presupuestos/<doc_id>/edit', methods=['POST'])
+@login_required
+def api_presupuestos_edit(doc_id):
+    data = request.get_json()
+    data['editado_por'] = session.get('usuario', '')
+    ok, err = db.update_presupuesto(doc_id, data)
+    return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/presupuestos/<doc_id>/delete', methods=['POST'])
+@login_required
+def api_presupuestos_delete(doc_id):
+    ok = db.delete_presupuesto(doc_id)
+    return jsonify({'ok': ok})
+
+@app.route('/admin/presupuestos/<doc_id>/pdf')
+@login_required
+def presupuesto_pdf(doc_id):
+    p = db.get_presupuesto_by_id(doc_id)
+    if not p:
+        return '<h2>Presupuesto no encontrado</h2>', 404
+    logo_b64 = get_logo_b64()
+    return render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64)
+
+@app.route('/api/presupuestos/<doc_id>/enviar-email', methods=['POST'])
+@login_required
+def api_presupuestos_enviar_email(doc_id):
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    p = db.get_presupuesto_by_id(doc_id)
+    if not p:
+        return jsonify({'ok': False, 'error': 'Presupuesto no encontrado'})
+
+    email_to = p.get('email_cliente', '').strip()
+    if not email_to:
+        return jsonify({'ok': False, 'error': 'El cliente no tiene email registrado'})
+
+    if not EMAIL_PASS:
+        return jsonify({'ok': False, 'error': 'EMAIL_PASS no configurada en las variables de entorno'})
+
+    logo_b64 = get_logo_b64()
+    html_body = render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64)
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"Presupuesto {p.get('folio','---')} — Corze Energía Solar"
+        msg['From']    = f'Corze <{EMAIL_USER}>'
+        msg['To']      = email_to
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASS)
+            server.sendmail(EMAIL_USER, [email_to], msg.as_string())
+
+        db.update_presupuesto(doc_id, {
+            'email_enviado': True,
+            'fecha_envio': db._now(),
+            'estado': 'enviado',
+        })
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CRM PIPELINE
+# ══════════════════════════════════════════════════════════════════════════════
+
+ETAPAS_PIPELINE = [
+    'Nuevo Lead',
+    'Contactado',
+    'Visita Técnica Agendada',
+    'Propuesta Enviada',
+    'En Negociación',
+    'Esperando Documentación',
+    'Contrato Firmado',
+    'En Instalación',
+    'Proyecto Finalizado',
+    'Post Venta',
+]
+
+@app.route('/admin/pipeline')
+@login_required
+def pipeline():
+    leads = db.get_all_leads()
+    trabajadores = db.get_all_trabajadores(solo_activos=True)
+    return render_template('pipeline.html', page='pipeline',
+                           leads=leads, etapas=ETAPAS_PIPELINE,
+                           trabajadores=trabajadores)
+
+@app.route('/api/leads/add', methods=['POST'])
+@login_required
+def api_leads_add():
+    data = request.get_json()
+    data['creado_por'] = session.get('usuario', '')
+    ok, err = db.add_lead(data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+
+@app.route('/api/leads', methods=['GET'])
+@login_required
+def api_leads_list():
+    etapa    = request.args.get('etapa', '')
+    asignado = request.args.get('asignado', '')
+    q        = request.args.get('q', '')
+    rows = db.get_all_leads(etapa=etapa, asignado=asignado, query=q)
+    return jsonify(rows)
+
+@app.route('/api/leads/<doc_id>', methods=['GET'])
+@login_required
+def api_leads_get(doc_id):
+    return jsonify(db.get_lead_by_id(doc_id) or {})
+
+@app.route('/api/leads/<doc_id>/edit', methods=['POST'])
+@login_required
+def api_leads_edit(doc_id):
+    data = request.get_json()
+    data['editado_por'] = session.get('usuario', '')
+    ok, err = db.update_lead(doc_id, data)
+    return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/leads/<doc_id>/delete', methods=['POST'])
+@login_required
+def api_leads_delete(doc_id):
+    ok = db.delete_lead(doc_id)
+    return jsonify({'ok': ok})
+
+@app.route('/api/leads/<doc_id>/mover-etapa', methods=['POST'])
+@login_required
+def api_leads_mover_etapa(doc_id):
+    data      = request.get_json()
+    nueva_etapa = data.get('etapa', '')
+    if nueva_etapa not in ETAPAS_PIPELINE:
+        return jsonify({'ok': False, 'error': 'Etapa inválida'})
+    lead = db.get_lead_by_id(doc_id)
+    if not lead:
+        return jsonify({'ok': False, 'error': 'Lead no encontrado'})
+    etapa_anterior = lead.get('etapa', '')
+    ok, err = db.update_lead(doc_id, {'etapa': nueva_etapa})
+    if ok:
+        db.add_historial_lead(doc_id, 'Cambio de etapa',
+                              session.get('usuario', ''),
+                              f'{etapa_anterior} → {nueva_etapa}')
+    return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/leads/importar-email', methods=['POST'])
+@login_required
+def api_leads_importar_email():
+    """Parsea texto de email y crea un lead."""
+    data = request.get_json()
+    texto = data.get('texto', '')
+    if not texto:
+        return jsonify({'ok': False, 'error': 'Texto vacío'})
+
+    import re
+    lead_data = {
+        'nombre': '',
+        'apellido': '',
+        'email': '',
+        'telefono': '',
+        'empresa': '',
+        'origen': 'email',
+        'notas': texto[:500],
+        'etapa': 'Nuevo Lead',
+        'creado_por': session.get('usuario', ''),
+    }
+
+    email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', texto)
+    if email_match:
+        lead_data['email'] = email_match.group(0)
+
+    phone_match = re.search(r'(\+?56\s?9\s?\d{4}\s?\d{4}|9\d{8}|\d{9})', texto)
+    if phone_match:
+        lead_data['telefono'] = phone_match.group(0).replace(' ', '')
+
+    name_match = re.search(r'(?:nombre[:\s]+|de[:\s]+|from[:\s]+)([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)*)', texto, re.IGNORECASE)
+    if name_match:
+        parts = name_match.group(1).strip().split()
+        lead_data['nombre'] = parts[0] if parts else ''
+        lead_data['apellido'] = ' '.join(parts[1:]) if len(parts) > 1 else ''
+    else:
+        lead_data['nombre'] = 'Lead Email'
+
+    ok, err = db.add_lead(lead_data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TRABAJADORES
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/admin/trabajadores')
+@login_required
+def trabajadores():
+    rows = db.get_all_trabajadores(solo_activos=False)
+    return render_template('trabajadores.html', page='trabajadores', trabajadores=rows)
+
+@app.route('/api/trabajadores', methods=['GET'])
+@login_required
+def api_trabajadores_list():
+    solo_activos = request.args.get('solo_activos', 'true').lower() != 'false'
+    rows = db.get_all_trabajadores(solo_activos=solo_activos)
+    return jsonify(rows)
+
+@app.route('/api/trabajadores/add', methods=['POST'])
+@login_required
+def api_trabajadores_add():
+    data = request.get_json()
+    # Generar avatar desde iniciales si no se provee
+    if not data.get('avatar'):
+        n = (data.get('nombre', '') + ' ' + data.get('apellido', '')).strip()
+        parts = n.split()
+        data['avatar'] = ''.join(p[0].upper() for p in parts[:2]) if parts else '??'
+    ok, err = db.add_trabajador(data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+
+@app.route('/api/trabajadores/<doc_id>/edit', methods=['POST'])
+@login_required
+def api_trabajadores_edit(doc_id):
+    data = request.get_json()
+    ok, err = db.update_trabajador(doc_id, data)
+    return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/trabajadores/<doc_id>/delete', methods=['POST'])
+@login_required
+def api_trabajadores_delete(doc_id):
+    ok = db.delete_trabajador(doc_id)
+    return jsonify({'ok': ok})

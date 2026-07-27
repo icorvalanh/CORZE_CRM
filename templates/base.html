@@ -31,16 +31,28 @@
     <nav class="sidebar-nav">
       <a href="{{ url_for('dashboard') }}"
          class="nav-item {% if page=='dashboard' %}active{% endif %}">
-        <span class="nav-icon">📊</span> Indicadores
+        <span class="nav-icon">📊</span> Dashboard
       </a>
-      <a href="{{ url_for('inventario') }}"
-         class="nav-item {% if page=='inventario' %}active{% endif %}">
-        <span class="nav-icon">🚗</span> Inventario
+      <a href="{{ url_for('inventario_solar') }}"
+         class="nav-item {% if page=='inventario_solar' %}active{% endif %}">
+        <span class="nav-icon">⚡</span> Inventario Solar
       </a>
-      <a href="{{ url_for('crm') }}"
-         class="nav-item {% if page=='crm' %}active{% endif %}">
-        <span class="nav-icon">💬</span> CRM
+      <a href="{{ url_for('presupuestos') }}"
+         class="nav-item {% if page=='presupuestos' %}active{% endif %}">
+        <span class="nav-icon">📋</span> Presupuestos
       </a>
+      <a href="{{ url_for('pipeline') }}"
+         class="nav-item {% if page=='pipeline' %}active{% endif %}">
+        <span class="nav-icon">👥</span> CRM / Pipeline
+      </a>
+      <a href="{{ url_for('trabajadores') }}"
+         class="nav-item {% if page=='trabajadores' %}active{% endif %}">
+        <span class="nav-icon">👷</span> Trabajadores
+      </a>
+
+      <div class="sidebar-divider" style="margin:8px 4px"></div>
+      <p class="sidebar-section-label" style="padding-top:4px">GESTIÓN</p>
+
       <a href="{{ url_for('finanzas') }}"
          class="nav-item {% if page=='finanzas' %}active{% endif %}">
         <span class="nav-icon">💰</span> Finanzas
@@ -56,23 +68,6 @@
       <a href="{{ url_for('calendario') }}"
          class="nav-item {% if page=='calendario' %}active{% endif %}">
         <span class="nav-icon">📅</span> Calendario
-      </a>
-      <a href="{{ url_for('buscador') }}"
-         class="nav-item {% if page=='buscador' %}active{% endif %}">
-        <span class="nav-icon">🔍</span> Buscador
-      </a>
-
-      <div class="sidebar-divider" style="margin:8px 4px"></div>
-      <p class="sidebar-section-label" style="padding-top:4px">NEGOCIOS</p>
-      <a href="{{ url_for('flipping') }}"
-         class="nav-item {% if page=='flipping' %}active{% endif %}"
-         style="{% if page=='flipping' %}background:#1A3A1A;color:#27AE60;{% endif %}">
-        <span class="nav-icon">🔄</span> Flipping
-      </a>
-      <a href="{{ url_for('car_hunter') }}"
-         class="nav-item {% if page=='car_hunter' %}active{% endif %}"
-         style="{% if page=='car_hunter' %}background:#1A3A1A;color:#27AE60;{% endif %}">
-        <span class="nav-icon">🎯</span> Car Hunter
       </a>
     </nav>
 

@@ -1049,3 +1049,284 @@ class FirebaseDB:
             return True
         except:
             return False
+
+    # ── PRODUCTOS SOLAR ───────────────────────────────────────────────────────
+    def add_producto(self, data: dict) -> tuple:
+        try:
+            data.setdefault('activo', True)
+            data.setdefault('stock_actual', 0)
+            data.setdefault('stock_minimo', 0)
+            data.setdefault('precio_costo', 0)
+            data.setdefault('precio_venta', 0)
+            data.setdefault('potencia_w', 0)
+            data.setdefault('unidad', 'unidad')
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            ref = self.db.collection('productos_solar').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def get_all_productos(self, categoria='', query='', solo_activos=True) -> list:
+        try:
+            col = self.db.collection('productos_solar').order_by(
+                'created_at', direction=firestore.Query.DESCENDING)
+            docs = [self._doc(d) for d in col.stream()]
+            if solo_activos:
+                docs = [r for r in docs if r.get('activo', True)]
+            if categoria:
+                docs = [r for r in docs if r.get('categoria', '') == categoria]
+            if query:
+                q = query.lower()
+                docs = [r for r in docs if
+                    q in str(r.get('nombre', '')).lower() or
+                    q in str(r.get('codigo', '')).lower() or
+                    q in str(r.get('marca', '')).lower() or
+                    q in str(r.get('modelo', '')).lower() or
+                    q in str(r.get('descripcion', '')).lower()]
+            return docs
+        except Exception as e:
+            print(f'Error get_all_productos: {e}')
+            return []
+
+    def get_producto_by_id(self, doc_id) -> dict:
+        try:
+            doc = self.db.collection('productos_solar').document(doc_id).get()
+            return self._doc(doc) if doc.exists else None
+        except:
+            return None
+
+    def update_producto(self, doc_id, data) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('productos_solar').document(doc_id).update(data)
+            return True, ''
+        except Exception as e:
+            return False, str(e)
+
+    def delete_producto(self, doc_id) -> bool:
+        try:
+            self.db.collection('productos_solar').document(doc_id).delete()
+            return True
+        except:
+            return False
+
+    # ── PRESUPUESTOS ──────────────────────────────────────────────────────────
+    def _next_presupuesto_folio(self) -> str:
+        try:
+            year = datetime.now().year
+            col = self.db.collection('presupuestos')
+            docs = list(col.stream())
+            # Contar los del año actual
+            year_prefix = f'CORZE-{year}-'
+            max_num = 0
+            for d in docs:
+                folio = (d.to_dict() or {}).get('folio', '')
+                if folio.startswith(year_prefix):
+                    try:
+                        num = int(folio.replace(year_prefix, ''))
+                        max_num = max(max_num, num)
+                    except:
+                        pass
+            return f'CORZE-{year}-{max_num + 1:04d}'
+        except Exception:
+            import random
+            return f'CORZE-{datetime.now().year}-{random.randint(1000, 9999)}'
+
+    def add_presupuesto(self, data: dict) -> tuple:
+        try:
+            data['folio'] = self._next_presupuesto_folio()
+            data.setdefault('estado', 'borrador')
+            data.setdefault('items', [])
+            data.setdefault('subtotal_bruto', 0)
+            data.setdefault('descuento_general_pct', 0)
+            data.setdefault('monto_descuento', 0)
+            data.setdefault('subtotal_neto', 0)
+            data.setdefault('incluye_iva', False)
+            data.setdefault('monto_iva', 0)
+            data.setdefault('total', 0)
+            data.setdefault('validez_dias', 10)
+            data.setdefault('email_enviado', False)
+            data.setdefault('fecha_envio', '')
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            ref = self.db.collection('presupuestos').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def get_all_presupuestos(self, estado='', query='') -> list:
+        try:
+            col = self.db.collection('presupuestos').order_by(
+                'created_at', direction=firestore.Query.DESCENDING)
+            docs = [self._doc(d) for d in col.stream()]
+            if estado:
+                docs = [r for r in docs if r.get('estado') == estado]
+            if query:
+                q = query.lower()
+                docs = [r for r in docs if
+                    q in str(r.get('folio', '')).lower() or
+                    q in str(r.get('nombre_cliente', '')).lower() or
+                    q in str(r.get('email_cliente', '')).lower() or
+                    q in str(r.get('telefono_cliente', '')).lower()]
+            return docs
+        except Exception as e:
+            print(f'Error get_all_presupuestos: {e}')
+            return []
+
+    def get_presupuesto_by_id(self, doc_id) -> dict:
+        try:
+            doc = self.db.collection('presupuestos').document(doc_id).get()
+            return self._doc(doc) if doc.exists else None
+        except:
+            return None
+
+    def update_presupuesto(self, doc_id, data) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('presupuestos').document(doc_id).update(data)
+            return True, ''
+        except Exception as e:
+            return False, str(e)
+
+    def delete_presupuesto(self, doc_id) -> bool:
+        try:
+            self.db.collection('presupuestos').document(doc_id).delete()
+            return True
+        except:
+            return False
+
+    # ── LEADS / PIPELINE CRM ─────────────────────────────────────────────────
+    def add_lead(self, data: dict) -> tuple:
+        try:
+            data.setdefault('etapa', 'Nuevo Lead')
+            data.setdefault('origen', 'manual')
+            data.setdefault('historial', [])
+            data.setdefault('presupuestos_ids', [])
+            data.setdefault('asignado_a', '')
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            # Agregar primer entrada al historial
+            data['historial'] = [{
+                'accion': 'Lead creado',
+                'usuario': data.get('creado_por', ''),
+                'fecha': self._now(),
+                'detalle': f"Origen: {data.get('origen', 'manual')}",
+            }]
+            ref = self.db.collection('leads').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def get_all_leads(self, etapa='', asignado='', query='') -> list:
+        try:
+            col = self.db.collection('leads').order_by(
+                'created_at', direction=firestore.Query.DESCENDING)
+            docs = [self._doc(d) for d in col.stream()]
+            if etapa:
+                docs = [r for r in docs if r.get('etapa') == etapa]
+            if asignado:
+                docs = [r for r in docs if r.get('asignado_a') == asignado]
+            if query:
+                q = query.lower()
+                docs = [r for r in docs if
+                    q in str(r.get('nombre', '')).lower() or
+                    q in str(r.get('apellido', '')).lower() or
+                    q in str(r.get('email', '')).lower() or
+                    q in str(r.get('telefono', '')).lower() or
+                    q in str(r.get('empresa', '')).lower()]
+            return docs
+        except Exception as e:
+            print(f'Error get_all_leads: {e}')
+            return []
+
+    def get_lead_by_id(self, doc_id) -> dict:
+        try:
+            doc = self.db.collection('leads').document(doc_id).get()
+            return self._doc(doc) if doc.exists else None
+        except:
+            return None
+
+    def update_lead(self, doc_id, data) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('leads').document(doc_id).update(data)
+            return True, ''
+        except Exception as e:
+            return False, str(e)
+
+    def delete_lead(self, doc_id) -> bool:
+        try:
+            self.db.collection('leads').document(doc_id).delete()
+            return True
+        except:
+            return False
+
+    def add_historial_lead(self, lead_id, accion, usuario, detalle='') -> bool:
+        try:
+            from google.cloud.firestore_v1 import ArrayUnion
+            entrada = {
+                'accion': accion,
+                'usuario': usuario,
+                'fecha': self._now(),
+                'detalle': detalle,
+            }
+            self.db.collection('leads').document(lead_id).update({
+                'historial': ArrayUnion([entrada]),
+                'updated_at': self._now(),
+            })
+            return True
+        except Exception as e:
+            print(f'Error add_historial_lead: {e}')
+            return False
+
+    # ── TRABAJADORES ──────────────────────────────────────────────────────────
+    def add_trabajador(self, data: dict) -> tuple:
+        try:
+            data.setdefault('activo', True)
+            data.setdefault('color', '#F5A623')
+            data.setdefault('avatar', '')
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            ref = self.db.collection('trabajadores').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def get_all_trabajadores(self, solo_activos=True) -> list:
+        try:
+            col = self.db.collection('trabajadores').order_by(
+                'created_at', direction=firestore.Query.DESCENDING)
+            docs = [self._doc(d) for d in col.stream()]
+            if solo_activos:
+                docs = [r for r in docs if r.get('activo', True)]
+            return docs
+        except Exception as e:
+            print(f'Error get_all_trabajadores: {e}')
+            return []
+
+    def get_trabajador_by_id(self, doc_id) -> dict:
+        try:
+            doc = self.db.collection('trabajadores').document(doc_id).get()
+            return self._doc(doc) if doc.exists else None
+        except:
+            return None
+
+    def update_trabajador(self, doc_id, data) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('trabajadores').document(doc_id).update(data)
+            return True, ''
+        except Exception as e:
+            return False, str(e)
+
+    def delete_trabajador(self, doc_id) -> bool:
+        try:
+            self.db.collection('trabajadores').document(doc_id).delete()
+            return True
+        except:
+            return False

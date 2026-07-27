@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">📋 Presupuestos</h1>
+  </div>
+  <a href="{{ url_for('presupuesto_nuevo') }}" class="btn btn-primary">➕ Nuevo Presupuesto</a>
+</div>
+
+<!-- Filtros -->
+<div class="toolbar" style="margin-bottom:12px">
+  <div class="toolbar-left">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar folio, cliente..."
+           oninput="filtrar()" style="min-width:220px">
+    <select id="filtEstado" class="filter-select" onchange="filtrar()">
+      <option value="">Todos los estados</option>
+      <option value="borrador">Borrador</option>
+      <option value="enviado">Enviado</option>
+      <option value="aprobado">Aprobado</option>
+      <option value="rechazado">Rechazado</option>
+    </select>
+  </div>
+  <div class="toolbar-right">
+    <span id="countLabel" style="color:var(--gray2);font-size:12px"></span>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table class="vta-table">
+    <thead>
+      <tr>
+        <th>Folio</th>
+        <th>Cliente</th>
+        <th>Email</th>
+        <th>Total</th>
+        <th>Estado</th>
+        <th>Trabajador</th>
+        <th>Fecha</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaBody">
+      {% for p in presupuestos %}
+      {% set estadoColor = {'borrador':'#1A2A3A','enviado':'#1A3A1A','aprobado':'#1A3A1A','rechazado':'#3A1A1A'} %}
+      {% set estadoText  = {'borrador':'var(--blue)','enviado':'var(--green)','aprobado':'var(--green)','rechazado':'var(--red)'} %}
+      <tr>
+        <td><a href="{{ url_for('presupuesto_ver', doc_id=p.id) }}" style="color:var(--blue);font-weight:700">{{ p.folio or '—' }}</a></td>
+        <td>{{ p.nombre_cliente or '—' }} {{ p.apellido_cliente or '' }}</td>
+        <td style="color:var(--gray2)">{{ p.email_cliente or '—' }}</td>
+        <td style="font-weight:700;color:var(--green)">{{ p.total|int|clp }}</td>
+        <td>
+          <span class="badge" style="background:{{ estadoColor.get(p.estado,'#1A2A3A') }};color:{{ estadoText.get(p.estado,'var(--blue)') }}">
+            {{ p.estado|title }}
+          </span>
+        </td>
+        <td>{{ p.trabajador_asignado or '—' }}</td>
+        <td style="color:var(--gray2)">{{ (p.created_at or '')[:10] }}</td>
+        <td>
+          <a href="{{ url_for('presupuesto_ver', doc_id=p.id) }}" class="btn-icon" title="Ver/Editar">✏️</a>
+          <a href="{{ url_for('presupuesto_pdf', doc_id=p.id) }}" class="btn-icon" title="Ver PDF" target="_blank">📄</a>
+          <button class="btn-icon" title="Eliminar" onclick="eliminar('{{ p.id }}','{{ p.folio }}')">🗑️</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" style="text-align:center;color:var(--gray2);padding:32px">
+        Sin presupuestos aún. <a href="{{ url_for('presupuesto_nuevo') }}" style="color:var(--blue)">Crear el primero →</a>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function filtrar() {
+  const q      = document.getElementById('searchInput').value.toLowerCase();
+  const estado = document.getElementById('filtEstado').value;
+  const filas  = document.querySelectorAll('#tablaBody tr');
+  let count    = 0;
+  filas.forEach(tr => {
+    const text = tr.textContent.toLowerCase();
+    const matchQ = !q || text.includes(q);
+    const matchE = !estado || text.includes(estado);
+    tr.style.display = (matchQ && matchE) ? '' : 'none';
+    if (matchQ && matchE) count++;
+  });
+  document.getElementById('countLabel').textContent = count + ' presupuesto(s)';
+}
+
+async function eliminar(id, folio) {
+  if (!confirm(`¿Eliminar presupuesto ${folio}?`)) return;
+  const r = await fetch(`/api/presupuestos/${id}/delete`, { method: 'POST' });
+  const d = await r.json();
+  if (d.ok) { showToast('Eliminado', 'success'); location.reload(); }
+  else showToast(d.error || 'Error', 'error');
+}
+
+filtrar();
+</script>
+{% endblock %}

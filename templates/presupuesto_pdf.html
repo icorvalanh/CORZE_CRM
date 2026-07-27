@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Presupuesto {{ p.folio }}</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#1a1a1a; font-size:12px; line-height:1.5; }
+  .page { max-width:860px; margin:0 auto; padding:32px 40px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; border-bottom:3px solid #F5A623; padding-bottom:20px; }
+  .logo-wrap img { max-height:60px; max-width:180px; object-fit:contain; }
+  .empresa-info { text-align:right; }
+  .empresa-info h2 { font-size:18px; font-weight:800; color:#F5A623; }
+  .empresa-info p { font-size:11px; color:#555; }
+  .folio-box { background:#F5A623; color:#fff; border-radius:8px; padding:10px 18px; text-align:center; margin-bottom:16px; }
+  .folio-box .num { font-size:20px; font-weight:800; }
+  .folio-box .lbl { font-size:10px; opacity:.85; }
+  .section-title { font-size:11px; font-weight:700; color:#F5A623; text-transform:uppercase; letter-spacing:.06em; margin:18px 0 8px; border-bottom:1px solid #eee; padding-bottom:4px; }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; }
+  .info-item { display:flex; gap:6px; }
+  .info-label { color:#888; font-size:11px; min-width:80px; }
+  .info-value { font-weight:600; font-size:12px; }
+  table.items { width:100%; border-collapse:collapse; margin-top:8px; }
+  table.items thead { background:#F5A623; color:#fff; }
+  table.items th { padding:8px 10px; text-align:left; font-size:11px; font-weight:700; }
+  table.items th:last-child, table.items td:last-child { text-align:right; }
+  table.items tbody tr:nth-child(even) { background:#f9f9f9; }
+  table.items td { padding:7px 10px; font-size:12px; border-bottom:1px solid #eee; }
+  .totals { margin-top:16px; width:280px; margin-left:auto; }
+  .total-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:12px; }
+  .total-row.grand { font-size:16px; font-weight:800; color:#F5A623; border-bottom:none; border-top:2px solid #F5A623; padding-top:10px; margin-top:6px; }
+  .notes { background:#fffbf0; border-left:3px solid #F5A623; padding:12px 16px; border-radius:0 8px 8px 0; margin-top:20px; font-size:11px; color:#444; }
+  .footer { margin-top:32px; padding-top:20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:flex-end; }
+  .firma-box { text-align:center; }
+  .firma-line { width:160px; border-top:1px solid #aaa; margin:40px auto 6px; }
+  .firma-label { font-size:11px; color:#888; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:4px; font-size:10px; font-weight:700; text-transform:uppercase; }
+  .badge-borrador  { background:#eee; color:#666; }
+  .badge-enviado   { background:#d4edda; color:#155724; }
+  .badge-aprobado  { background:#cce5ff; color:#004085; }
+  .badge-rechazado { background:#f8d7da; color:#721c24; }
+  .validez-note { font-size:10px; color:#888; margin-top:6px; }
+  @media print {
+    body { background:#fff; }
+    .no-print { display:none !important; }
+    .page { padding:16px 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-wrap">
+      {% if logo_b64 %}
+      <img src="{{ logo_b64 }}" alt="Corze">
+      {% else %}
+      <div style="font-size:22px;font-weight:900;color:#F5A623">CORZE</div>
+      {% endif %}
+      <div style="font-size:10px;color:#888;margin-top:4px">Energía Solar</div>
+    </div>
+    <div class="empresa-info">
+      <h2>Corze Energía Solar</h2>
+      <p>contacto@corze.cl</p>
+      <p>Chile</p>
+      <div style="margin-top:8px">
+        <div class="folio-box">
+          <div class="lbl">PRESUPUESTO</div>
+          <div class="num">{{ p.folio }}</div>
+        </div>
+        <span class="badge badge-{{ p.estado }}">{{ p.estado }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fechas -->
+  <div style="display:flex;gap:24px;margin-bottom:16px">
+    <div><span style="color:#888;font-size:11px">Fecha emisión: </span><strong>{{ (p.created_at or '')[:10] }}</strong></div>
+    <div><span style="color:#888;font-size:11px">Validez: </span><strong>{{ p.validez_dias or 10 }} días</strong></div>
+    {% if p.trabajador_asignado %}
+    <div><span style="color:#888;font-size:11px">Asesor: </span><strong>{{ p.trabajador_asignado }}</strong></div>
+    {% endif %}
+  </div>
+
+  <!-- Datos del cliente -->
+  <div class="section-title">Datos del cliente</div>
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">Nombre:</span>
+      <span class="info-value">{{ p.nombre_cliente or '' }} {{ p.apellido_cliente or '' }}</span>
+    </div>
+    {% if p.rut_cliente %}
+    <div class="info-item">
+      <span class="info-label">RUT:</span>
+      <span class="info-value">{{ p.rut_cliente }}</span>
+    </div>
+    {% endif %}
+    {% if p.email_cliente %}
+    <div class="info-item">
+      <span class="info-label">Email:</span>
+      <span class="info-value">{{ p.email_cliente }}</span>
+    </div>
+    {% endif %}
+    {% if p.telefono_cliente %}
+    <div class="info-item">
+      <span class="info-label">Teléfono:</span>
+      <span class="info-value">{{ p.telefono_cliente }}</span>
+    </div>
+    {% endif %}
+    {% if p.direccion_cliente %}
+    <div class="info-item">
+      <span class="info-label">Dirección:</span>
+      <span class="info-value">{{ p.direccion_cliente }}{% if p.comuna_cliente %}, {{ p.comuna_cliente }}{% endif %}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Ítems -->
+  <div class="section-title">Detalle de productos y servicios</div>
+  <table class="items">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Descripción</th>
+        <th>Cód.</th>
+        <th>Cant.</th>
+        <th>P. Unitario</th>
+        <th>Desc.%</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in p.items or [] %}
+      <tr>
+        <td style="color:#aaa">{{ loop.index }}</td>
+        <td><strong>{{ it.nombre }}</strong></td>
+        <td style="color:#aaa;font-size:10px">{{ it.codigo or '' }}</td>
+        <td style="text-align:center">{{ it.cantidad }}</td>
+        <td style="text-align:right">${{ '{:,.0f}'.format(it.precio_unitario or 0).replace(',','.') }}</td>
+        <td style="text-align:center">{% if it.descuento_pct %}{{ it.descuento_pct }}%{% else %}—{% endif %}</td>
+        <td style="text-align:right;font-weight:600">${{ '{:,.0f}'.format(it.subtotal or 0).replace(',','.') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Totales -->
+  <div class="totals">
+    <div class="total-row">
+      <span>Subtotal</span>
+      <span>${{ '{:,.0f}'.format(p.subtotal_bruto or 0).replace(',','.') }}</span>
+    </div>
+    {% if p.descuento_general_pct %}
+    <div class="total-row" style="color:#c0392b">
+      <span>Descuento general ({{ p.descuento_general_pct }}%)</span>
+      <span>− ${{ '{:,.0f}'.format(p.monto_descuento or 0).replace(',','.') }}</span>
+    </div>
+    {% endif %}
+    <div class="total-row">
+      <span>Subtotal neto</span>
+      <span>${{ '{:,.0f}'.format(p.subtotal_neto or 0).replace(',','.') }}</span>
+    </div>
+    {% if p.incluye_iva %}
+    <div class="total-row">
+      <span>IVA (19%)</span>
+      <span>${{ '{:,.0f}'.format(p.monto_iva or 0).replace(',','.') }}</span>
+    </div>
+    {% endif %}
+    <div class="total-row grand">
+      <span>TOTAL</span>
+      <span>${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</span>
+    </div>
+  </div>
+
+  <!-- Notas y condiciones -->
+  {% if p.notas %}
+  <div class="notes" style="margin-top:16px">
+    <strong>Notas:</strong><br>{{ p.notas }}
+  </div>
+  {% endif %}
+  {% if p.condiciones %}
+  <div class="notes" style="margin-top:10px">
+    <strong>Condiciones de venta:</strong><br>{{ p.condiciones }}
+  </div>
+  {% endif %}
+
+  <div class="validez-note">
+    Este presupuesto tiene una validez de {{ p.validez_dias or 10 }} días desde la fecha de emisión.
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div>
+      <div style="font-size:11px;color:#888">Generado por Corze Admin</div>
+      <div style="font-size:10px;color:#bbb">corze.cl · contacto@corze.cl</div>
+    </div>
+    <div class="firma-box">
+      <div class="firma-line"></div>
+      <div class="firma-label">{{ p.trabajador_asignado or 'Asesor comercial' }}</div>
+      <div style="font-size:10px;color:#bbb">Corze Energía Solar</div>
+    </div>
+  </div>
+
+  <!-- Botón imprimir -->
+  <div class="no-print" style="text-align:center;margin-top:24px">
+    <button onclick="window.print()"
+      style="background:#F5A623;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
+      🖨️ Imprimir / Guardar PDF
+    </button>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">⚡ Inventario Solar</h1>
+  </div>
+  <div style="display:flex;gap:8px">
+    <label class="btn btn-secondary" style="cursor:pointer" title="Importar desde Excel">
+      📥 Importar Excel
+      <input type="file" id="xlsxFile" accept=".xlsx" style="display:none" onchange="importarExcel(this)">
+    </label>
+    <button class="btn btn-primary" onclick="abrirModalProducto()">➕ Agregar Producto</button>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar" style="margin-bottom:12px">
+  <div class="toolbar-left" style="flex-wrap:wrap;gap:6px">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar código, nombre, marca..."
+           oninput="filtrar()" style="min-width:220px">
+    <select id="filtCategoria" class="filter-select" onchange="filtrar()">
+      <option value="">Todas las categorías</option>
+      {% for cat in categorias %}
+      <option value="{{ cat }}">{{ cat }}</option>
+      {% endfor %}
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--gray2);font-size:12px;cursor:pointer">
+      <input type="checkbox" id="filtSoloActivos" checked onchange="filtrar()"> Solo activos
+    </label>
+  </div>
+  <div class="toolbar-right">
+    <span id="countLabel" style="color:var(--gray2);font-size:12px"></span>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table class="vta-table">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Marca</th>
+        <th>P. Venta</th>
+        <th>Stock</th>
+        <th>Unidad</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaBody">
+      <tr><td colspan="9" style="text-align:center;color:var(--gray2);padding:32px">Cargando...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ MODAL PRODUCTO ══ -->
+<div class="modal-overlay" id="modalProducto" onclick="if(event.target===this)cerrarModal()">
+ <div class="modal-box" style="max-width:680px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nuevo Producto</span>
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+  </div>
+  <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Nombre del producto *</label>
+      <input class="form-input" id="fNombre" placeholder="Ej: Panel Solar Monocristalino 400W">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Código</label>
+      <input class="form-input" id="fCodigo" placeholder="Ej: PSM-400W">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Categoría *</label>
+      <select class="form-input" id="fCategoria">
+        {% for cat in categorias %}
+        <option>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Marca</label>
+      <input class="form-input" id="fMarca" placeholder="Ej: JA Solar">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Modelo</label>
+      <input class="form-input" id="fModelo" placeholder="Ej: JAM72S30-540">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Potencia (W)</label>
+      <input class="form-input" type="number" id="fPotencia" placeholder="400">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Unidad</label>
+      <select class="form-input" id="fUnidad">
+        <option>unidad</option>
+        <option>metro</option>
+        <option>kit</option>
+        <option>m2</option>
+        <option>par</option>
+        <option>rollo</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Precio Costo ($)</label>
+      <input class="form-input" type="number" id="fPrecioCosto" placeholder="0">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Precio Venta ($)</label>
+      <input class="form-input" type="number" id="fPrecioVenta" placeholder="0">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Stock Actual</label>
+      <input class="form-input" type="number" id="fStock" placeholder="0">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Stock Mínimo</label>
+      <input class="form-input" type="number" id="fStockMin" placeholder="0">
+    </div>
+
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Descripción</label>
+      <textarea class="form-input" id="fDescripcion" rows="3" placeholder="Descripción técnica del producto..."></textarea>
+    </div>
+
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Notas internas</label>
+      <textarea class="form-input" id="fNotas" rows="2" placeholder="Observaciones internas..."></textarea>
+    </div>
+
+    <div class="form-group" style="align-items:center;display:flex;gap:8px">
+      <input type="checkbox" id="fActivo" checked>
+      <label for="fActivo" style="color:var(--gray1);cursor:pointer">Producto activo</label>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let productos = [];
+let editId = null;
+
+const fmt = n => '$' + Number(n||0).toLocaleString('es-CL');
+
+async function cargarProductos() {
+  const soloA = document.getElementById('filtSoloActivos').checked;
+  const cat   = document.getElementById('filtCategoria').value;
+  const q     = document.getElementById('searchInput').value;
+  const url   = `/api/productos?q=${encodeURIComponent(q)}&categoria=${encodeURIComponent(cat)}&solo_activos=${soloA}`;
+  try {
+    const r = await fetch(url);
+    productos = await r.json();
+    renderTabla();
+  } catch(e) { showToast('Error cargando productos', 'error'); }
+}
+
+function filtrar() { cargarProductos(); }
+
+function renderTabla() {
+  const tb = document.getElementById('tablaBody');
+  document.getElementById('countLabel').textContent = `${productos.length} producto(s)`;
+  if (!productos.length) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray2);padding:32px">Sin resultados</td></tr>';
+    return;
+  }
+  tb.innerHTML = productos.map(p => {
+    const stock = parseInt(p.stock_actual || 0);
+    const min   = parseInt(p.stock_minimo || 0);
+    let stockBadge, stockColor;
+    if (stock <= 0)      { stockBadge = 'Sin Stock'; stockColor = 'var(--red)'; }
+    else if (stock <= min) { stockBadge = 'Bajo';   stockColor = 'var(--yellow)'; }
+    else                 { stockBadge = 'OK';        stockColor = 'var(--green)'; }
+
+    return `<tr>
+      <td><code style="color:var(--blue);font-size:11px">${p.codigo || '—'}</code></td>
+      <td style="font-weight:500">${p.nombre}</td>
+      <td><span class="badge" style="background:var(--card3)">${p.categoria || '—'}</span></td>
+      <td>${p.marca || '—'}</td>
+      <td style="font-weight:600;color:var(--green)">${fmt(p.precio_venta)}</td>
+      <td><span style="color:${stockColor};font-weight:700">${stock}</span>
+          <span style="font-size:10px;color:${stockColor}"> ${stockBadge}</span></td>
+      <td>${p.unidad || 'unidad'}</td>
+      <td><span class="badge" style="background:${p.activo ? '#1A3A1A' : '#3A1A1A'};color:${p.activo ? 'var(--green)' : 'var(--red)'}">
+        ${p.activo ? 'Activo' : 'Inactivo'}
+      </span></td>
+      <td>
+        <button class="btn-icon" title="Editar" onclick="editarProducto('${p.id}')">✏️</button>
+        <button class="btn-icon" title="Eliminar" onclick="eliminarProducto('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalProducto(p = null) {
+  editId = p ? p.id : null;
+  document.getElementById('modalTitle').textContent = p ? 'Editar Producto' : 'Nuevo Producto';
+  document.getElementById('fNombre').value     = p?.nombre     || '';
+  document.getElementById('fCodigo').value     = p?.codigo     || '';
+  document.getElementById('fCategoria').value  = p?.categoria  || 'Panel Solar';
+  document.getElementById('fMarca').value      = p?.marca      || '';
+  document.getElementById('fModelo').value     = p?.modelo     || '';
+  document.getElementById('fPotencia').value   = p?.potencia_w || '';
+  document.getElementById('fUnidad').value     = p?.unidad     || 'unidad';
+  document.getElementById('fPrecioCosto').value= p?.precio_costo || 0;
+  document.getElementById('fPrecioVenta').value= p?.precio_venta || 0;
+  document.getElementById('fStock').value      = p?.stock_actual || 0;
+  document.getElementById('fStockMin').value   = p?.stock_minimo || 0;
+  document.getElementById('fDescripcion').value= p?.descripcion || '';
+  document.getElementById('fNotas').value      = p?.notas      || '';
+  document.getElementById('fActivo').checked   = p ? !!p.activo : true;
+  document.getElementById('modalProducto').classList.remove('hidden');
+}
+
+async function editarProducto(id) {
+  try {
+    const r = await fetch(`/api/productos/${id}`);
+    const p = await r.json();
+    abrirModalProducto(p);
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+function cerrarModal() {
+  document.getElementById('modalProducto').classList.add('hidden');
+  editId = null;
+}
+
+async function guardarProducto() {
+  const nombre = document.getElementById('fNombre').value.trim();
+  if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
+  const data = {
+    nombre,
+    codigo:       document.getElementById('fCodigo').value.trim(),
+    categoria:    document.getElementById('fCategoria').value,
+    marca:        document.getElementById('fMarca').value.trim(),
+    modelo:       document.getElementById('fModelo').value.trim(),
+    potencia_w:   parseInt(document.getElementById('fPotencia').value) || 0,
+    unidad:       document.getElementById('fUnidad').value,
+    precio_costo: parseInt(document.getElementById('fPrecioCosto').value) || 0,
+    precio_venta: parseInt(document.getElementById('fPrecioVenta').value) || 0,
+    stock_actual: parseInt(document.getElementById('fStock').value) || 0,
+    stock_minimo: parseInt(document.getElementById('fStockMin').value) || 0,
+    descripcion:  document.getElementById('fDescripcion').value.trim(),
+    notas:        document.getElementById('fNotas').value.trim(),
+    activo:       document.getElementById('fActivo').checked,
+  };
+  const url    = editId ? `/api/productos/${editId}/edit` : '/api/productos/add';
+  const r      = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const result = await r.json();
+  if (result.ok) {
+    showToast(editId ? 'Producto actualizado' : 'Producto creado', 'success');
+    cerrarModal();
+    cargarProductos();
+  } else {
+    showToast(result.error || 'Error', 'error');
+  }
+}
+
+async function eliminarProducto(id, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+  const r      = await fetch(`/api/productos/${id}/delete`, { method: 'POST' });
+  const result = await r.json();
+  if (result.ok) { showToast('Producto eliminado', 'success'); cargarProductos(); }
+  else showToast(result.error || 'Error', 'error');
+}
+
+async function importarExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast('Importando...', 'info');
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r      = await fetch('/api/productos/import-excel', { method: 'POST', body: form });
+    const result = await r.json();
+    if (result.ok) {
+      showToast(`✅ ${result.creados} creados, ${result.actualizados} actualizados`, 'success');
+      cargarProductos();
+    } else {
+      showToast(result.error || 'Error importando', 'error');
+    }
+  } catch(e) { showToast('Error importando', 'error'); }
+  input.value = '';
+}
+
+cargarProductos();
+</script>
+{% endblock %}

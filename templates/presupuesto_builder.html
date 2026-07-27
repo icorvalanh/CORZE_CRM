@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<style>
+.builder-grid { display:grid; grid-template-columns:1fr 360px; gap:16px; margin-top:8px; }
+.builder-card { background:var(--card); border:1px solid var(--border1); border-radius:12px; padding:20px; }
+.section-title { font-size:13px; font-weight:700; color:var(--blue); margin-bottom:14px; border-bottom:1px solid var(--border1); padding-bottom:8px; }
+.item-row { display:grid; grid-template-columns:3fr 80px 110px 70px 100px 36px; gap:6px; align-items:center; margin-bottom:6px; }
+.item-row input { background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:6px 8px; color:var(--white); font-size:12px; width:100%; }
+.item-row .sub { color:var(--green); font-weight:700; text-align:right; font-size:12px; padding-right:4px; }
+.total-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border1); font-size:13px; }
+.total-row.final { border-bottom:none; font-size:17px; font-weight:800; color:var(--blue); margin-top:8px; }
+.autocomplete-wrap { position:relative; }
+.autocomplete-list { position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--card2); border:1px solid var(--border2); border-radius:8px; max-height:200px; overflow-y:auto; }
+.autocomplete-item { padding:8px 12px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border1); }
+.autocomplete-item:hover { background:var(--card3); }
+.estado-badge { display:inline-block; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="{{ url_for('presupuestos') }}" style="color:var(--gray2);text-decoration:none">← Presupuestos</a>
+    <h1 class="page-title">
+      {% if presupuesto %}
+        {{ presupuesto.folio }}
+        <span class="estado-badge" id="estadoBadge"></span>
+      {% else %}
+        Nuevo Presupuesto
+      {% endif %}
+    </h1>
+  </div>
+  <div style="display:flex;gap:8px">
+    {% if presupuesto %}
+    <a href="{{ url_for('presupuesto_pdf', doc_id=presupuesto.id) }}" class="btn btn-secondary" target="_blank">📄 Ver PDF</a>
+    <button class="btn btn-secondary" onclick="enviarEmail()">📧 Enviar Email</button>
+    {% endif %}
+    <button class="btn btn-secondary" onclick="guardar('borrador')">💾 Guardar Borrador</button>
+    <button class="btn btn-primary" onclick="guardar('enviado')">✅ Guardar y Marcar Enviado</button>
+  </div>
+</div>
+
+<div class="builder-grid">
+
+  <!-- ── Columna izquierda ── -->
+  <div>
+
+    <!-- CLIENTE -->
+    <div class="builder-card" style="margin-bottom:12px">
+      <div class="section-title">👤 Datos del Cliente</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">Nombre *</label>
+          <input class="form-input" id="fNombreCliente" placeholder="Nombre">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Apellido</label>
+          <input class="form-input" id="fApellidoCliente" placeholder="Apellido">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="fEmail" placeholder="cliente@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono</label>
+          <input class="form-input" id="fTelefono" placeholder="+56 9 ...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">RUT</label>
+          <input class="form-input" id="fRut" placeholder="12.345.678-9">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Comuna</label>
+          <input class="form-input" id="fComuna" placeholder="Santiago">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Dirección</label>
+          <input class="form-input" id="fDireccion" placeholder="Av. Ejemplo 1234">
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="builder-card" style="margin-bottom:12px">
+      <div class="section-title">📦 Ítems del Presupuesto</div>
+
+      <div class="autocomplete-wrap" style="margin-bottom:12px">
+        <input class="form-input" id="productoSearch"
+               placeholder="🔍 Buscar producto por nombre o código..."
+               oninput="buscarProducto(this.value)" autocomplete="off">
+        <div id="autocompleteList" class="autocomplete-list" style="display:none"></div>
+      </div>
+
+      <!-- Header de ítems -->
+      <div style="display:grid;grid-template-columns:3fr 80px 110px 70px 100px 36px;gap:6px;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--gray2);font-weight:600">PRODUCTO</span>
+        <span style="font-size:10px;color:var(--gray2);font-weight:600">CANT.</span>
+        <span style="font-size:10px;color:var(--gray2);font-weight:600">P. UNITARIO</span>
+        <span style="font-size:10px;color:var(--gray2);font-weight:600">DESC.%</span>
+        <span style="font-size:10px;color:var(--gray2);font-weight:600;text-align:right">SUBTOTAL</span>
+        <span></span>
+      </div>
+
+      <div id="itemsContainer"></div>
+
+      <div id="emptyItems" style="text-align:center;color:var(--gray3);padding:24px;font-size:12px">
+        Busca y selecciona productos arriba para agregarlos
+      </div>
+    </div>
+
+    <!-- NOTAS Y CONDICIONES -->
+    <div class="builder-card">
+      <div class="section-title">📝 Notas y Condiciones</div>
+      <div class="form-group">
+        <label class="form-label">Notas para el cliente</label>
+        <textarea class="form-input" id="fNotas" rows="3" placeholder="Observaciones que verá el cliente..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Condiciones de venta</label>
+        <textarea class="form-input" id="fCondiciones" rows="3"
+          placeholder="Ej: El precio incluye instalación básica. Garantía de 1 año en mano de obra..."></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Columna derecha ── -->
+  <div>
+
+    <!-- TOTALES -->
+    <div class="builder-card" style="margin-bottom:12px;position:sticky;top:16px">
+      <div class="section-title">💰 Totales</div>
+
+      <div class="total-row">
+        <span style="color:var(--gray1)">Subtotal bruto</span>
+        <span id="tSubtotalBruto" style="color:var(--white)">$0</span>
+      </div>
+
+      <div class="total-row" style="align-items:center">
+        <span style="color:var(--gray1)">Descuento general</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="fDescuentoGral" min="0" max="100" value="0"
+                 oninput="recalcular()" style="width:54px;background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:4px 6px;color:var(--white);font-size:12px;text-align:right">
+          <span style="color:var(--gray2);font-size:11px">%</span>
+        </div>
+      </div>
+
+      <div class="total-row">
+        <span style="color:var(--red)">− Monto descuento</span>
+        <span id="tMontoDescuento" style="color:var(--red)">$0</span>
+      </div>
+
+      <div class="total-row">
+        <span style="color:var(--gray1)">Subtotal neto</span>
+        <span id="tSubtotalNeto" style="color:var(--white)">$0</span>
+      </div>
+
+      <div class="total-row" style="align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--gray1)">
+          <input type="checkbox" id="fIva" onchange="recalcular()"> IVA (19%)
+        </label>
+        <span id="tIva" style="color:var(--gray2)">$0</span>
+      </div>
+
+      <div class="total-row final">
+        <span>TOTAL</span>
+        <span id="tTotal">$0</span>
+      </div>
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border1)">
+        <div class="form-group">
+          <label class="form-label">Trabajador asignado</label>
+          <select class="form-input" id="fTrabajador">
+            <option value="">Sin asignar</option>
+            {% for t in trabajadores %}
+            <option value="{{ t.nombre }} {{ t.apellido }}">{{ t.nombre }} {{ t.apellido }} — {{ t.cargo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Validez (días)</label>
+          <input class="form-input" type="number" id="fValidez" value="10" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-input" id="fEstado">
+            <option value="borrador">Borrador</option>
+            <option value="enviado">Enviado</option>
+            <option value="aprobado">Aprobado</option>
+            <option value="rechazado">Rechazado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const PRESUPUESTO_ID = '{{ presupuesto.id if presupuesto else "" }}';
+let items = [];
+let productos = [];
+
+const fmt = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
+
+// ── Cargar presupuesto existente ──────────────────────────────────────────
+{% if presupuesto %}
+const pData = {{ presupuesto|tojson }};
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fNombreCliente').value  = pData.nombre_cliente  || '';
+  document.getElementById('fApellidoCliente').value= pData.apellido_cliente|| '';
+  document.getElementById('fEmail').value          = pData.email_cliente   || '';
+  document.getElementById('fTelefono').value       = pData.telefono_cliente|| '';
+  document.getElementById('fRut').value            = pData.rut_cliente     || '';
+  document.getElementById('fComuna').value         = pData.comuna_cliente  || '';
+  document.getElementById('fDireccion').value      = pData.direccion_cliente|| '';
+  document.getElementById('fNotas').value          = pData.notas           || '';
+  document.getElementById('fCondiciones').value    = pData.condiciones     || '';
+  document.getElementById('fDescuentoGral').value  = pData.descuento_general_pct || 0;
+  document.getElementById('fIva').checked          = !!pData.incluye_iva;
+  document.getElementById('fTrabajador').value     = pData.trabajador_asignado || '';
+  document.getElementById('fValidez').value        = pData.validez_dias    || 10;
+  document.getElementById('fEstado').value         = pData.estado          || 'borrador';
+
+  const eb = document.getElementById('estadoBadge');
+  if (eb) {
+    const colors = {borrador:'var(--blue)',enviado:'var(--green)',aprobado:'var(--teal)',rechazado:'var(--red)'};
+    eb.textContent = pData.estado || 'borrador';
+    eb.style.background = '#1A2A3A';
+    eb.style.color = colors[pData.estado] || 'var(--blue)';
+  }
+
+  items = (pData.items || []).map((it, i) => ({...it, _key: i}));
+  renderItems();
+  recalcular();
+});
+{% endif %}
+
+// ── Búsqueda de productos ────────────────────────────────────────────────
+let searchTimeout;
+async function buscarProducto(q) {
+  clearTimeout(searchTimeout);
+  if (q.length < 2) { document.getElementById('autocompleteList').style.display='none'; return; }
+  searchTimeout = setTimeout(async () => {
+    const r = await fetch(`/api/productos?q=${encodeURIComponent(q)}&solo_activos=true`);
+    productos = await r.json();
+    const list = document.getElementById('autocompleteList');
+    if (!productos.length) { list.style.display='none'; return; }
+    list.innerHTML = productos.slice(0,10).map(p =>
+      `<div class="autocomplete-item" onclick="agregarItem(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+        <strong>${p.nombre}</strong>
+        <span style="color:var(--gray2);margin-left:8px">${p.codigo||''}</span>
+        <span style="float:right;color:var(--green)">${fmt(p.precio_venta)}</span>
+      </div>`
+    ).join('');
+    list.style.display = 'block';
+  }, 280);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.autocomplete-wrap'))
+    document.getElementById('autocompleteList').style.display='none';
+});
+
+function agregarItem(p) {
+  items.push({
+    _key:          Date.now(),
+    producto_id:   p.id,
+    nombre:        p.nombre,
+    codigo:        p.codigo || '',
+    cantidad:      1,
+    precio_unitario: parseInt(p.precio_venta) || 0,
+    descuento_pct: 0,
+    subtotal:      parseInt(p.precio_venta) || 0,
+  });
+  document.getElementById('productoSearch').value = '';
+  document.getElementById('autocompleteList').style.display = 'none';
+  renderItems();
+  recalcular();
+}
+
+function renderItems() {
+  const cont   = document.getElementById('itemsContainer');
+  const empty  = document.getElementById('emptyItems');
+  if (!items.length) { cont.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  cont.innerHTML = items.map((it, idx) => `
+    <div class="item-row" data-idx="${idx}">
+      <div style="font-size:12px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.nombre}">
+        ${it.nombre} <span style="color:var(--gray3);font-size:10px">${it.codigo||''}</span>
+      </div>
+      <input type="number" min="1" value="${it.cantidad}" onchange="updateItem(${idx},'cantidad',this.value)">
+      <input type="number" min="0" value="${it.precio_unitario}" onchange="updateItem(${idx},'precio_unitario',this.value)">
+      <input type="number" min="0" max="100" value="${it.descuento_pct}" onchange="updateItem(${idx},'descuento_pct',this.value)">
+      <span class="sub">${fmt(it.subtotal)}</span>
+      <button onclick="quitarItem(${idx})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px">×</button>
+    </div>
+  `).join('');
+}
+
+function updateItem(idx, field, val) {
+  items[idx][field] = parseFloat(val) || 0;
+  const it  = items[idx];
+  const bruto = it.cantidad * it.precio_unitario;
+  it.subtotal = bruto * (1 - it.descuento_pct / 100);
+  renderItems();
+  recalcular();
+}
+
+function quitarItem(idx) {
+  items.splice(idx, 1);
+  renderItems();
+  recalcular();
+}
+
+function recalcular() {
+  const subtotalBruto = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
+  const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
+  const montoDesc     = subtotalBruto * descPct / 100;
+  const subtotalNeto  = (subtotalBruto - montoDesc) - items.reduce((s, it) => {
+    const bruto = it.cantidad * it.precio_unitario;
+    return s + bruto * it.descuento_pct / 100;
+  }, 0);
+  // Recalcular subtotalNeto correctamente:
+  const netoDespItemDesc = items.reduce((s, it) => s + it.subtotal, 0);
+  const netoFinal = netoDespItemDesc - netoDespItemDesc * descPct / 100;
+  const montoDescFinal = netoDespItemDesc * descPct / 100;
+  const inclIva   = document.getElementById('fIva').checked;
+  const montoIva  = inclIva ? netoFinal * 0.19 : 0;
+  const total     = netoFinal + montoIva;
+
+  document.getElementById('tSubtotalBruto').textContent = fmt(items.reduce((s,it)=>s+it.cantidad*it.precio_unitario,0));
+  document.getElementById('tMontoDescuento').textContent= fmt(montoDescFinal);
+  document.getElementById('tSubtotalNeto').textContent  = fmt(netoFinal);
+  document.getElementById('tIva').textContent           = fmt(montoIva);
+  document.getElementById('tTotal').textContent         = fmt(total);
+}
+
+// ── Guardar ───────────────────────────────────────────────────────────────
+async function guardar(estadoOverride) {
+  const nombre = document.getElementById('fNombreCliente').value.trim();
+  if (!nombre) { showToast('El nombre del cliente es requerido', 'error'); return; }
+
+  const subtotalBruto  = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
+  const subtotalItems  = items.reduce((s, it) => s + it.subtotal, 0);
+  const descPct        = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
+  const montoDesc      = subtotalItems * descPct / 100;
+  const subtotalNeto   = subtotalItems - montoDesc;
+  const inclIva        = document.getElementById('fIva').checked;
+  const montoIva       = inclIva ? subtotalNeto * 0.19 : 0;
+  const total          = subtotalNeto + montoIva;
+
+  const data = {
+    nombre_cliente:         nombre,
+    apellido_cliente:       document.getElementById('fApellidoCliente').value.trim(),
+    email_cliente:          document.getElementById('fEmail').value.trim(),
+    telefono_cliente:       document.getElementById('fTelefono').value.trim(),
+    rut_cliente:            document.getElementById('fRut').value.trim(),
+    direccion_cliente:      document.getElementById('fDireccion').value.trim(),
+    comuna_cliente:         document.getElementById('fComuna').value.trim(),
+    items:                  items.map(({_key,...it}) => it),
+    subtotal_bruto:         subtotalBruto,
+    descuento_general_pct:  descPct,
+    monto_descuento:        montoDesc,
+    subtotal_neto:          subtotalNeto,
+    incluye_iva:            inclIva,
+    monto_iva:              montoIva,
+    total,
+    notas:                  document.getElementById('fNotas').value.trim(),
+    condiciones:            document.getElementById('fCondiciones').value.trim(),
+    trabajador_asignado:    document.getElementById('fTrabajador').value,
+    validez_dias:           parseInt(document.getElementById('fValidez').value) || 10,
+    estado:                 estadoOverride || document.getElementById('fEstado').value,
+  };
+
+  const url = PRESUPUESTO_ID
+    ? `/api/presupuestos/${PRESUPUESTO_ID}/edit`
+    : '/api/presupuestos/add';
+  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  const result = await r.json();
+  if (result.ok) {
+    showToast('Presupuesto guardado', 'success');
+    if (!PRESUPUESTO_ID && result.id) {
+      setTimeout(() => location.href = `/admin/presupuestos/${result.id}`, 800);
+    }
+  } else {
+    showToast(result.error || 'Error guardando', 'error');
+  }
+}
+
+async function enviarEmail() {
+  if (!PRESUPUESTO_ID) { showToast('Guarda el presupuesto primero', 'error'); return; }
+  if (!confirm('¿Enviar el presupuesto por email al cliente?')) return;
+  showToast('Enviando...', 'info');
+  const r = await fetch(`/api/presupuestos/${PRESUPUESTO_ID}/enviar-email`, { method:'POST' });
+  const d = await r.json();
+  if (d.ok) showToast('Email enviado correctamente', 'success');
+  else showToast(d.error || 'Error enviando email', 'error');
+}
+</script>
+{% endblock %}

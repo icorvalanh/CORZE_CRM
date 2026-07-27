@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<style>
+.workers-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:8px; }
+.worker-card { background:var(--card); border:1px solid var(--border1); border-radius:14px; padding:20px; text-align:center; transition:border-color .15s; }
+.worker-card:hover { border-color:var(--blue); }
+.worker-avatar { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; margin:0 auto 12px; }
+.worker-name { font-size:15px; font-weight:700; margin-bottom:4px; }
+.worker-cargo { font-size:12px; color:var(--blue); margin-bottom:8px; }
+.worker-meta { font-size:11px; color:var(--gray2); margin-bottom:4px; }
+.worker-actions { display:flex; justify-content:center; gap:8px; margin-top:12px; }
+.inactive-badge { position:absolute; top:10px; right:10px; font-size:9px; background:#3A1A1A; color:var(--red); padding:2px 8px; border-radius:10px; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <h1 class="page-title">👷 Trabajadores</h1>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--gray2);font-size:12px;cursor:pointer">
+      <input type="checkbox" id="filtTodos" onchange="toggleInactivos(this.checked)"> Ver inactivos
+    </label>
+  </div>
+  <button class="btn btn-primary" onclick="abrirModal()">➕ Agregar Trabajador</button>
+</div>
+
+<div class="workers-grid" id="workersGrid">
+  {% for t in trabajadores %}
+  <div class="worker-card" style="position:relative" data-activo="{{ 'true' if t.activo else 'false' }}">
+    {% if not t.activo %}
+    <span class="inactive-badge">Inactivo</span>
+    {% endif %}
+    <div class="worker-avatar" style="background:{{ t.color }}22;color:{{ t.color }}">
+      {{ t.avatar or (t.nombre[0] + (t.apellido[0] if t.apellido else '')) }}
+    </div>
+    <div class="worker-name">{{ t.nombre }} {{ t.apellido or '' }}</div>
+    <div class="worker-cargo">{{ t.cargo or 'Sin cargo' }}</div>
+    {% if t.email %}
+    <div class="worker-meta">📧 {{ t.email }}</div>
+    {% endif %}
+    {% if t.telefono %}
+    <div class="worker-meta">📞 {{ t.telefono }}</div>
+    {% endif %}
+    {% if t.rut %}
+    <div class="worker-meta" style="color:var(--gray3)">RUT: {{ t.rut }}</div>
+    {% endif %}
+    {% if t.fecha_ingreso %}
+    <div class="worker-meta" style="color:var(--gray3)">Ingreso: {{ t.fecha_ingreso }}</div>
+    {% endif %}
+    <div class="worker-actions">
+      <button class="btn btn-secondary" onclick="editarTrabajador('{{ t.id }}')">✏️ Editar</button>
+      <button class="btn" style="background:var(--red)22;color:var(--red);border:1px solid var(--red)44"
+              onclick="eliminarTrabajador('{{ t.id }}','{{ t.nombre }}')">🗑️</button>
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column:1/-1;text-align:center;color:var(--gray2);padding:40px">
+    No hay trabajadores aún. <button class="btn btn-primary" onclick="abrirModal()">Agregar el primero</button>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ══ MODAL TRABAJADOR ══ -->
+<div class="modal-overlay hidden" id="modalTrabajador" onclick="if(event.target===this)cerrarModal()">
+ <div class="modal-box" style="max-width:580px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nuevo Trabajador</span>
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+  </div>
+  <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+    <div class="form-group">
+      <label class="form-label">Nombre *</label>
+      <input class="form-input" id="tNombre" placeholder="Nombre">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Apellido</label>
+      <input class="form-input" id="tApellido" placeholder="Apellido">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cargo *</label>
+      <input class="form-input" id="tCargo" placeholder="Ej: Asesor Comercial">
+    </div>
+    <div class="form-group">
+      <label class="form-label">RUT</label>
+      <input class="form-input" id="tRut" placeholder="12.345.678-9">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" type="email" id="tEmail" placeholder="nombre@corze.cl">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Teléfono</label>
+      <input class="form-input" id="tTelefono" placeholder="+56 9 ...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha de ingreso</label>
+      <input class="form-input" type="date" id="tFechaIngreso">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color de avatar</label>
+      <input class="form-input" type="color" id="tColor" value="#F5A623">
+    </div>
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Notas</label>
+      <textarea class="form-input" id="tNotas" rows="2" placeholder="Notas adicionales..."></textarea>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="tActivo" checked>
+      <label for="tActivo" style="color:var(--gray1);cursor:pointer">Trabajador activo</label>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarTrabajador()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let editId = null;
+
+function toggleInactivos(show) {
+  document.querySelectorAll('.worker-card').forEach(card => {
+    if (card.dataset.activo === 'false') {
+      card.style.display = show ? '' : 'none';
+    }
+  });
+}
+
+function abrirModal(data = null) {
+  editId = data ? data.id : null;
+  document.getElementById('modalTitle').textContent = data ? 'Editar Trabajador' : 'Nuevo Trabajador';
+  document.getElementById('tNombre').value      = data?.nombre     || '';
+  document.getElementById('tApellido').value    = data?.apellido   || '';
+  document.getElementById('tCargo').value       = data?.cargo      || '';
+  document.getElementById('tRut').value         = data?.rut        || '';
+  document.getElementById('tEmail').value       = data?.email      || '';
+  document.getElementById('tTelefono').value    = data?.telefono   || '';
+  document.getElementById('tFechaIngreso').value= data?.fecha_ingreso || '';
+  document.getElementById('tColor').value       = data?.color      || '#F5A623';
+  document.getElementById('tNotas').value       = data?.notas      || '';
+  document.getElementById('tActivo').checked    = data ? !!data.activo : true;
+  document.getElementById('modalTrabajador').classList.remove('hidden');
+}
+
+async function editarTrabajador(id) {
+  const r = await fetch(`/api/trabajadores`);
+  const lista = await r.json();
+  const t = lista.find(x => x.id === id);
+  if (t) abrirModal(t);
+}
+
+function cerrarModal() {
+  document.getElementById('modalTrabajador').classList.add('hidden');
+  editId = null;
+}
+
+async function guardarTrabajador() {
+  const nombre = document.getElementById('tNombre').value.trim();
+  const cargo  = document.getElementById('tCargo').value.trim();
+  if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
+  const data = {
+    nombre,
+    apellido:      document.getElementById('tApellido').value.trim(),
+    cargo:         cargo,
+    rut:           document.getElementById('tRut').value.trim(),
+    email:         document.getElementById('tEmail').value.trim(),
+    telefono:      document.getElementById('tTelefono').value.trim(),
+    fecha_ingreso: document.getElementById('tFechaIngreso').value,
+    color:         document.getElementById('tColor').value,
+    notas:         document.getElementById('tNotas').value.trim(),
+    activo:        document.getElementById('tActivo').checked,
+  };
+  const url = editId ? `/api/trabajadores/${editId}/edit` : '/api/trabajadores/add';
+  const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  const res = await r.json();
+  if (res.ok) {
+    showToast(editId ? 'Trabajador actualizado' : 'Trabajador creado', 'success');
+    cerrarModal();
+    setTimeout(() => location.reload(), 600);
+  } else {
+    showToast(res.error || 'Error', 'error');
+  }
+}
+
+async function eliminarTrabajador(id, nombre) {
+  if (!confirm(`¿Eliminar trabajador "${nombre}"?`)) return;
+  const r = await fetch(`/api/trabajadores/${id}/delete`, { method:'POST' });
+  const d = await r.json();
+  if (d.ok) { showToast('Trabajador eliminado', 'success'); setTimeout(() => location.reload(), 600); }
+  else showToast(d.error || 'Error', 'error');
+}
+
+// Ocultar inactivos por defecto
+toggleInactivos(false);
+</script>
+{% endblock %}
