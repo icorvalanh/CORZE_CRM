@@ -131,7 +131,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for it in p.items or [] %}
+      {% for it in p.get('items') or [] %}
       <tr>
         <td style="color:#aaa">{{ loop.index }}</td>
         <td><strong>{{ it.nombre }}</strong></td>
