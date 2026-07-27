@@ -1053,10 +1053,7 @@ def api_gastos_corze_delete(doc_id):
 @app.route('/api/admin/seed-ventas-gastos', methods=['POST'])
 @login_required
 def api_seed_ventas_gastos():
-    """Importa datos iniciales del Excel a Firestore. Solo para administrador."""
-    if session.get('role') != 'admin':
-        return jsonify({'ok': False, 'error': 'Solo admin'}), 403
-
+    """Importa datos iniciales del Excel a Firestore."""
     from datetime import datetime as dt
 
     VENTAS = [
