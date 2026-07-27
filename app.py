@@ -445,7 +445,7 @@ def api_export_inv():
 @app.route('/api/stats')
 @login_required
 def api_stats():
-    return jsonify(db.get_dashboard_stats())
+    return jsonify(db.get_corze_dashboard_stats())
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
@@ -989,7 +989,7 @@ def api_finanzas_resumen():
 @login_required
 def api_finanzas_comprobante(doc_id):
     try:
-        doc = db.db.collection('finanzas').document(doc_id).get()
+        doc = db.db.collection('finanzas_corze').document(doc_id).get()
         data = doc.to_dict() or {}
         return jsonify({'comprobante': data.get('comprobante', '')})
     except Exception as e:

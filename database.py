@@ -704,17 +704,17 @@ class FirebaseDB:
             print(f'Error save_fb_config: {e}')
             return False
 
-    # ── FINANZAS ─────────────────────────────────────────────────────────────
+    # ── FINANZAS CORZE ────────────────────────────────────────────────────────
     def _next_finanzas_id(self) -> str:
         try:
-            count = len(list(self.db.collection('finanzas').limit(9999).stream()))
-            return f"VTA-{datetime.now().year}-{count+1:05d}"
+            count = len(list(self.db.collection('finanzas_corze').limit(9999).stream()))
+            return f"CORZE-{datetime.now().year}-{count+1:05d}"
         except Exception:
-            return f"VTA-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            return f"CORZE-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
     def get_all_finanzas(self, tipo: str = '', mes: str = '') -> List[dict]:
         try:
-            col  = self.db.collection('finanzas').order_by(
+            col  = self.db.collection('finanzas_corze').order_by(
                 'fecha', direction=firestore.Query.DESCENDING)
             docs = [self._doc(d) for d in col.stream()]
             if tipo:
@@ -731,7 +731,7 @@ class FirebaseDB:
             data['id_interno']  = self._next_finanzas_id()
             data['created_at']  = self._now()
             data['updated_at']  = self._now()
-            ref = self.db.collection('finanzas').add(data)
+            ref = self.db.collection('finanzas_corze').add(data)
             return True, ref[1].id
         except Exception as e:
             return False, str(e)
@@ -740,14 +740,14 @@ class FirebaseDB:
         try:
             data.pop('id', None)
             data['updated_at'] = self._now()
-            self.db.collection('finanzas').document(doc_id).update(data)
+            self.db.collection('finanzas_corze').document(doc_id).update(data)
             return True, None
         except Exception as e:
             return False, str(e)
 
     def delete_finanza(self, doc_id: str) -> bool:
         try:
-            self.db.collection('finanzas').document(doc_id).delete()
+            self.db.collection('finanzas_corze').document(doc_id).delete()
             return True
         except Exception as e:
             print(f'Error delete_finanza: {e}')
@@ -826,13 +826,7 @@ class FirebaseDB:
             return 0
 
     def get_finanzas_by_vehiculo(self, doc_id: str) -> List[dict]:
-        try:
-            docs = [self._doc(d) for d in
-                    self.db.collection('finanzas').where('vehiculo_id', '==', doc_id).stream()]
-            return sorted(docs, key=lambda x: x.get('fecha', ''))
-        except Exception as e:
-            print(f'Error get_finanzas_by_vehiculo: {e}')
-            return []
+        return []
 
     def get_historial_vehiculo(self, doc_id: str) -> List[dict]:
         try:
