@@ -621,64 +621,55 @@ async function importarEML(input) {
   if (!file) return;
   input.value = '';
 
-  showToast('⏳ Leyendo archivo EML...', 'info', 4000);
+  showToast('⏳ Leyendo EML...', 'info', 6000);
+
   const fd = new FormData();
   fd.append('archivo', file);
 
   let d;
   try {
-    const r = await fetch('/api/leads/importar-eml', { method:'POST', body: fd });
-    if (!r.ok) {
-      showToast(`❌ Error del servidor (${r.status})`, 'error');
-      return;
-    }
-    d = await r.json();
+    const r = await fetch('/api/leads/importar-eml', { method: 'POST', body: fd });
+    const text = await r.text();
+    try { d = JSON.parse(text); }
+    catch(e) { showToast('❌ Respuesta inválida del servidor: ' + text.slice(0,120), 'error', 8000); return; }
   } catch(e) {
-    showToast('❌ Error de conexión subiendo EML', 'error');
+    showToast('❌ Error de red: ' + e.message, 'error', 6000);
     return;
   }
 
   if (!d.ok) {
-    showToast('❌ ' + (d.error || 'Error procesando EML'), 'error');
+    showToast('❌ ' + (d.error || 'Error procesando EML'), 'error', 8000);
     return;
   }
 
-  const lead = d.lead || null;
-
   if (d.duplicado) {
-    showToast('⚠️ ' + d.msg + ' (lead ya existía) — resaltando en kanban', 'warning', 4000);
-    // Highlight existing card
-    const existing = document.querySelector(`.lead-card[data-id="${d.lead_id}"]`);
-    if (existing) {
-      existing.scrollIntoView({ behavior:'smooth', block:'center' });
-      existing.style.transition = 'box-shadow .3s';
-      existing.style.boxShadow = '0 0 0 3px #F5A623, 0 4px 20px rgba(245,166,35,.5)';
-      setTimeout(() => { existing.style.boxShadow = ''; }, 3000);
-    } else {
-      setTimeout(() => location.reload(), 1200);
+    showToast(`⚠️ ${d.msg} — recargando para mostrar lead existente`, 'warning', 3000);
+    setTimeout(() => location.reload(), 1500);
+    return;
+  }
+
+  // Lead nuevo creado — agregar al kanban directamente
+  showToast(`✅ Lead creado: ${d.nombre}${d.email ? ' · ' + d.email : ''}`, 'success', 5000);
+  const col = document.getElementById('cards_Nuevo_Lead');
+  if (col) {
+    const lead = {
+      id: d.id, nombre: d.nombre, apellido: d.apellido || '',
+      email: d.email, telefono: d.telefono || '',
+      tipo_proyecto: d.tipo_proyecto || '', empresa: '',
+      asignado_a: '', etapa: 'Nuevo Lead',
+      created_at: new Date().toISOString().slice(0,10),
+    };
+    col.insertAdjacentHTML('afterbegin', buildCard(lead));
+    leadsData.unshift(lead);
+    recalcularContadores();
+    const newCard = col.firstElementChild;
+    if (newCard) {
+      newCard.style.boxShadow = '0 0 0 3px #2ECC71, 0 4px 24px rgba(46,204,113,.5)';
+      newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => { newCard.style.boxShadow = ''; }, 4000);
     }
   } else {
-    showToast(`✅ Lead creado: ${d.nombre}${d.email ? ' · '+d.email : ''}`, 'success', 4000);
-    if (lead) {
-      // Insert card at top of "Nuevo Lead" column without page reload
-      const col = document.getElementById('cards_Nuevo_Lead');
-      if (col) {
-        col.insertAdjacentHTML('afterbegin', buildCard(lead));
-        leadsData.unshift(lead);
-        recalcularContadores();
-        const newCard = col.querySelector('.lead-card');
-        if (newCard) {
-          newCard.style.transition = 'box-shadow .3s';
-          newCard.style.boxShadow = '0 0 0 3px #2ECC71, 0 4px 20px rgba(46,204,113,.5)';
-          newCard.scrollIntoView({ behavior:'smooth', block:'center' });
-          setTimeout(() => { newCard.style.boxShadow = ''; }, 3000);
-        }
-      } else {
-        location.reload();
-      }
-    } else {
-      location.reload();
-    }
+    setTimeout(() => location.reload(), 1000);
   }
 }
 

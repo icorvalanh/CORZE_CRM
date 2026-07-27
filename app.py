@@ -3343,147 +3343,161 @@ def api_leads_importar_email():
 @app.route('/api/leads/importar-eml', methods=['POST'])
 @login_required
 def api_leads_importar_eml():
-    """Parsea un archivo .eml de formulario web y crea un lead."""
-    import email as _eml_std
-    from email.header import decode_header as _dh
+    """Parsea un archivo .eml de formulario SolarLaunch y crea un lead."""
+    import re as _re
+    import email as _eml
 
-    if 'archivo' not in request.files:
-        return jsonify({'ok': False, 'error': 'No se recibió archivo'})
-    f = request.files['archivo']
-    if not f.filename.lower().endswith('.eml'):
-        return jsonify({'ok': False, 'error': 'El archivo debe ser .eml'})
-
-    raw = f.read()
-    msg = _eml_std.message_from_bytes(raw)
-
-    # Decodificar asunto
-    asunto_raw = msg.get('Subject', '')
     try:
-        asunto = ' '.join(
-            (p.decode(enc or 'utf-8') if isinstance(p, bytes) else p)
-            for p, enc in _dh(asunto_raw)
-        )
-    except Exception:
-        asunto = asunto_raw
+        # ── 1. Validar archivo ─────────────────────────────────────────────
+        if 'archivo' not in request.files:
+            return jsonify({'ok': False, 'error': 'No se recibió archivo (campo: archivo)'})
+        f = request.files['archivo']
+        if not f.filename.lower().endswith('.eml'):
+            return jsonify({'ok': False, 'error': 'El archivo debe ser .eml'})
 
-    # Obtener body texto plano
-    body = ''
-    for part in msg.walk():
-        if part.get_content_type() == 'text/plain':
-            payload = part.get_payload(decode=True)
-            if payload:
-                charset = part.get_content_charset() or 'utf-8'
-                body = payload.decode(charset, errors='replace')
-                break
-        # Fallback: try HTML part if no plain text
-    if not body:
+        raw = f.read()
+        if not raw:
+            return jsonify({'ok': False, 'error': 'El archivo está vacío'})
+
+        # ── 2. Parsear MIME ────────────────────────────────────────────────
+        msg = _eml.message_from_bytes(raw)
+
+        asunto = msg.get('Subject', '') or ''
+        try:
+            from email.header import decode_header as _dh
+            asunto = ' '.join(
+                (p.decode(enc or 'utf-8') if isinstance(p, bytes) else p)
+                for p, enc in _dh(asunto)
+            )
+        except Exception:
+            pass
+
+        # ── 3. Extraer body (plain text preferido, fallback HTML) ──────────
+        body = ''
         for part in msg.walk():
-            if part.get_content_type() == 'text/html':
+            if part.get_content_type() == 'text/plain':
                 payload = part.get_payload(decode=True)
                 if payload:
-                    charset = part.get_content_charset() or 'utf-8'
-                    html = payload.decode(charset, errors='replace')
-                    # Strip HTML tags
-                    import re as _re2
-                    body = _re2.sub(r'<br\s*/?>', '\n', html)
-                    body = _re2.sub(r'<[^>]+>', '', body)
+                    body = payload.decode(part.get_content_charset() or 'utf-8', errors='replace')
                     break
+        if not body:
+            for part in msg.walk():
+                if part.get_content_type() == 'text/html':
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        html = payload.decode(part.get_content_charset() or 'utf-8', errors='replace')
+                        body = _re.sub(r'<br\s*/?>', '\n', html, flags=_re.IGNORECASE)
+                        body = _re.sub(r'<[^>]+>', '', body)
+                        break
 
-    if not body:
-        return jsonify({'ok': False, 'error': 'No se encontró texto en el archivo EML'})
+        if not body:
+            return jsonify({'ok': False, 'error': 'No se encontró texto en el EML'})
 
-    # Normalize line endings (CRLF → LF)
-    body = body.replace('\r\n', '\n').replace('\r', '\n')
+        # ── 4. Normalizar saltos de línea ──────────────────────────────────
+        body = body.replace('\r\n', '\n').replace('\r', '\n')
 
-    # Parsear pares pregunta/respuesta (bloques separados por líneas vacías)
-    nombre = apellido = email_lead = telefono = ciudad = region = ''
-    consumo_estimado = tipo_proyecto = ''
+        # ── 5. Parsear pares pregunta / respuesta ──────────────────────────
+        nombre = apellido = email_lead = telefono = ciudad = region = ''
+        consumo_estimado = tipo_proyecto = ''
 
-    blocks = [b.strip() for b in body.split('\n\n') if b.strip()]
-    for block in blocks:
-        lines = [l.strip() for l in block.split('\n') if l.strip()]
-        if len(lines) < 2:
-            continue
-        q = lines[0].lower()
-        a = lines[1].strip()
-        if not a:
-            continue
+        for block in body.split('\n\n'):
+            block = block.strip()
+            if not block:
+                continue
+            lines = [l.strip() for l in block.split('\n') if l.strip()]
+            if len(lines) < 2:
+                continue
+            q = lines[0].lower()
+            a = lines[1]
+            if not a:
+                continue
 
-        if 'nombre' in q:
-            parts = a.split()
-            nombre    = parts[0] if parts else a
-            apellido  = ' '.join(parts[1:]) if len(parts) > 1 else ''
-        elif 'email' in q or 'correo' in q:
-            email_lead = a
-        elif 'tel' in q or 'whatsapp' in q or 'phone' in q:
-            telefono   = a.replace(' ', '')
-        elif 'ciudad' in q or 'indica' in q:
-            ciudad     = a
-        elif 'regi' in q:
-            region     = a
-        elif 'pagas' in q or 'electricidad' in q or 'boleta' in q:
-            consumo_estimado = a
-        elif 'donde' in q or 'dónde' in q or 'evaluar' in q or 'soluci' in q:
-            tipo_proyecto = ('Residencial'
-                             if any(w in a.lower() for w in ('casa', 'residencial', 'hogar'))
-                             else 'Comercial')
+            if any(k in q for k in ('nombre', 'name')):
+                parts = a.split()
+                nombre   = parts[0] if parts else a
+                apellido = ' '.join(parts[1:]) if len(parts) > 1 else ''
+            elif any(k in q for k in ('email', 'correo', 'e-mail')):
+                email_lead = a.strip()
+            elif any(k in q for k in ('tel', 'whatsapp', 'phone', 'fono', 'celular')):
+                telefono = _re.sub(r'\s+', '', a)
+            elif any(k in q for k in ('ciudad', 'indica', 'localidad', 'city')):
+                ciudad = a
+            elif any(k in q for k in ('regi', 'region', 'región')):
+                region = a
+            elif any(k in q for k in ('pagas', 'electricidad', 'boleta', 'luz', 'gasto')):
+                consumo_estimado = a
+            elif any(k in q for k in ('donde', 'dónde', 'evaluar', 'soluci', 'instala', 'proyecto', 'residencial', 'comercial')):
+                tipo_proyecto = ('Residencial'
+                                 if any(w in a.lower() for w in ('casa', 'residencial', 'hogar', 'departamento'))
+                                 else 'Comercial')
 
-    # Fallback: buscar email por regex si no se encontró en pares
-    if not email_lead:
-        import re
-        m = re.search(r'[\w\.\-]+@[\w\.\-]+\.\w+', body)
-        if m:
-            email_lead = m.group(0)
+        # ── 6. Fallback: extraer email por regex ───────────────────────────
+        if not email_lead:
+            m = _re.search(r'[\w\.\-]+@[\w\.\-]+\.\w+', body)
+            if m:
+                email_lead = m.group(0)
 
-    if not nombre:
-        nombre = 'Lead Web'
+        if not nombre:
+            nombre = 'Lead Web'
 
-    # Detectar duplicado por email
-    if email_lead:
-        existing = db.get_lead_by_email(email_lead)
-        if existing:
-            db.add_historial_lead(
-                existing['id'], 'EML importado (duplicado)',
-                session.get('usuario', ''),
-                f'Se subió un EML pero el email {email_lead} ya existe como lead.'
-            )
-            return jsonify({
-                'ok': True, 'duplicado': True,
-                'msg': f'El email ya existe: {existing.get("nombre","")} {existing.get("apellido","")}'.strip(),
-                'lead_id': existing['id'],
-                'lead': existing,
-            })
+        # ── 7. Verificar duplicado ─────────────────────────────────────────
+        if email_lead:
+            existing = db.get_lead_by_email(email_lead)
+            if existing:
+                db.add_historial_lead(
+                    existing['id'], 'EML duplicado',
+                    session.get('usuario', ''),
+                    f'EML subido pero {email_lead} ya existe.'
+                )
+                return jsonify({
+                    'ok': True, 'duplicado': True,
+                    'msg': f"Ya existe: {existing.get('nombre','')} {existing.get('apellido','')}".strip(),
+                    'lead_id': existing['id'],
+                    'nombre': existing.get('nombre', ''),
+                    'email': email_lead,
+                })
 
-    notas_parts = []
-    if tipo_proyecto:     notas_parts.append(f'Tipo proyecto: {tipo_proyecto}')
-    if consumo_estimado:  notas_parts.append(f'Consumo estimado: {consumo_estimado}')
-    if ciudad:            notas_parts.append(f'Ciudad: {ciudad}')
-    if region:            notas_parts.append(f'Región: {region}')
-    if asunto:            notas_parts.append(f'Asunto EML: {asunto}')
+        # ── 8. Crear lead ──────────────────────────────────────────────────
+        notas_parts = []
+        if tipo_proyecto:    notas_parts.append(f'Tipo proyecto: {tipo_proyecto}')
+        if consumo_estimado: notas_parts.append(f'Consumo estimado: {consumo_estimado}')
+        if ciudad:           notas_parts.append(f'Ciudad: {ciudad}')
+        if region:           notas_parts.append(f'Región: {region}')
+        if asunto:           notas_parts.append(f'Asunto EML: {asunto}')
 
-    lead_data = {
-        'nombre':           nombre,
-        'apellido':         apellido,
-        'email':            email_lead,
-        'telefono':         telefono,
-        'ciudad':           ciudad,
-        'region':           region,
-        'tipo_proyecto':    tipo_proyecto,
-        'consumo_estimado': consumo_estimado,
-        'empresa':          '',
-        'origen':           'formulario_web',
-        'notas':            '\n'.join(notas_parts),
-        'etapa':            'Nuevo Lead',
-        'creado_por':       session.get('usuario', ''),
-    }
-    ok, err = db.add_lead(lead_data)
-    if not ok:
-        return jsonify({'ok': False, 'error': err})
-    lead_id = err
-    lead_full = db.get_lead_by_id(lead_id) or {}
-    lead_full['id'] = lead_id
-    return jsonify({'ok': True, 'id': lead_id, 'lead': lead_full,
-                    'nombre': nombre, 'email': email_lead})
+        lead_data = {
+            'nombre':           nombre,
+            'apellido':         apellido,
+            'email':            email_lead,
+            'telefono':         telefono,
+            'ciudad':           ciudad,
+            'region':           region,
+            'tipo_proyecto':    tipo_proyecto,
+            'consumo_estimado': consumo_estimado,
+            'empresa':          '',
+            'origen':           'formulario_web',
+            'notas':            '\n'.join(notas_parts),
+            'etapa':            'Nuevo Lead',
+            'creado_por':       session.get('usuario', ''),
+        }
+        ok, err = db.add_lead(lead_data)
+        if not ok:
+            return jsonify({'ok': False, 'error': f'Error Firestore: {err}'})
+
+        return jsonify({
+            'ok': True,
+            'id': err,
+            'nombre': nombre,
+            'apellido': apellido,
+            'email': email_lead,
+            'telefono': telefono,
+            'tipo_proyecto': tipo_proyecto,
+            'consumo_estimado': consumo_estimado,
+        })
+
+    except Exception as exc:
+        import traceback
+        return jsonify({'ok': False, 'error': f'Error interno: {exc}', 'trace': traceback.format_exc()[-400:]})
 
 
 # ══════════════════════════════════════════════════════════════════════════════
