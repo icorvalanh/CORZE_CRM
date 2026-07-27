@@ -621,27 +621,64 @@ async function importarEML(input) {
   if (!file) return;
   input.value = '';
 
-  showToast('⏳ Leyendo archivo EML...', 'info');
+  showToast('⏳ Leyendo archivo EML...', 'info', 4000);
   const fd = new FormData();
   fd.append('archivo', file);
 
+  let d;
   try {
     const r = await fetch('/api/leads/importar-eml', { method:'POST', body: fd });
-    const d = await r.json();
-
-    if (!d.ok) {
-      showToast('❌ ' + (d.error || 'Error procesando EML'), 'error');
+    if (!r.ok) {
+      showToast(`❌ Error del servidor (${r.status})`, 'error');
       return;
     }
-    if (d.duplicado) {
-      showToast('⚠️ ' + d.msg + ' (lead ya existía)', 'warning');
-      setTimeout(() => location.reload(), 1500);
+    d = await r.json();
+  } catch(e) {
+    showToast('❌ Error de conexión subiendo EML', 'error');
+    return;
+  }
+
+  if (!d.ok) {
+    showToast('❌ ' + (d.error || 'Error procesando EML'), 'error');
+    return;
+  }
+
+  const lead = d.lead || null;
+
+  if (d.duplicado) {
+    showToast('⚠️ ' + d.msg + ' (lead ya existía) — resaltando en kanban', 'warning', 4000);
+    // Highlight existing card
+    const existing = document.querySelector(`.lead-card[data-id="${d.lead_id}"]`);
+    if (existing) {
+      existing.scrollIntoView({ behavior:'smooth', block:'center' });
+      existing.style.transition = 'box-shadow .3s';
+      existing.style.boxShadow = '0 0 0 3px #F5A623, 0 4px 20px rgba(245,166,35,.5)';
+      setTimeout(() => { existing.style.boxShadow = ''; }, 3000);
     } else {
-      showToast(`✅ Lead creado: ${d.nombre} ${d.email ? '· '+d.email : ''}`, 'success');
       setTimeout(() => location.reload(), 1200);
     }
-  } catch(e) {
-    showToast('❌ Error subiendo EML', 'error');
+  } else {
+    showToast(`✅ Lead creado: ${d.nombre}${d.email ? ' · '+d.email : ''}`, 'success', 4000);
+    if (lead) {
+      // Insert card at top of "Nuevo Lead" column without page reload
+      const col = document.getElementById('cards_Nuevo_Lead');
+      if (col) {
+        col.insertAdjacentHTML('afterbegin', buildCard(lead));
+        leadsData.unshift(lead);
+        recalcularContadores();
+        const newCard = col.querySelector('.lead-card');
+        if (newCard) {
+          newCard.style.transition = 'box-shadow .3s';
+          newCard.style.boxShadow = '0 0 0 3px #2ECC71, 0 4px 20px rgba(46,204,113,.5)';
+          newCard.scrollIntoView({ behavior:'smooth', block:'center' });
+          setTimeout(() => { newCard.style.boxShadow = ''; }, 3000);
+        }
+      } else {
+        location.reload();
+      }
+    } else {
+      location.reload();
+    }
   }
 }
 

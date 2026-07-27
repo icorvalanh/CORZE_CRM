@@ -3421,7 +3421,7 @@ def api_leads_importar_eml():
             ciudad     = a
         elif 'regi' in q:
             region     = a
-        elif 'pagas' in q or 'electricidad' in q or 'cuenta' in q:
+        elif 'pagas' in q or 'electricidad' in q or 'boleta' in q:
             consumo_estimado = a
         elif 'donde' in q or 'dónde' in q or 'evaluar' in q or 'soluci' in q:
             tipo_proyecto = ('Residencial'
@@ -3451,6 +3451,7 @@ def api_leads_importar_eml():
                 'ok': True, 'duplicado': True,
                 'msg': f'El email ya existe: {existing.get("nombre","")} {existing.get("apellido","")}'.strip(),
                 'lead_id': existing['id'],
+                'lead': existing,
             })
 
     notas_parts = []
@@ -3476,7 +3477,12 @@ def api_leads_importar_eml():
         'creado_por':       session.get('usuario', ''),
     }
     ok, err = db.add_lead(lead_data)
-    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err,
+    if not ok:
+        return jsonify({'ok': False, 'error': err})
+    lead_id = err
+    lead_full = db.get_lead_by_id(lead_id) or {}
+    lead_full['id'] = lead_id
+    return jsonify({'ok': True, 'id': lead_id, 'lead': lead_full,
                     'nombre': nombre, 'email': email_lead})
 
 
