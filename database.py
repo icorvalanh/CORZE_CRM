@@ -1248,6 +1248,15 @@ class FirebaseDB:
         except:
             return None
 
+    def get_lead_by_email(self, email_addr: str) -> dict:
+        try:
+            docs = [self._doc(d) for d in
+                    self.db.collection('leads').where('email', '==', email_addr.lower().strip()).stream()]
+            return docs[0] if docs else None
+        except Exception as e:
+            print(f'Error get_lead_by_email: {e}')
+            return None
+
     def update_lead(self, doc_id, data) -> tuple:
         try:
             data.pop('id', None)

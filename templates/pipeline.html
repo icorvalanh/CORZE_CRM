@@ -58,7 +58,11 @@
       {% endfor %}
     </select>
   </div>
-  <button class="btn btn-primary" onclick="abrirModalNuevoLead()">➕ Nuevo Lead</button>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" id="btnCheckEmail" onclick="revisarBandeja()" title="Revisar contacto@corze.cl ahora">📬 Revisar bandeja</button>
+    <button class="btn btn-secondary" onclick="abrirModalEmail()">📧 Importar email</button>
+    <button class="btn btn-primary" onclick="abrirModalNuevoLead()">➕ Nuevo Lead</button>
+  </div>
 </div>
 
 <!-- Kanban -->
@@ -202,6 +206,41 @@
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="cerrarModalLead()">Cancelar</button>
     <button class="btn btn-primary" onclick="guardarLead()">💾 Crear Lead</button>
+  </div>
+ </div>
+</div>
+
+<!-- Modal Importar Email -->
+<div class="modal-overlay" id="modalEmail" onclick="if(event.target===this)cerrarModalEmail()">
+ <div class="modal-box" style="max-width:580px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span>📧 Importar Email como Lead</span>
+    <button class="modal-close" onclick="cerrarModalEmail()">✕</button>
+  </div>
+  <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:11px;color:var(--gray2);background:var(--card2);padding:10px 14px;border-radius:8px;border-left:3px solid var(--blue)">
+      Pega o escribe el contenido del email. Si el remitente ya tiene un lead, el email se agrega a su historial.
+    </div>
+    <div class="form-group">
+      <label class="form-label">De (remitente) *</label>
+      <input class="form-input" id="eDe" placeholder='Juan Pérez &lt;juan@email.com&gt; o solo juan@email.com'>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Asunto</label>
+      <input class="form-input" id="eAsunto" placeholder="Consulta sobre energía solar">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cuerpo del mensaje</label>
+      <textarea class="form-input" id="eCuerpo" rows="6" placeholder="Contenido del email..."></textarea>
+    </div>
+    <div style="font-size:11px;color:var(--gray3)">
+      O pega el email completo aquí:
+      <textarea class="form-input" id="eRaw" rows="4" placeholder='From: Juan &lt;juan@email.com&gt;&#10;Subject: Consulta solar&#10;&#10;Hola, me interesa instalar paneles...' oninput="parsearEmailRaw(this.value)" style="margin-top:6px;font-family:monospace;font-size:11px"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="cerrarModalEmail()">Cancelar</button>
+    <button class="btn btn-primary" onclick="importarEmail()">📥 Crear Lead</button>
   </div>
  </div>
 </div>
@@ -440,6 +479,82 @@ async function eliminarLead(id, nombre) {
     recalcularContadores();
   } else {
     showToast(d.error || 'Error', 'error');
+  }
+}
+
+// ── Importar Email ────────────────────────────────────────────────────────────
+function abrirModalEmail() {
+  ['eDe','eAsunto','eCuerpo','eRaw'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modalEmail').classList.add('open');
+}
+
+function cerrarModalEmail() {
+  document.getElementById('modalEmail').classList.remove('open');
+}
+
+function parsearEmailRaw(raw) {
+  if (!raw.trim()) return;
+  const lines = raw.split('\n');
+  let from = '', subject = '', bodyStarted = false, bodyLines = [];
+  for (const line of lines) {
+    if (!bodyStarted) {
+      const lower = line.toLowerCase();
+      if (lower.startsWith('from:'))    from    = line.slice(5).trim();
+      else if (lower.startsWith('de:')) from    = line.slice(3).trim();
+      else if (lower.startsWith('subject:')) subject = line.slice(8).trim();
+      else if (lower.startsWith('asunto:'))  subject = line.slice(7).trim();
+      else if (line.trim() === '')      bodyStarted = true;
+    } else {
+      bodyLines.push(line);
+    }
+  }
+  if (from)    document.getElementById('eDe').value     = from;
+  if (subject) document.getElementById('eAsunto').value = subject;
+  if (bodyLines.length) document.getElementById('eCuerpo').value = bodyLines.join('\n').trim();
+}
+
+async function importarEmail() {
+  const remitente = document.getElementById('eDe').value.trim();
+  if (!remitente) { showToast('El campo "De" es requerido', 'error'); return; }
+  const btn = document.querySelector('#modalEmail .btn-primary');
+  btn.disabled = true; btn.textContent = 'Procesando...';
+  try {
+    const r = await fetch('/api/leads/importar-email', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        remitente,
+        asunto: document.getElementById('eAsunto').value.trim(),
+        cuerpo: document.getElementById('eCuerpo').value.trim(),
+      })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast(d.msg, 'success');
+      cerrarModalEmail();
+      setTimeout(() => location.reload(), 900);
+    } else {
+      showToast(d.error || 'Error', 'error');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '📥 Crear Lead';
+  }
+}
+
+// ── Revisar bandeja ───────────────────────────────────────────────────────────
+async function revisarBandeja() {
+  const btn = document.getElementById('btnCheckEmail');
+  btn.disabled = true; btn.textContent = '⏳ Revisando...';
+  try {
+    const r = await fetch('/api/leads/check-emails', { method:'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      showToast(d.msg, d.procesados > 0 ? 'success' : 'info');
+      if (d.procesados > 0) setTimeout(() => location.reload(), 1000);
+    } else {
+      showToast(d.error || 'Error conectando al correo', 'error');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '📬 Revisar bandeja';
   }
 }
 </script>

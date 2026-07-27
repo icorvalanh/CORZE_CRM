@@ -4,7 +4,10 @@ from flask import (Flask, render_template, request, redirect,
                    url_for, session, jsonify, flash, Response)
 from flask.json.provider import DefaultJSONProvider
 from functools import wraps
-import os, json
+import os, json, threading, imaplib
+import email as _email_lib
+from email.header import decode_header as _email_decode_header
+from email.utils import parseaddr as _parseaddr
 from datetime import datetime, date
 
 from config import USERS, APP_NAME, APP_VERSION
@@ -2606,10 +2609,141 @@ def api_productos_import_excel():
 #  PRESUPUESTOS
 # ══════════════════════════════════════════════════════════════════════════════
 
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USER = os.environ.get('EMAIL_USER', 'contacto@corze.cl')
-EMAIL_PASS = os.environ.get('EMAIL_PASS', '')
+EMAIL_HOST      = os.environ.get('EMAIL_HOST', 'mail.corze.cl')
+EMAIL_PORT      = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USER      = os.environ.get('EMAIL_USER', 'contacto@corze.cl')
+EMAIL_PASS      = os.environ.get('EMAIL_PASS', '')
+EMAIL_IMAP_HOST = os.environ.get('EMAIL_IMAP_HOST', 'mail.corze.cl')
+EMAIL_IMAP_PORT = int(os.environ.get('EMAIL_IMAP_PORT', '993'))
+
+# ── IMAP → Leads ─────────────────────────────────────────────────────────────
+
+def _imap_decode(value):
+    if not value:
+        return ''
+    parts = _email_decode_header(value)
+    result = []
+    for b, enc in parts:
+        if isinstance(b, bytes):
+            result.append(b.decode(enc or 'utf-8', errors='ignore'))
+        else:
+            result.append(b)
+    return ' '.join(result)
+
+def _imap_get_body(msg):
+    if msg.is_multipart():
+        for part in msg.walk():
+            if (part.get_content_type() == 'text/plain' and
+                    'attachment' not in str(part.get('Content-Disposition', ''))):
+                payload = part.get_payload(decode=True)
+                if payload:
+                    return payload.decode(part.get_content_charset() or 'utf-8', errors='ignore')
+    else:
+        payload = msg.get_payload(decode=True)
+        if payload:
+            return payload.decode(msg.get_content_charset() or 'utf-8', errors='ignore')
+    return ''
+
+def procesar_email_como_lead(asunto, remitente, cuerpo, usuario='Sistema'):
+    """Convierte un email en lead o agrega al historial si ya existe. Retorna (ok, msg, lead_id)."""
+    nombre_raw, email_addr = _parseaddr(remitente)
+    email_addr = (email_addr or remitente).strip().lower()
+    nombre_raw = nombre_raw.strip() or email_addr.split('@')[0]
+    partes   = nombre_raw.split()
+    nombre   = partes[0] if partes else nombre_raw
+    apellido = ' '.join(partes[1:]) if len(partes) > 1 else ''
+
+    existing = db.get_lead_by_email(email_addr) if email_addr else None
+    if existing:
+        db.add_historial_lead(existing['id'], 'email_recibido', usuario,
+                              f'Asunto: {asunto[:120]}')
+        return True, f'Email agregado al historial de {nombre}', existing['id']
+
+    notas = f'Asunto: {asunto}\n\n{cuerpo[:800]}' if cuerpo else f'Asunto: {asunto}'
+    lead_data = {
+        'nombre': nombre, 'apellido': apellido,
+        'email': email_addr, 'telefono': '', 'empresa': '',
+        'origen': 'Email', 'etapa': 'Nuevo Lead',
+        'tipo_proyecto': '', 'asignado_a': '',
+        'consumo_kwh': '', 'region': '', 'notas': notas,
+    }
+    ok, lead_id = db.add_lead(lead_data)
+    if ok:
+        db.add_historial_lead(lead_id, 'email_recibido', usuario,
+                              f'Email detectado: {asunto[:120]}')
+    return ok, ('Lead creado desde email' if ok else 'Error creando lead'), (lead_id if ok else None)
+
+def _imap_check_once():
+    """Conecta por IMAP SSL y procesa emails no leídos. Retorna cantidad procesada."""
+    if not EMAIL_PASS:
+        return 0
+    processed = 0
+    try:
+        mail = imaplib.IMAP4_SSL(EMAIL_IMAP_HOST, EMAIL_IMAP_PORT)
+        mail.login(EMAIL_USER, EMAIL_PASS)
+        mail.select('INBOX')
+        _, msgnums = mail.search(None, 'UNSEEN')
+        ids = msgnums[0].split() if msgnums[0] else []
+        for num in ids:
+            try:
+                _, data = mail.fetch(num, '(RFC822)')
+                raw = data[0][1]
+                msg      = _email_lib.message_from_bytes(raw)
+                asunto   = _imap_decode(msg.get('Subject', 'Sin asunto'))
+                remit    = _imap_decode(msg.get('From', ''))
+                cuerpo   = _imap_get_body(msg)
+                ok, _, _ = procesar_email_como_lead(asunto, remit, cuerpo)
+                if ok:
+                    mail.store(num, '+FLAGS', '\\Seen')
+                    processed += 1
+            except Exception as e:
+                print(f'[IMAP] Error procesando email: {e}')
+        mail.close()
+        mail.logout()
+    except Exception as e:
+        print(f'[IMAP] Error de conexión: {e}')
+    return processed
+
+def _imap_worker():
+    import time
+    print('[IMAP] Poller iniciado — revisando cada 5 min')
+    while True:
+        try:
+            n = _imap_check_once()
+            if n:
+                print(f'[IMAP] {n} emails procesados como leads')
+        except Exception as e:
+            print(f'[IMAP] Worker error: {e}')
+        time.sleep(300)
+
+# Iniciar poller en background (seguro con gunicorn --workers 1)
+_imap_thread = threading.Thread(target=_imap_worker, daemon=True)
+_imap_thread.start()
+
+# API: revisar bandeja ahora (manual trigger)
+@app.route('/api/leads/check-emails', methods=['POST'])
+@login_required
+def api_check_emails():
+    try:
+        n = _imap_check_once()
+        return jsonify({'ok': True, 'procesados': n,
+                        'msg': f'{n} email(s) convertidos en leads' if n else 'No hay emails nuevos'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+# API: importar email manualmente
+@app.route('/api/leads/importar-email', methods=['POST'])
+@login_required
+def api_importar_email():
+    data     = request.get_json() or {}
+    remit    = data.get('remitente', '').strip()
+    asunto   = data.get('asunto', '').strip()
+    cuerpo   = data.get('cuerpo', '').strip()
+    usuario  = session.get('usuario', 'Manual')
+    if not remit:
+        return jsonify({'ok': False, 'error': 'El campo "De" es requerido'})
+    ok, msg, lead_id = procesar_email_como_lead(asunto, remit, cuerpo, usuario)
+    return jsonify({'ok': ok, 'msg': msg, 'lead_id': lead_id})
 
 @app.route('/admin/presupuestos')
 @login_required
