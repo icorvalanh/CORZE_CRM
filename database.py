@@ -754,6 +754,100 @@ class FirebaseDB:
             print(f'Error delete_finanza: {e}')
             return False
 
+    # ── VENTAS CORZE SOLAR ───────────────────────────────────────────────────
+    def _next_venta_id(self) -> str:
+        try:
+            docs = list(self.db.collection('ventas_corze').stream())
+            num = len(docs) + 1
+            return f"VTA-{num:03d}"
+        except Exception:
+            return f"VTA-{datetime.now().strftime('%H%M%S')}"
+
+    def get_all_ventas_corze(self) -> List[dict]:
+        try:
+            docs = [self._doc(d) for d in
+                    self.db.collection('ventas_corze')
+                        .order_by('fecha_venta', direction=firestore.Query.DESCENDING)
+                        .stream()]
+            return docs
+        except Exception as e:
+            print(f'Error get_all_ventas_corze: {e}')
+            return []
+
+    def add_venta_corze(self, data: dict) -> tuple:
+        try:
+            data.setdefault('id_venta', self._next_venta_id())
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            ref = self.db.collection('ventas_corze').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def update_venta_corze(self, doc_id: str, data: dict) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('ventas_corze').document(doc_id).update(data)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
+    def delete_venta_corze(self, doc_id: str) -> bool:
+        try:
+            self.db.collection('ventas_corze').document(doc_id).delete()
+            return True
+        except Exception as e:
+            print(f'Error delete_venta_corze: {e}')
+            return False
+
+    # ── GASTOS CORZE SOLAR ───────────────────────────────────────────────────
+    def _next_gasto_id(self) -> str:
+        try:
+            docs = list(self.db.collection('gastos_corze').stream())
+            num = len(docs) + 1
+            return f"GTO-{num:03d}"
+        except Exception:
+            return f"GTO-{datetime.now().strftime('%H%M%S')}"
+
+    def get_all_gastos_corze(self) -> List[dict]:
+        try:
+            docs = [self._doc(d) for d in
+                    self.db.collection('gastos_corze')
+                        .order_by('fecha', direction=firestore.Query.DESCENDING)
+                        .stream()]
+            return docs
+        except Exception as e:
+            print(f'Error get_all_gastos_corze: {e}')
+            return []
+
+    def add_gasto_corze(self, data: dict) -> tuple:
+        try:
+            data.setdefault('id_gasto', self._next_gasto_id())
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            ref = self.db.collection('gastos_corze').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def update_gasto_corze(self, doc_id: str, data: dict) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('gastos_corze').document(doc_id).update(data)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
+    def delete_gasto_corze(self, doc_id: str) -> bool:
+        try:
+            self.db.collection('gastos_corze').document(doc_id).delete()
+            return True
+        except Exception as e:
+            print(f'Error delete_gasto_corze: {e}')
+            return False
+
     # ── TAREAS ───────────────────────────────────────────────────────────────
     def get_all_tareas(self, estado: str = '', asignado: str = '') -> List[dict]:
         try:
