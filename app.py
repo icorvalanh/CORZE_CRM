@@ -2843,6 +2843,215 @@ def api_presupuestos_enviar_email(doc_id):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  SOLAR — BOLETA + COTIZADOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+_HSP = {
+    'Arica y Parinacota':6.5,'Tarapacá':6.3,'Antofagasta':6.2,'Atacama':6.1,
+    'Coquimbo':5.6,'Valparaíso':5.1,'Metropolitana de Santiago':5.0,
+    "O'Higgins":4.8,'Maule':4.6,'Ñuble':4.4,'Biobío':4.2,
+    'La Araucanía':3.9,'Los Ríos':3.6,'Los Lagos':3.3,'Aysén':2.9,'Magallanes':2.5,
+}
+_FACTOR_ESTACIONAL = {
+    'Ene':1.2857,'Feb':1.2078,'Mar':1.1006,'Abr':0.9253,'May':0.7597,'Jun':0.6331,
+    'Jul':0.6623,'Ago':0.7987,'Sep':0.9545,'Oct':1.1104,'Nov':1.2468,'Dic':1.3149,
+}
+_FACTOR_ORIENT = {
+    'Norte':1.0,'Nororiente':0.95,'Norponiente':0.95,
+    'Oriente':0.85,'Poniente':0.85,'Suroriente':0.5,'Surponiente':0.5,
+    'Sur':0.4,'Horizontal':0.9,
+}
+_COMUNAS_REGION = {
+    'LAS CONDES':'Metropolitana de Santiago','PROVIDENCIA':'Metropolitana de Santiago',
+    'SANTIAGO':'Metropolitana de Santiago','VITACURA':'Metropolitana de Santiago',
+    'ÑUÑOA':'Metropolitana de Santiago','LA REINA':'Metropolitana de Santiago',
+    'MAIPÚ':'Metropolitana de Santiago','PUENTE ALTO':'Metropolitana de Santiago',
+    'PEÑALOLÉN':'Metropolitana de Santiago','LA FLORIDA':'Metropolitana de Santiago',
+    'SAN MIGUEL':'Metropolitana de Santiago','MACUL':'Metropolitana de Santiago',
+    'HUECHURABA':'Metropolitana de Santiago','RECOLETA':'Metropolitana de Santiago',
+    'COLINA':'Metropolitana de Santiago','BUIN':'Metropolitana de Santiago',
+    'VALPARAÍSO':'Valparaíso','VIÑA DEL MAR':'Valparaíso','QUILPUÉ':'Valparaíso',
+    'SAN ANTONIO':'Valparaíso','QUILLOTA':'Valparaíso',
+    'CONCEPCIÓN':'Biobío','TALCAHUANO':'Biobío','CHILLÁN':'Ñuble',
+    'TEMUCO':'La Araucanía','OSORNO':'Los Lagos','PUERTO MONTT':'Los Lagos',
+    'IQUIQUE':'Tarapacá','ANTOFAGASTA':'Antofagasta','CALAMA':'Antofagasta',
+    'LA SERENA':'Coquimbo','COQUIMBO':'Coquimbo','RANCAGUA':"O'Higgins",
+    'TALCA':'Maule','CURICÓ':'Maule','VALDIVIA':'Los Ríos','ARICA':'Arica y Parinacota',
+}
+
+@app.route('/api/boleta/leer', methods=['POST'])
+@login_required
+def api_leer_boleta():
+    import re, io
+    if 'archivo' not in request.files:
+        return jsonify({'ok': False, 'error': 'No se recibió archivo'})
+    archivo = request.files['archivo']
+    if not archivo.filename.lower().endswith('.pdf'):
+        return jsonify({'ok': False, 'error': 'El archivo debe ser PDF'})
+    try:
+        from pdfminer.high_level import extract_text
+        texto = extract_text(io.BytesIO(archivo.read()))
+        lineas = [l.strip() for l in texto.split('\n')
+                  if l.strip() and not l.strip().startswith('(cid:')]
+        txt = '\n'.join(lineas)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'Error leyendo PDF: {e}'})
+
+    datos = {
+        'nombre':'','apellido':'','rut':'','direccion':'','comuna':'',
+        'region':'','distribuidor':'','tarifa_tipo':'',
+        'consumo_actual_kwh':0,'consumos_mensuales':{},'tarifa_kwh':230,'total_boleta':0,
+    }
+
+    # Nombre cliente
+    m = re.search(r'Sr\.\s*\(a\)\s+([A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ\s]+?)[\s]*\.?\s*\n', txt, re.I)
+    if m:
+        full = m.group(1).strip().title()
+        p = full.split()
+        datos['nombre']   = p[0] if p else ''
+        datos['apellido'] = ' '.join(p[1:]) if len(p)>1 else ''
+
+    # Dirección
+    m = re.search(r'Direcci[oó]n suministro:\s*(.+)', txt, re.I)
+    if m:
+        addr = m.group(1).strip()
+        datos['direccion'] = addr.title()
+        parts = addr.upper().rsplit('-', 1)
+        if len(parts) == 2:
+            comuna = parts[1].strip()
+            datos['comuna'] = comuna.title()
+            datos['region'] = _COMUNAS_REGION.get(comuna, '')
+
+    # RUT (del cliente si aparece explícito)
+    m = re.search(r'R\.?U\.?T\.?\s*cliente[:\s]+(\d[\d\.]+\-[\dkK])', txt, re.I)
+    if m: datos['rut'] = m.group(1)
+
+    # Tarifa tipo
+    m = re.search(r'Tipo de tarifa contratada:\s*(\S+)', txt, re.I)
+    if m: datos['tarifa_tipo'] = m.group(1)
+
+    # Consumo actual del periodo
+    m = re.search(r'Electricidad Consumida\s*\((\d+)\s*kWh\)', txt, re.I)
+    if not m:
+        m = re.search(r'Consumo total del periodo\s*=\s*(\d+)\s*kWh', txt, re.I)
+    if m: datos['consumo_actual_kwh'] = int(m.group(1))
+
+    # Total a pagar
+    m = re.search(r'Total a pagar[:\s]*\$\s*([\d\.]+)', txt, re.I)
+    if m: datos['total_boleta'] = int(m.group(1).replace('.',''))
+
+    # Costo electricidad (para calcular tarifa)
+    m = re.search(r'Electricidad Consumida[^\n]*\n[^\$]*\$\s*([\d\.]+)', txt, re.I)
+    if m and datos['consumo_actual_kwh']:
+        costo_elec = int(m.group(1).replace('.',''))
+        datos['tarifa_kwh'] = round(costo_elec / datos['consumo_actual_kwh'])
+
+    # Distribuidora
+    for dist in ['Enel','CGE','Chilquinta','Frontel','Saesa','Edelaysen','Edelmag']:
+        if dist.lower() in txt.lower():
+            datos['distribuidor'] = dist; break
+
+    # Consumos mensuales del gráfico
+    meses_map = {'ENE':'Ene','FEB':'Feb','MAR':'Mar','ABR':'Abr','MAY':'May','JUN':'Jun',
+                 'JUL':'Jul','AGO':'Ago','SEP':'Sep','OCT':'Oct','NOV':'Nov','DIC':'Dic'}
+    pat_meses = r'\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\b'
+    mes_matches = re.findall(pat_meses, txt, re.I)
+    # Find all kWh-range numbers after removing meter numbers (>9999)
+    num_matches = re.findall(r'\b([1-9]\d{1,3})\b', txt)
+    kwh_vals = [int(v) for v in num_matches if 50 <= int(v) <= 3000]
+
+    if mes_matches and kwh_vals:
+        # Deduplicate to last 12 unique months
+        seen, orden = {}, []
+        for mes in mes_matches:
+            k = mes.upper()
+            if k not in seen:
+                seen[k] = True
+                orden.append(k)
+        orden = orden[-12:]  # last 12
+        for i, mes_key in enumerate(orden):
+            if i < len(kwh_vals):
+                mes_norm = meses_map.get(mes_key, mes_key)
+                datos['consumos_mensuales'][mes_norm] = kwh_vals[i]
+
+    datos['ok'] = True
+    return jsonify(datos)
+
+
+@app.route('/api/cotizacion/calcular', methods=['POST'])
+@login_required
+def api_calcular_cotizacion():
+    d = request.get_json() or {}
+    potencia_kwp   = float(d.get('potencia_kwp', 0))
+    region         = d.get('region', 'Metropolitana de Santiago')
+    orientacion    = d.get('orientacion', 'Norte')
+    pr             = float(d.get('pr', 80)) / 100
+    tarifa_kwh     = float(d.get('tarifa_kwh', 230))
+    precio_excedente = float(d.get('precio_excedente', 110))
+    incremento     = float(d.get('incremento_anual', 5)) / 100
+    degradacion    = float(d.get('degradacion_anual', 0.5)) / 100
+    total_proyecto = float(d.get('total_proyecto', 0))
+    consumos       = d.get('consumos', {})  # {Ene:947, Feb:829, ...}
+
+    if potencia_kwp <= 0:
+        return jsonify({'ok': False, 'error': 'Potencia del sistema requerida'})
+
+    hsp           = _HSP.get(region, 5.0)
+    factor_orient = _FACTOR_ORIENT.get(orientacion, 1.0)
+    MESES         = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+    # Generación anual: P_kWp × HSP × 30.4 días × 12 meses × PR × factor_orient
+    gen_anual = potencia_kwp * hsp * 30.4 * 12 * pr * factor_orient
+    sum_f     = sum(_FACTOR_ESTACIONAL.values())  # ≈ 12
+
+    gen_por_mes = []
+    consumo_anual = 0
+    for mes in MESES:
+        factor  = _FACTOR_ESTACIONAL.get(mes, 1.0)
+        gen_mes = gen_anual * factor / sum_f
+        c_mes   = float(consumos.get(mes, 0))
+        consumo_anual += c_mes
+        gen_por_mes.append({'mes': mes, 'consumo': round(c_mes, 1), 'generacion': round(gen_mes, 1)})
+
+    consumo_mensual_prom = consumo_anual / 12 if consumo_anual > 0 else 0
+    cobertura_pct        = gen_anual / consumo_anual * 100 if consumo_anual > 0 else 0
+
+    # Proyección 25 años
+    proyeccion, ahorro_acum, neto_acum, payback = [], 0, -total_proyecto, None
+    for anio in range(1, 26):
+        gen_a  = gen_anual * ((1 - degradacion) ** (anio - 1))
+        tar_a  = tarifa_kwh * ((1 + incremento) ** (anio - 1))
+        ah_a   = gen_a * tar_a
+        ahorro_acum += ah_a
+        neto_acum   += ah_a
+        if payback is None and neto_acum >= 0 and proyeccion:
+            frac   = -(neto_acum - ah_a) / ah_a
+            payback = anio - 1 + frac
+        proyeccion.append({'anio': anio, 'gen': round(gen_a,1),
+                           'tarifa': round(tar_a,1), 'ahorro': round(ah_a,0),
+                           'acumulado': round(ahorro_acum,0), 'neto': round(neto_acum,0)})
+
+    co2_ton = gen_anual * 0.35 / 1000
+
+    return jsonify({
+        'ok': True,
+        'gen_mensual_kwh':     round(gen_anual / 12, 1),
+        'gen_anual_kwh':       round(gen_anual, 1),
+        'consumo_mensual_prom':round(consumo_mensual_prom, 1),
+        'consumo_anual':       round(consumo_anual, 1),
+        'cobertura_pct':       round(cobertura_pct, 1),
+        'payback_anios':       round(payback, 1) if payback is not None else None,
+        'ahorro_anio1':        round(proyeccion[0]['ahorro'], 0) if proyeccion else 0,
+        'ahorro_10':           round(proyeccion[9]['acumulado'], 0) if len(proyeccion) >= 10 else 0,
+        'ahorro_25':           round(proyeccion[24]['acumulado'], 0) if len(proyeccion) >= 25 else 0,
+        'roi_25':              round(proyeccion[24]['acumulado'] / total_proyecto * 100, 1) if total_proyecto > 0 and len(proyeccion) >= 25 else 0,
+        'co2_anual_ton':       round(co2_ton, 2),
+        'hsp':                 hsp,
+        'gen_por_mes':         gen_por_mes,
+        'proyeccion':          proyeccion,
+    })
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  CRM PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 

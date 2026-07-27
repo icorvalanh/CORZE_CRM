@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-.builder-grid { display:grid; grid-template-columns:1fr 360px; gap:16px; margin-top:8px; }
+.builder-grid { display:grid; grid-template-columns:1fr 380px; gap:16px; margin-top:8px; }
 .builder-card { background:var(--card); border:1px solid var(--border1); border-radius:12px; padding:20px; }
 .section-title { font-size:13px; font-weight:700; color:var(--blue); margin-bottom:14px; border-bottom:1px solid var(--border1); padding-bottom:8px; }
 .item-row { display:grid; grid-template-columns:3fr 80px 110px 70px 100px 36px; gap:6px; align-items:center; margin-bottom:6px; }
@@ -14,6 +14,19 @@
 .autocomplete-item { padding:8px 12px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border1); }
 .autocomplete-item:hover { background:var(--card3); }
 .estado-badge { display:inline-block; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700; }
+.mes-input-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.mes-input-wrap label { font-size:9px; color:var(--gray2); font-weight:600; text-transform:uppercase; }
+.mes-input-wrap input { width:100%; background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:5px 6px; color:var(--white); font-size:12px; text-align:center; }
+.kpi-solar { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border1); font-size:12px; }
+.kpi-solar:last-child { border-bottom:none; }
+.kpi-solar .val { font-weight:700; color:var(--blue); }
+.kpi-solar .val.green { color:#2ECC71; }
+.kpi-solar .val.gold { color:#F5A623; }
+.chart-bar-wrap { margin-top:12px; }
+.chart-bar-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:10px; }
+.chart-bar-row .mes-lbl { width:28px; color:var(--gray2); }
+.chart-bar-row .bar { height:12px; border-radius:3px; min-width:2px; transition:width .3s; }
+.boleta-banner { display:flex; align-items:center; gap:10px; background:var(--card2); border:1px dashed var(--border2); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
 </style>
 {% endblock %}
 {% block content %}
@@ -48,6 +61,18 @@
     <!-- CLIENTE -->
     <div class="builder-card" style="margin-bottom:12px">
       <div class="section-title">👤 Datos del Cliente</div>
+      <!-- Upload boleta banner -->
+      <div class="boleta-banner">
+        <span style="font-size:20px">📄</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:var(--white)">Subir boleta de luz</div>
+          <div style="font-size:11px;color:var(--gray2)" id="boletaStatus">Acepta PDF — detecta consumos y datos del cliente automáticamente</div>
+        </div>
+        <label class="btn btn-secondary" style="cursor:pointer;font-size:12px;white-space:nowrap">
+          📎 Seleccionar PDF
+          <input type="file" id="boletaInput" accept=".pdf" style="display:none" onchange="leerBoleta(this)">
+        </label>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="form-group">
           <label class="form-label">Nombre *</label>
@@ -71,7 +96,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Comuna</label>
-          <input class="form-input" id="fComuna" placeholder="Santiago">
+          <input class="form-input" id="fComuna" placeholder="Santiago" oninput="recalcularSolar()">
         </div>
         <div class="form-group" style="grid-column:1/-1">
           <label class="form-label">Dirección</label>
@@ -80,18 +105,105 @@
       </div>
     </div>
 
+    <!-- ANÁLISIS SOLAR -->
+    <div class="builder-card" style="margin-bottom:12px">
+      <div class="section-title" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between" onclick="toggleSolar()">
+        <span>☀️ Análisis Solar — Consumo y Generación</span>
+        <span id="solarArrow" style="font-size:11px;color:var(--gray2)">▼</span>
+      </div>
+      <div id="solarBody">
+
+        <!-- Consumo mensual -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:var(--gray2);margin-bottom:8px;font-weight:600">CONSUMO ELÉCTRICO MENSUAL (kWh) — rellenado desde la boleta</div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+            {% for mes in ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'] %}
+            <div class="mes-input-wrap">
+              <label>{{ mes }}</label>
+              <input type="number" id="cons_{{ mes }}" min="0" placeholder="0" oninput="recalcularSolar()">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Parámetros técnicos -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+          <div class="form-group">
+            <label class="form-label">Región (HSP)</label>
+            <select class="form-input" id="sRegion" onchange="recalcularSolar()">
+              <option value="Metropolitana de Santiago">Metropolitana (5.0)</option>
+              <option value="Valparaíso">Valparaíso (5.1)</option>
+              <option value="Coquimbo">Coquimbo (5.6)</option>
+              <option value="Atacama">Atacama (6.1)</option>
+              <option value="Antofagasta">Antofagasta (6.2)</option>
+              <option value="Tarapacá">Tarapacá (6.3)</option>
+              <option value="Arica y Parinacota">Arica (6.5)</option>
+              <option value="O'Higgins">O'Higgins (4.8)</option>
+              <option value="Maule">Maule (4.6)</option>
+              <option value="Ñuble">Ñuble (4.4)</option>
+              <option value="Biobío">Biobío (4.2)</option>
+              <option value="La Araucanía">Araucanía (3.9)</option>
+              <option value="Los Ríos">Los Ríos (3.6)</option>
+              <option value="Los Lagos">Los Lagos (3.3)</option>
+              <option value="Aysén">Aysén (2.9)</option>
+              <option value="Magallanes">Magallanes (2.5)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Orientación</label>
+            <select class="form-input" id="sOrientacion" onchange="recalcularSolar()">
+              <option value="Norte">Norte (100%)</option>
+              <option value="Nororiente">Nororiente (95%)</option>
+              <option value="Norponiente" selected>Norponiente (95%)</option>
+              <option value="Oriente">Oriente (85%)</option>
+              <option value="Poniente">Poniente (85%)</option>
+              <option value="Horizontal">Horizontal (90%)</option>
+              <option value="Suroriente">Suroriente (50%)</option>
+              <option value="Surponiente">Surponiente (50%)</option>
+              <option value="Sur">Sur (40%)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Potencia sistema (kWp)</label>
+            <input class="form-input" type="number" id="sPotencia" step="0.01" placeholder="Auto desde ítems" oninput="recalcularSolar()">
+            <div id="potenciaAuto" style="font-size:10px;color:var(--gray3);margin-top:3px"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tarifa eléctrica ($/kWh)</label>
+            <input class="form-input" type="number" id="sTarifa" value="230" oninput="recalcularSolar()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Precio excedente ($/kWh)</label>
+            <input class="form-input" type="number" id="sExcedente" value="110" oninput="recalcularSolar()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Performance Ratio (%)</label>
+            <input class="form-input" type="number" id="sPR" value="80" min="50" max="100" oninput="recalcularSolar()">
+          </div>
+        </div>
+
+        <!-- Gráfico consumo vs generación -->
+        <div id="chartSolar" style="display:none">
+          <div style="font-size:11px;color:var(--gray2);font-weight:600;margin-bottom:6px">CONSUMO vs GENERACIÓN ESTIMADA</div>
+          <div id="chartBarras"></div>
+          <div style="display:flex;gap:16px;margin-top:6px;font-size:10px">
+            <span style="color:#F5A623">■ Consumo</span>
+            <span style="color:#2ECC71">■ Generación</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ITEMS -->
     <div class="builder-card" style="margin-bottom:12px">
       <div class="section-title">📦 Ítems del Presupuesto</div>
-
       <div class="autocomplete-wrap" style="margin-bottom:12px">
         <input class="form-input" id="productoSearch"
                placeholder="🔍 Buscar producto por nombre o código..."
                oninput="buscarProducto(this.value)" autocomplete="off">
         <div id="autocompleteList" class="autocomplete-list" style="display:none"></div>
       </div>
-
-      <!-- Header de ítems -->
       <div style="display:grid;grid-template-columns:3fr 80px 110px 70px 100px 36px;gap:6px;margin-bottom:4px">
         <span style="font-size:10px;color:var(--gray2);font-weight:600">PRODUCTO</span>
         <span style="font-size:10px;color:var(--gray2);font-weight:600">CANT.</span>
@@ -100,19 +212,17 @@
         <span style="font-size:10px;color:var(--gray2);font-weight:600;text-align:right">SUBTOTAL</span>
         <span></span>
       </div>
-
       <div id="itemsContainer"></div>
-
       <div id="emptyItems" style="text-align:center;color:var(--gray3);padding:24px;font-size:12px">
         Busca y selecciona productos arriba para agregarlos
       </div>
     </div>
 
-    <!-- NOTAS Y CONDICIONES -->
+    <!-- NOTAS -->
     <div class="builder-card">
       <div class="section-title">📝 Notas y Condiciones</div>
       <div class="form-group">
-        <label class="form-label">Notas para el cliente</label>
+        <label class="form-label">Mensaje para el cliente</label>
         <textarea class="form-input" id="fNotas" rows="3" placeholder="Observaciones que verá el cliente..."></textarea>
       </div>
       <div class="form-group">
@@ -135,7 +245,6 @@
         <span style="color:var(--gray1)">Subtotal bruto</span>
         <span id="tSubtotalBruto" style="color:var(--white)">$0</span>
       </div>
-
       <div class="total-row" style="align-items:center">
         <span style="color:var(--gray1)">Descuento general</span>
         <div style="display:flex;align-items:center;gap:6px">
@@ -144,24 +253,20 @@
           <span style="color:var(--gray2);font-size:11px">%</span>
         </div>
       </div>
-
       <div class="total-row">
         <span style="color:var(--red)">− Monto descuento</span>
         <span id="tMontoDescuento" style="color:var(--red)">$0</span>
       </div>
-
       <div class="total-row">
         <span style="color:var(--gray1)">Subtotal neto</span>
         <span id="tSubtotalNeto" style="color:var(--white)">$0</span>
       </div>
-
       <div class="total-row" style="align-items:center">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--gray1)">
           <input type="checkbox" id="fIva" onchange="recalcular()"> IVA (19%)
         </label>
         <span id="tIva" style="color:var(--gray2)">$0</span>
       </div>
-
       <div class="total-row final">
         <span>TOTAL</span>
         <span id="tTotal">$0</span>
@@ -193,6 +298,49 @@
       </div>
     </div>
 
+    <!-- KPIs SOLARES -->
+    <div class="builder-card" id="solarKpisCard" style="display:none">
+      <div class="section-title">⚡ Retorno Solar</div>
+      <div id="solarKpisBody">
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">Potencia del sistema</span>
+          <span class="val" id="kPotencia">—</span>
+        </div>
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">Generación anual</span>
+          <span class="val" id="kGenAnual">—</span>
+        </div>
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">Cobertura consumo</span>
+          <span class="val gold" id="kCobertura">—</span>
+        </div>
+        <div class="kpi-solar" style="background:var(--card2);border-radius:8px;padding:10px;margin-top:8px;border:none">
+          <span style="font-size:13px;font-weight:700;color:var(--white)">Payback</span>
+          <span class="val green" id="kPayback" style="font-size:18px">—</span>
+        </div>
+        <div class="kpi-solar" style="margin-top:4px">
+          <span style="color:var(--gray1)">Ahorro año 1</span>
+          <span class="val green" id="kAhorro1">—</span>
+        </div>
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">Ahorro acumulado 10 años</span>
+          <span class="val green" id="kAhorro10">—</span>
+        </div>
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">Ahorro acumulado 25 años</span>
+          <span class="val green" id="kAhorro25">—</span>
+        </div>
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">ROI a 25 años</span>
+          <span class="val gold" id="kRoi">—</span>
+        </div>
+        <div class="kpi-solar">
+          <span style="color:var(--gray1)">CO₂ evitado</span>
+          <span class="val" id="kCo2" style="color:#1ABC9C">—</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -202,27 +350,31 @@
 const PRESUPUESTO_ID = '{{ presupuesto.id if presupuesto else "" }}';
 let items = [];
 let productos = [];
+let solarVisible = true;
+let calcSolarTimeout = null;
 
-const fmt = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
+const fmt  = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
+const fmtK = n => { n = Math.round(n||0); if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString('es-CL'); };
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 // ── Cargar presupuesto existente ──────────────────────────────────────────
 {% if presupuesto %}
 const pData = {{ presupuesto|tojson }};
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('fNombreCliente').value  = pData.nombre_cliente  || '';
-  document.getElementById('fApellidoCliente').value= pData.apellido_cliente|| '';
-  document.getElementById('fEmail').value          = pData.email_cliente   || '';
-  document.getElementById('fTelefono').value       = pData.telefono_cliente|| '';
-  document.getElementById('fRut').value            = pData.rut_cliente     || '';
-  document.getElementById('fComuna').value         = pData.comuna_cliente  || '';
-  document.getElementById('fDireccion').value      = pData.direccion_cliente|| '';
-  document.getElementById('fNotas').value          = pData.notas           || '';
-  document.getElementById('fCondiciones').value    = pData.condiciones     || '';
-  document.getElementById('fDescuentoGral').value  = pData.descuento_general_pct || 0;
-  document.getElementById('fIva').checked          = !!pData.incluye_iva;
-  document.getElementById('fTrabajador').value     = pData.trabajador_asignado || '';
-  document.getElementById('fValidez').value        = pData.validez_dias    || 10;
-  document.getElementById('fEstado').value         = pData.estado          || 'borrador';
+  document.getElementById('fNombreCliente').value   = pData.nombre_cliente   || '';
+  document.getElementById('fApellidoCliente').value = pData.apellido_cliente  || '';
+  document.getElementById('fEmail').value           = pData.email_cliente     || '';
+  document.getElementById('fTelefono').value        = pData.telefono_cliente  || '';
+  document.getElementById('fRut').value             = pData.rut_cliente       || '';
+  document.getElementById('fComuna').value          = pData.comuna_cliente    || '';
+  document.getElementById('fDireccion').value       = pData.direccion_cliente || '';
+  document.getElementById('fNotas').value           = pData.notas             || '';
+  document.getElementById('fCondiciones').value     = pData.condiciones       || '';
+  document.getElementById('fDescuentoGral').value   = pData.descuento_general_pct || 0;
+  document.getElementById('fIva').checked           = !!pData.incluye_iva;
+  document.getElementById('fTrabajador').value      = pData.trabajador_asignado   || '';
+  document.getElementById('fValidez').value         = pData.validez_dias      || 10;
+  document.getElementById('fEstado').value          = pData.estado            || 'borrador';
 
   const eb = document.getElementById('estadoBadge');
   if (eb) {
@@ -232,11 +384,192 @@ document.addEventListener('DOMContentLoaded', () => {
     eb.style.color = colors[pData.estado] || 'var(--blue)';
   }
 
+  // Cargar datos solares guardados
+  const sd = pData.solar_data || {};
+  if (sd.consumos) {
+    MESES.forEach(m => {
+      const el = document.getElementById('cons_'+m);
+      if (el && sd.consumos[m]) el.value = sd.consumos[m];
+    });
+  }
+  if (sd.region)      document.getElementById('sRegion').value     = sd.region;
+  if (sd.orientacion) document.getElementById('sOrientacion').value = sd.orientacion;
+  if (sd.potencia_kwp)document.getElementById('sPotencia').value   = sd.potencia_kwp;
+  if (sd.tarifa_kwh)  document.getElementById('sTarifa').value     = sd.tarifa_kwh;
+  if (sd.excedente)   document.getElementById('sExcedente').value  = sd.excedente;
+  if (sd.pr)          document.getElementById('sPR').value         = sd.pr;
+
   items = (pData.items || []).map((it, i) => ({...it, _key: i}));
   renderItems();
   recalcular();
+  recalcularSolar();
 });
 {% endif %}
+
+// ── Solar toggle ──────────────────────────────────────────────────────────
+function toggleSolar() {
+  solarVisible = !solarVisible;
+  document.getElementById('solarBody').style.display = solarVisible ? '' : 'none';
+  document.getElementById('solarArrow').textContent  = solarVisible ? '▼' : '▶';
+}
+
+// ── Leer boleta PDF ───────────────────────────────────────────────────────
+async function leerBoleta(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('boletaStatus');
+  statusEl.textContent = '⏳ Leyendo PDF...';
+  statusEl.style.color = 'var(--gray2)';
+
+  const fd = new FormData();
+  fd.append('archivo', file);
+  try {
+    const r = await fetch('/api/boleta/leer', { method:'POST', body: fd });
+    const d = await r.json();
+    if (!d.ok) { statusEl.textContent = '❌ ' + d.error; statusEl.style.color='var(--red)'; return; }
+
+    // Rellenar datos del cliente
+    if (d.nombre)    document.getElementById('fNombreCliente').value   = d.nombre;
+    if (d.apellido)  document.getElementById('fApellidoCliente').value = d.apellido;
+    if (d.rut)       document.getElementById('fRut').value             = d.rut;
+    if (d.direccion) document.getElementById('fDireccion').value       = d.direccion;
+    if (d.comuna)    document.getElementById('fComuna').value          = d.comuna;
+
+    // Rellenar región
+    if (d.region) {
+      const sel = document.getElementById('sRegion');
+      for (const opt of sel.options) {
+        if (opt.value === d.region) { sel.value = d.region; break; }
+      }
+    }
+
+    // Rellenar consumos mensuales
+    if (d.consumos_mensuales && Object.keys(d.consumos_mensuales).length) {
+      MESES.forEach(m => {
+        const el = document.getElementById('cons_'+m);
+        if (el && d.consumos_mensuales[m]) el.value = d.consumos_mensuales[m];
+      });
+    }
+
+    // Tarifa
+    if (d.tarifa_kwh && d.tarifa_kwh > 50) document.getElementById('sTarifa').value = d.tarifa_kwh;
+
+    const resumen = [];
+    if (d.nombre) resumen.push(d.nombre + ' ' + (d.apellido||''));
+    if (d.consumo_actual_kwh) resumen.push(d.consumo_actual_kwh + ' kWh');
+    if (d.distribuidor) resumen.push(d.distribuidor);
+    statusEl.textContent = '✅ Boleta leída: ' + resumen.join(' · ');
+    statusEl.style.color = '#2ECC71';
+
+    recalcularSolar();
+  } catch(e) {
+    statusEl.textContent = '❌ Error procesando boleta';
+    statusEl.style.color = 'var(--red)';
+  }
+  input.value = '';
+}
+
+// ── Auto-detectar potencia desde ítems ───────────────────────────────────
+function detectarPotenciaKwp() {
+  let kWp = 0;
+  items.forEach(it => {
+    // Buscar "NNNw" o "NNN wp" o "NNN W" en el nombre (paneles solares)
+    const m = it.nombre.match(/(\d{2,4})\s*[Ww][Pp]?/);
+    if (m && it.cantidad) {
+      kWp += (parseInt(m[1]) * it.cantidad) / 1000;
+    }
+  });
+  const manualKwp = parseFloat(document.getElementById('sPotencia').value);
+  const autoEl   = document.getElementById('potenciaAuto');
+  if (kWp > 0 && !manualKwp) {
+    autoEl.textContent = `Auto-detectado desde paneles: ${kWp.toFixed(2)} kWp`;
+    autoEl.style.color = 'var(--blue)';
+    return kWp;
+  }
+  autoEl.textContent = kWp > 0 ? `Paneles detectados: ${kWp.toFixed(2)} kWp` : '';
+  return manualKwp || kWp || 0;
+}
+
+// ── Calcular solar ────────────────────────────────────────────────────────
+function recalcularSolar() {
+  clearTimeout(calcSolarTimeout);
+  calcSolarTimeout = setTimeout(_doCalcSolar, 400);
+}
+
+async function _doCalcSolar() {
+  const potencia = detectarPotenciaKwp();
+  if (potencia <= 0) {
+    document.getElementById('solarKpisCard').style.display = 'none';
+    document.getElementById('chartSolar').style.display   = 'none';
+    return;
+  }
+
+  const consumos = {};
+  MESES.forEach(m => {
+    const v = parseFloat(document.getElementById('cons_'+m)?.value || 0);
+    if (v > 0) consumos[m] = v;
+  });
+
+  const totalProyecto = calcTotal();
+  try {
+    const r = await fetch('/api/cotizacion/calcular', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        potencia_kwp:     potencia,
+        region:           document.getElementById('sRegion').value,
+        orientacion:      document.getElementById('sOrientacion').value,
+        pr:               parseFloat(document.getElementById('sPR').value) || 80,
+        tarifa_kwh:       parseFloat(document.getElementById('sTarifa').value) || 230,
+        precio_excedente: parseFloat(document.getElementById('sExcedente').value) || 110,
+        incremento_anual: 5,
+        degradacion_anual:0.5,
+        total_proyecto:   totalProyecto,
+        consumos,
+      })
+    });
+    const d = await r.json();
+    if (!d.ok) return;
+
+    // Actualizar KPIs
+    document.getElementById('solarKpisCard').style.display = '';
+    document.getElementById('kPotencia').textContent  = potencia.toFixed(2) + ' kWp';
+    document.getElementById('kGenAnual').textContent  = d.gen_anual_kwh.toLocaleString('es-CL') + ' kWh/año';
+    document.getElementById('kCobertura').textContent = d.cobertura_pct + '%';
+    document.getElementById('kPayback').textContent   = d.payback_anios ? d.payback_anios + ' años' : '—';
+    document.getElementById('kAhorro1').textContent   = fmtK(d.ahorro_anio1) + '/año';
+    document.getElementById('kAhorro10').textContent  = fmtK(d.ahorro_10);
+    document.getElementById('kAhorro25').textContent  = fmtK(d.ahorro_25);
+    document.getElementById('kRoi').textContent       = d.roi_25 + '%';
+    document.getElementById('kCo2').textContent       = d.co2_anual_ton + ' ton/año';
+
+    // Gráfico de barras consumo vs generación
+    if (d.gen_por_mes && d.gen_por_mes.some(m => m.consumo > 0 || m.generacion > 0)) {
+      const maxVal = Math.max(...d.gen_por_mes.map(m => Math.max(m.consumo, m.generacion)));
+      const barsHtml = d.gen_por_mes.map(m => {
+        const cw = maxVal > 0 ? (m.consumo / maxVal * 120) : 0;
+        const gw = maxVal > 0 ? (m.generacion / maxVal * 120) : 0;
+        return `<div class="chart-bar-row">
+          <span class="mes-lbl">${m.mes}</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+            ${m.consumo > 0 ? `<div class="bar" style="width:${cw}px;background:#F5A623" title="${m.consumo} kWh consumo"></div>` : ''}
+            <div class="bar" style="width:${gw}px;background:#2ECC71" title="${m.generacion} kWh generación"></div>
+          </div>
+          <span style="font-size:9px;color:var(--gray3);width:50px;text-align:right">${m.generacion} kWh</span>
+        </div>`;
+      }).join('');
+      document.getElementById('chartBarras').innerHTML = barsHtml;
+      document.getElementById('chartSolar').style.display = '';
+    }
+  } catch(e) { console.error('Error calculando solar:', e); }
+}
+
+function calcTotal() {
+  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
+  const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
+  const neto          = subtotalItems * (1 - descPct / 100);
+  const inclIva       = document.getElementById('fIva').checked;
+  return neto * (inclIva ? 1.19 : 1);
+}
 
 // ── Búsqueda de productos ────────────────────────────────────────────────
 let searchTimeout;
@@ -266,24 +599,26 @@ document.addEventListener('click', e => {
 
 function agregarItem(p) {
   items.push({
-    _key:          Date.now(),
-    producto_id:   p.id,
-    nombre:        p.nombre,
-    codigo:        p.codigo || '',
-    cantidad:      1,
+    _key:            Date.now(),
+    producto_id:     p.id,
+    nombre:          p.nombre,
+    codigo:          p.codigo || '',
+    categoria:       p.categoria || '',
+    cantidad:        1,
     precio_unitario: parseInt(p.precio_venta) || 0,
-    descuento_pct: 0,
-    subtotal:      parseInt(p.precio_venta) || 0,
+    descuento_pct:   0,
+    subtotal:        parseInt(p.precio_venta) || 0,
   });
   document.getElementById('productoSearch').value = '';
   document.getElementById('autocompleteList').style.display = 'none';
   renderItems();
   recalcular();
+  recalcularSolar();
 }
 
 function renderItems() {
-  const cont   = document.getElementById('itemsContainer');
-  const empty  = document.getElementById('emptyItems');
+  const cont  = document.getElementById('itemsContainer');
+  const empty = document.getElementById('emptyItems');
   if (!items.length) { cont.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   cont.innerHTML = items.map((it, idx) => `
@@ -302,40 +637,35 @@ function renderItems() {
 
 function updateItem(idx, field, val) {
   items[idx][field] = parseFloat(val) || 0;
-  const it  = items[idx];
-  const bruto = it.cantidad * it.precio_unitario;
-  it.subtotal = bruto * (1 - it.descuento_pct / 100);
+  const it = items[idx];
+  it.subtotal = it.cantidad * it.precio_unitario * (1 - it.descuento_pct / 100);
   renderItems();
   recalcular();
+  recalcularSolar();
 }
 
 function quitarItem(idx) {
   items.splice(idx, 1);
   renderItems();
   recalcular();
+  recalcularSolar();
 }
 
 function recalcular() {
-  const subtotalBruto = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
+  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
+  const brutoBruto    = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
   const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
-  const montoDesc     = subtotalBruto * descPct / 100;
-  const subtotalNeto  = (subtotalBruto - montoDesc) - items.reduce((s, it) => {
-    const bruto = it.cantidad * it.precio_unitario;
-    return s + bruto * it.descuento_pct / 100;
-  }, 0);
-  // Recalcular subtotalNeto correctamente:
-  const netoDespItemDesc = items.reduce((s, it) => s + it.subtotal, 0);
-  const netoFinal = netoDespItemDesc - netoDespItemDesc * descPct / 100;
-  const montoDescFinal = netoDespItemDesc * descPct / 100;
-  const inclIva   = document.getElementById('fIva').checked;
-  const montoIva  = inclIva ? netoFinal * 0.19 : 0;
-  const total     = netoFinal + montoIva;
+  const montoDesc     = subtotalItems * descPct / 100;
+  const neto          = subtotalItems - montoDesc;
+  const inclIva       = document.getElementById('fIva').checked;
+  const iva           = inclIva ? neto * 0.19 : 0;
+  const total         = neto + iva;
 
-  document.getElementById('tSubtotalBruto').textContent = fmt(items.reduce((s,it)=>s+it.cantidad*it.precio_unitario,0));
-  document.getElementById('tMontoDescuento').textContent= fmt(montoDescFinal);
-  document.getElementById('tSubtotalNeto').textContent  = fmt(netoFinal);
-  document.getElementById('tIva').textContent           = fmt(montoIva);
-  document.getElementById('tTotal').textContent         = fmt(total);
+  document.getElementById('tSubtotalBruto').textContent  = fmt(brutoBruto);
+  document.getElementById('tMontoDescuento').textContent = fmt(subtotalItems * descPct / 100);
+  document.getElementById('tSubtotalNeto').textContent   = fmt(neto);
+  document.getElementById('tIva').textContent            = fmt(iva);
+  document.getElementById('tTotal').textContent          = fmt(total);
 }
 
 // ── Guardar ───────────────────────────────────────────────────────────────
@@ -343,50 +673,63 @@ async function guardar(estadoOverride) {
   const nombre = document.getElementById('fNombreCliente').value.trim();
   if (!nombre) { showToast('El nombre del cliente es requerido', 'error'); return; }
 
-  const subtotalBruto  = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
-  const subtotalItems  = items.reduce((s, it) => s + it.subtotal, 0);
-  const descPct        = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
-  const montoDesc      = subtotalItems * descPct / 100;
-  const subtotalNeto   = subtotalItems - montoDesc;
-  const inclIva        = document.getElementById('fIva').checked;
-  const montoIva       = inclIva ? subtotalNeto * 0.19 : 0;
-  const total          = subtotalNeto + montoIva;
+  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
+  const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
+  const montoDesc     = subtotalItems * descPct / 100;
+  const subtotalNeto  = subtotalItems - montoDesc;
+  const inclIva       = document.getElementById('fIva').checked;
+  const montoIva      = inclIva ? subtotalNeto * 0.19 : 0;
+  const total         = subtotalNeto + montoIva;
 
-  const data = {
-    nombre_cliente:         nombre,
-    apellido_cliente:       document.getElementById('fApellidoCliente').value.trim(),
-    email_cliente:          document.getElementById('fEmail').value.trim(),
-    telefono_cliente:       document.getElementById('fTelefono').value.trim(),
-    rut_cliente:            document.getElementById('fRut').value.trim(),
-    direccion_cliente:      document.getElementById('fDireccion').value.trim(),
-    comuna_cliente:         document.getElementById('fComuna').value.trim(),
-    items:                  items.map(({_key,...it}) => it),
-    subtotal_bruto:         subtotalBruto,
-    descuento_general_pct:  descPct,
-    monto_descuento:        montoDesc,
-    subtotal_neto:          subtotalNeto,
-    incluye_iva:            inclIva,
-    monto_iva:              montoIva,
-    total,
-    notas:                  document.getElementById('fNotas').value.trim(),
-    condiciones:            document.getElementById('fCondiciones').value.trim(),
-    trabajador_asignado:    document.getElementById('fTrabajador').value,
-    validez_dias:           parseInt(document.getElementById('fValidez').value) || 10,
-    estado:                 estadoOverride || document.getElementById('fEstado').value,
+  // Guardar datos solares
+  const consumos = {};
+  MESES.forEach(m => {
+    const v = parseFloat(document.getElementById('cons_'+m)?.value||0);
+    if (v > 0) consumos[m] = v;
+  });
+  const solar_data = {
+    consumos,
+    region:        document.getElementById('sRegion').value,
+    orientacion:   document.getElementById('sOrientacion').value,
+    potencia_kwp:  parseFloat(document.getElementById('sPotencia').value)||0,
+    tarifa_kwh:    parseFloat(document.getElementById('sTarifa').value)||230,
+    excedente:     parseFloat(document.getElementById('sExcedente').value)||110,
+    pr:            parseFloat(document.getElementById('sPR').value)||80,
+    potencia_auto: detectarPotenciaKwp(),
   };
 
-  const url = PRESUPUESTO_ID
-    ? `/api/presupuestos/${PRESUPUESTO_ID}/edit`
-    : '/api/presupuestos/add';
-  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-  const result = await r.json();
-  if (result.ok) {
+  const data = {
+    nombre_cliente:        nombre,
+    apellido_cliente:      document.getElementById('fApellidoCliente').value.trim(),
+    email_cliente:         document.getElementById('fEmail').value.trim(),
+    telefono_cliente:      document.getElementById('fTelefono').value.trim(),
+    rut_cliente:           document.getElementById('fRut').value.trim(),
+    direccion_cliente:     document.getElementById('fDireccion').value.trim(),
+    comuna_cliente:        document.getElementById('fComuna').value.trim(),
+    items:                 items.map(({_key,...it}) => it),
+    subtotal_bruto:        items.reduce((s,it)=>s+it.cantidad*it.precio_unitario,0),
+    descuento_general_pct: descPct,
+    monto_descuento:       montoDesc,
+    subtotal_neto:         subtotalNeto,
+    incluye_iva:           inclIva,
+    monto_iva:             montoIva,
+    total,
+    notas:                 document.getElementById('fNotas').value.trim(),
+    condiciones:           document.getElementById('fCondiciones').value.trim(),
+    trabajador_asignado:   document.getElementById('fTrabajador').value,
+    validez_dias:          parseInt(document.getElementById('fValidez').value)||10,
+    estado:                estadoOverride || document.getElementById('fEstado').value,
+    solar_data,
+  };
+
+  const url = PRESUPUESTO_ID ? `/api/presupuestos/${PRESUPUESTO_ID}/edit` : '/api/presupuestos/add';
+  const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  const res = await r.json();
+  if (res.ok) {
     showToast('Presupuesto guardado', 'success');
-    if (!PRESUPUESTO_ID && result.id) {
-      setTimeout(() => location.href = `/admin/presupuestos/${result.id}`, 800);
-    }
+    if (!PRESUPUESTO_ID && res.id) setTimeout(() => location.href = `/admin/presupuestos/${res.id}`, 800);
   } else {
-    showToast(result.error || 'Error guardando', 'error');
+    showToast(res.error || 'Error guardando', 'error');
   }
 }
 
