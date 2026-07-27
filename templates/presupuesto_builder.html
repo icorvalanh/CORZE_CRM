@@ -240,17 +240,19 @@
       </div>
       <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dBateriaPrecio">Precio unitario: —</div>
 
-      <!-- Estructura -->
-      <div class="equip-lbl">ESTRUCTURA DE MONTAJE</div>
-      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
-        <select class="equip-select" id="selEstructura" onchange="onEstructuraChange()">
-          <option value="">— Seleccionar estructura —</option>
+      <!-- Materiales, montaje y otros (multi-item) -->
+      <div class="equip-lbl">MONTAJE, MATERIALES Y ACCESORIOS</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <select class="equip-select" id="selMaterial" style="flex:1">
+          <option value="">— Seleccionar producto —</option>
         </select>
-        <input type="number" class="equip-qty" id="qEstructura" min="0" value="0" oninput="recalcular()" placeholder="N°">
-        <span class="equip-display" id="dEstructuraSpec" title="Especificación">—</span>
-        <span class="equip-display equip-sub" id="dEstructuraSub">—</span>
+        <input type="number" class="equip-qty" id="qMaterial" min="1" value="1" placeholder="N°" style="width:64px">
+        <button class="btn btn-secondary" style="white-space:nowrap;font-size:12px;padding:7px 12px;flex-shrink:0" onclick="agregarMaterial()">+ Agregar</button>
       </div>
-      <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dEstructuraPrecio">Precio unitario: —</div>
+      <div id="materialesContainer">
+        <div style="font-size:11px;color:var(--gray3);padding:4px 0 10px">Sin materiales agregados</div>
+      </div>
+      <div id="dSubMateriales" style="display:none;text-align:right;font-size:12px;font-weight:700;color:#2ECC71;padding-top:6px;border-top:1px solid var(--border1)"></div>
 
       <!-- Parámetros técnicos -->
       <div style="padding-top:12px;border-top:1px solid var(--border1)">
@@ -343,7 +345,7 @@
         <div class="price-row sub-item"><span class="lbl">Paneles</span><span class="val" id="rPaneles">—</span></div>
         <div class="price-row sub-item"><span class="lbl">Inversor</span><span class="val" id="rInversor">—</span></div>
         <div class="price-row sub-item"><span class="lbl">Batería</span><span class="val" id="rBateria">—</span></div>
-        <div class="price-row sub-item"><span class="lbl">Estructura</span><span class="val" id="rEstructura">—</span></div>
+        <div class="price-row sub-item"><span class="lbl">Materiales / Montaje</span><span class="val" id="rMateriales">—</span></div>
         <div class="price-row bold" style="margin-top:4px"><span class="lbl">Subtotal equipos</span><span class="val" id="rSubEquipos">$0</span></div>
       </div>
 
@@ -495,8 +497,9 @@ const EXTRAS_DEF = [
 ];
 
 // ── Estado ──────────────────────────────────────────────────────────────────
-let paneles = [], inversores = [], baterias = [], estructuras = [];
-let selPanel = null, selInversor = null, selBateria = null, selEstructura = null;
+let paneles = [], inversores = [], baterias = [], todosProductos = [];
+let selPanel = null, selInversor = null, selBateria = null;
+let materiales = [];
 let calcTimer = null;
 
 const fmt  = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
@@ -514,27 +517,40 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 // ── Cargar productos ──────────────────────────────────────────────────────────
 async function cargarProductos() {
+  const MAIN_CATS = ['Panel Solar', 'Inversor', 'Batería'];
   try {
-    const [rP, rI, rB, rE] = await Promise.all([
+    const [rP, rI, rB, rT] = await Promise.all([
       fetch('/api/productos?categoria=Panel%20Solar&solo_activos=true'),
       fetch('/api/productos?categoria=Inversor&solo_activos=true'),
       fetch('/api/productos?categoria=Bater%C3%ADa&solo_activos=true'),
-      fetch('/api/productos?categoria=Estructura%2FMounting&solo_activos=true'),
+      fetch('/api/productos?solo_activos=true'),
     ]);
-    paneles     = await rP.json();
-    inversores  = await rI.json();
-    baterias    = await rB.json();
-    estructuras = await rE.json();
+    paneles        = await rP.json();
+    inversores     = await rI.json();
+    baterias       = await rB.json();
+    const todos    = await rT.json();
+    todosProductos = todos.filter(p => !MAIN_CATS.includes(p.categoria));
   } catch(e) { console.error('Error cargando productos:', e); }
 
   const fillSel = (elId, arr, labelFn) => {
     const sel = document.getElementById(elId);
     arr.forEach(p => sel.appendChild(new Option(labelFn(p), p.id)));
   };
-  fillSel('selPanel',    paneles,     p => p.nombre + (p.potencia_w ? ' · '+p.potencia_w+'W' : ''));
-  fillSel('selInversor', inversores,  p => p.nombre);
-  fillSel('selBateria',  baterias,    p => p.nombre);
-  fillSel('selEstructura',estructuras,p => p.nombre);
+  fillSel('selPanel',   paneles,   p => p.nombre + (p.potencia_w ? ' · '+p.potencia_w+'W' : ''));
+  fillSel('selInversor',inversores,p => p.nombre);
+  fillSel('selBateria', baterias,  p => p.nombre);
+
+  // Dropdown de materiales agrupado por categoría
+  const selM = document.getElementById('selMaterial');
+  const cats = [...new Set(todosProductos.map(p => p.categoria||'Otro'))].sort();
+  cats.forEach(cat => {
+    const prods = todosProductos.filter(p => (p.categoria||'Otro') === cat);
+    if (!prods.length) return;
+    const grp = document.createElement('optgroup');
+    grp.label = cat;
+    prods.forEach(p => grp.appendChild(new Option(p.nombre + (p.codigo ? ' ('+p.codigo+')' : ''), p.id)));
+    selM.appendChild(grp);
+  });
 }
 
 // ── Equipment changes ─────────────────────────────────────────────────────────
@@ -550,9 +566,66 @@ function onBateriaChange() {
   selBateria = baterias.find(p => p.id === document.getElementById('selBateria').value) || null;
   recalcular();
 }
-function onEstructuraChange() {
-  selEstructura = estructuras.find(p => p.id === document.getElementById('selEstructura').value) || null;
+// ── Materiales multi-item ────────────────────────────────────────────────────
+function agregarMaterial() {
+  const id = document.getElementById('selMaterial').value;
+  if (!id) { showToast('Selecciona un producto primero', 'error'); return; }
+  const prod = todosProductos.find(p => p.id === id);
+  if (!prod) return;
+  const qty = parseInt(document.getElementById('qMaterial').value)||1;
+  const existing = materiales.find(m => m.id === id);
+  if (existing) {
+    existing.cantidad += qty;
+    existing.subtotal = existing.precio_unitario * existing.cantidad;
+  } else {
+    materiales.push({
+      id: prod.id, nombre: prod.nombre, codigo: prod.codigo||'',
+      categoria: prod.categoria||'', producto_id: prod.id,
+      precio_unitario: parseInt(prod.precio_venta)||0,
+      cantidad: qty,
+      subtotal: (parseInt(prod.precio_venta)||0) * qty,
+    });
+  }
+  document.getElementById('qMaterial').value = 1;
+  renderMateriales();
   recalcular();
+}
+
+function quitarMaterial(idx) {
+  materiales.splice(idx, 1);
+  renderMateriales();
+  recalcular();
+}
+
+function updateMaterialQty(idx, val) {
+  const qty = parseInt(val)||1;
+  materiales[idx].cantidad = qty;
+  materiales[idx].subtotal = materiales[idx].precio_unitario * qty;
+  const el = document.getElementById('matSub_'+idx);
+  if (el) el.textContent = fmt(materiales[idx].subtotal);
+  recalcular();
+}
+
+function renderMateriales() {
+  const cont = document.getElementById('materialesContainer');
+  const subEl = document.getElementById('dSubMateriales');
+  if (!materiales.length) {
+    cont.innerHTML = '<div style="font-size:11px;color:var(--gray3);padding:4px 0 10px">Sin materiales agregados</div>';
+    if (subEl) subEl.style.display = 'none';
+    return;
+  }
+  cont.innerHTML = materiales.map((m,i) => `
+    <div style="display:grid;grid-template-columns:1fr 62px 108px 28px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border1)">
+      <div style="overflow:hidden">
+        <div style="font-size:12px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${m.nombre}">${m.nombre}</div>
+        <div style="font-size:10px;color:var(--gray3)">${m.categoria} · ${fmt(m.precio_unitario)} c/u</div>
+      </div>
+      <input type="number" class="equip-qty" value="${m.cantidad}" min="1" style="width:100%" oninput="updateMaterialQty(${i},this.value)">
+      <span id="matSub_${i}" style="font-size:12px;font-weight:700;color:#2ECC71;text-align:right">${fmt(m.subtotal)}</span>
+      <button onclick="quitarMaterial(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;line-height:1;padding:0">×</button>
+    </div>`).join('');
+  const total = materiales.reduce((s,m)=>s+m.subtotal,0);
+  if (subEl) { subEl.textContent = 'Total materiales: '+fmt(total); subEl.style.display=''; }
 }
 
 // ── Extras ────────────────────────────────────────────────────────────────────
@@ -583,18 +656,16 @@ function recalcular() {
   const nPanel    = parseInt(document.getElementById('qPanel').value)    || 0;
   const nInversor = parseInt(document.getElementById('qInversor').value) || 0;
   const nBateria  = parseInt(document.getElementById('qBateria').value)  || 0;
-  const nEstruc   = parseInt(document.getElementById('qEstructura').value) || 0;
 
   const pPanel    = selPanel    ? (parseInt(selPanel.precio_venta)    || 0) : 0;
   const pInversor = selInversor ? (parseInt(selInversor.precio_venta) || 0) : 0;
   const pBateria  = selBateria  ? (parseInt(selBateria.precio_venta)  || 0) : 0;
-  const pEstruc   = selEstructura?(parseInt(selEstructura.precio_venta)|| 0) : 0;
 
   const subPaneles  = pPanel    * nPanel;
   const subInversor = pInversor * nInversor;
   const subBateria  = pBateria  * nBateria;
-  const subEstruc   = pEstruc   * nEstruc;
-  const subEquipos  = subPaneles + subInversor + subBateria + subEstruc;
+  const subMaterieles = materiales.reduce((s,m) => s+m.subtotal, 0);
+  const subEquipos  = subPaneles + subInversor + subBateria + subMaterieles;
 
   // kWp
   const potW = selPanel ? (parseInt(selPanel.potencia_w)||0) : 0;
@@ -610,9 +681,6 @@ function recalcular() {
   document.getElementById('dBateriaSpec').textContent   = selBateria ? (selBateria.capacidad_kwh ? selBateria.capacidad_kwh+' kWh' : '—') : '—';
   document.getElementById('dBateriaSub').textContent    = nBateria>0 ? fmt(subBateria) : '—';
   document.getElementById('dBateriaPrecio').textContent = selBateria ? 'Precio unitario: '+fmt(pBateria) : 'Precio unitario: —';
-  document.getElementById('dEstructuraSpec').textContent = selEstructura ? (selEstructura.tipo||'—') : '—';
-  document.getElementById('dEstructuraSub').textContent  = nEstruc>0 ? fmt(subEstruc) : '—';
-  document.getElementById('dEstructuraPrecio').textContent= selEstructura ? 'Precio unitario: '+fmt(pEstruc) : 'Precio unitario: —';
 
   // Consumo
   let totalCons = 0;
@@ -675,7 +743,7 @@ function recalcular() {
   document.getElementById('rPaneles').textContent    = subPaneles>0  ? fmt(subPaneles)  : '—';
   document.getElementById('rInversor').textContent   = subInversor>0 ? fmt(subInversor) : '—';
   document.getElementById('rBateria').textContent    = subBateria>0  ? fmt(subBateria)  : '—';
-  document.getElementById('rEstructura').textContent = subEstruc>0   ? fmt(subEstruc)   : '—';
+  document.getElementById('rMateriales').textContent = subMaterieles>0 ? fmt(subMaterieles) : '—';
   document.getElementById('rSubEquipos').textContent = fmt(subEquipos);
   document.getElementById('rInstBase').textContent   = instBase>0 ? fmt(instBase) : (nPanel>0?'N/A (< 4 paneles)':'—');
   document.getElementById('rCostosAdic').textContent = fmt(subAdic);
@@ -747,19 +815,17 @@ async function guardar(estadoOverride) {
   const nPanel    = parseInt(document.getElementById('qPanel').value)    || 0;
   const nInversor = parseInt(document.getElementById('qInversor').value) || 0;
   const nBateria  = parseInt(document.getElementById('qBateria').value)  || 0;
-  const nEstruc   = parseInt(document.getElementById('qEstructura').value) || 0;
 
   const pPanel    = selPanel    ? (parseInt(selPanel.precio_venta)    ||0) : 0;
   const pInversor = selInversor ? (parseInt(selInversor.precio_venta) ||0) : 0;
   const pBateria  = selBateria  ? (parseInt(selBateria.precio_venta)  ||0) : 0;
-  const pEstruc   = selEstructura?(parseInt(selEstructura.precio_venta)||0) : 0;
 
   // Items array para compatibilidad con PDF
   const items = [];
-  if (selPanel    && nPanel>0)    items.push({producto_id:selPanel.id,    nombre:selPanel.nombre,    codigo:selPanel.codigo||'',    categoria:'Paneles',    cantidad:nPanel,    precio_unitario:pPanel,    descuento_pct:0, subtotal:pPanel*nPanel});
-  if (selInversor && nInversor>0) items.push({producto_id:selInversor.id, nombre:selInversor.nombre, codigo:selInversor.codigo||'', categoria:'Inversores', cantidad:nInversor, precio_unitario:pInversor, descuento_pct:0, subtotal:pInversor*nInversor});
-  if (selBateria  && nBateria>0)  items.push({producto_id:selBateria.id,  nombre:selBateria.nombre,  codigo:selBateria.codigo||'',  categoria:'Baterías',  cantidad:nBateria,  precio_unitario:pBateria,  descuento_pct:0, subtotal:pBateria*nBateria});
-  if (selEstructura&&nEstruc>0)   items.push({producto_id:selEstructura.id,nombre:selEstructura.nombre,codigo:selEstructura.codigo||'',categoria:'Estructuras',cantidad:nEstruc,precio_unitario:pEstruc,  descuento_pct:0, subtotal:pEstruc*nEstruc});
+  if (selPanel    && nPanel>0)    items.push({producto_id:selPanel.id,    nombre:selPanel.nombre,    codigo:selPanel.codigo||'',    categoria:'Panel Solar',  cantidad:nPanel,    precio_unitario:pPanel,    descuento_pct:0, subtotal:pPanel*nPanel});
+  if (selInversor && nInversor>0) items.push({producto_id:selInversor.id, nombre:selInversor.nombre, codigo:selInversor.codigo||'', categoria:'Inversor',     cantidad:nInversor, precio_unitario:pInversor, descuento_pct:0, subtotal:pInversor*nInversor});
+  if (selBateria  && nBateria>0)  items.push({producto_id:selBateria.id,  nombre:selBateria.nombre,  codigo:selBateria.codigo||'',  categoria:'Batería',      cantidad:nBateria,  precio_unitario:pBateria,  descuento_pct:0, subtotal:pBateria*nBateria});
+  materiales.forEach(m => items.push({producto_id:m.id, nombre:m.nombre, codigo:m.codigo||'', categoria:m.categoria, cantidad:m.cantidad, precio_unitario:m.precio_unitario, descuento_pct:0, subtotal:m.subtotal}));
 
   // Extras
   const extrasData = {};
@@ -776,7 +842,8 @@ async function guardar(estadoOverride) {
   const disenoTram = parseInt(document.getElementById('sDisenoTram').value)||0;
 
   // Cadena de precios
-  const subEquipos  = pPanel*nPanel + pInversor*nInversor + pBateria*nBateria + pEstruc*nEstruc;
+  const subMaterieles2 = materiales.reduce((s,m)=>s+m.subtotal,0);
+  const subEquipos  = pPanel*nPanel + pInversor*nInversor + pBateria*nBateria + subMaterieles2;
   const nClamped    = Math.min(Math.max(nPanel,4),59);
   const instBase    = nPanel>=4 ? (INSTALL_TABLE[nClamped]||0) : 0;
   const subDirectos = subEquipos + instBase + subAdic + disenoTram;
@@ -808,10 +875,10 @@ async function guardar(estadoOverride) {
   };
 
   const equipos_data = {
-    panel:     selPanel    ? {id:selPanel.id,    nombre:selPanel.nombre,    potencia_w:selPanel.potencia_w||0,    cantidad:nPanel,    precio:pPanel}    : null,
+    panel:     selPanel    ? {id:selPanel.id,    nombre:selPanel.nombre,    potencia_w:selPanel.potencia_w||0, cantidad:nPanel,    precio:pPanel}    : null,
     inversor:  selInversor ? {id:selInversor.id, nombre:selInversor.nombre, cantidad:nInversor, precio:pInversor} : null,
     bateria:   selBateria  ? {id:selBateria.id,  nombre:selBateria.nombre,  cantidad:nBateria,  precio:pBateria}  : null,
-    estructura:selEstructura?{id:selEstructura.id,nombre:selEstructura.nombre,cantidad:nEstruc, precio:pEstruc}  : null,
+    materiales: materiales.map(m=>({id:m.id,nombre:m.nombre,categoria:m.categoria,cantidad:m.cantidad,precio:m.precio_unitario,subtotal:m.subtotal})),
   };
 
   const data = {
@@ -906,10 +973,16 @@ async function cargarPresupuesto(p) {
     onBateriaChange();
     document.getElementById('qBateria').value = eq.bateria.cantidad||0;
   }
-  if (eq.estructura?.id) {
-    document.getElementById('selEstructura').value = eq.estructura.id;
-    onEstructuraChange();
-    document.getElementById('qEstructura').value = eq.estructura.cantidad||0;
+  // Restaurar materiales (nuevo formato)
+  if (Array.isArray(eq.materiales) && eq.materiales.length) {
+    materiales = eq.materiales.map(m => ({
+      id: m.id, nombre: m.nombre, codigo: m.codigo||'',
+      categoria: m.categoria||'', producto_id: m.id,
+      precio_unitario: m.precio||0,
+      cantidad: m.cantidad||1,
+      subtotal: (m.precio||0) * (m.cantidad||1),
+    }));
+    renderMateriales();
   }
 
   // Restaurar extras
