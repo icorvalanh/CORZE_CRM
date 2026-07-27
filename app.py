@@ -48,7 +48,7 @@ def inject_globals():
     return {
         'app_name': APP_NAME, 'app_version': APP_VERSION,
         'usuario': usuario,
-        'usuario_color': session.get('usuario_color', '#00AEEF'),
+        'usuario_color': session.get('usuario_color', '#F5A623'),
         'usuario_avatar': session.get('usuario_avatar', ''),
         'usuario_role': role,
         'config': cfg,
@@ -391,7 +391,7 @@ def api_export_inv():
 
     # Estilos
     hdr_fill  = PatternFill("solid", fgColor="003D5C")
-    hdr_font  = Font(bold=True, color="00AEEF", size=10)
+    hdr_font  = Font(bold=True, color="F5A623", size=10)
     int_fill  = PatternFill("solid", fgColor="0D2030")
     con_fill  = PatternFill("solid", fgColor="2D2500")
     alt_fill  = PatternFill("solid", fgColor="131920")
@@ -797,7 +797,7 @@ def api_enviar_email_contrato():
     html_contrato = render_contrato(car, folio, datetime.now().strftime('%d/%m/%Y %H:%M'))
     html_email = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-      <div style="background:#00AEEF;padding:20px;border-radius:10px 10px 0 0;text-align:center">
+      <div style="background:#F5A623;padding:20px;border-radius:10px 10px 0 0;text-align:center">
         <h1 style="color:#fff;margin:0;font-size:22px">VTA — Vende Tu Auto</h1>
       </div>
       <div style="background:#f9f9f9;padding:24px;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px">
@@ -807,7 +807,7 @@ def api_enviar_email_contrato():
           ha sido generado exitosamente para el vehículo:
         </p>
         <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin:16px 0;text-align:center">
-          <div style="font-size:18px;font-weight:bold;color:#00AEEF">
+          <div style="font-size:18px;font-weight:bold;color:#F5A623">
             {car.get('marca','')} {car.get('modelo','')} {car.get('anio','')}
           </div>
           <div style="font-size:13px;color:#777;margin-top:4px">Patente: {car.get('patente','')}</div>

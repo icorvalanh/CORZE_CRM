@@ -14,7 +14,11 @@ class FirebaseDB:
         if not firebase_admin._apps:
             cred_json = os.environ.get('FIREBASE_CREDENTIALS_JSON')
             if cred_json:
-                cred = credentials.Certificate(json.loads(cred_json))
+                # Normalizar: reemplazar \\n literales por \n reales en la private_key
+                cred_dict = json.loads(cred_json)
+                if 'private_key' in cred_dict:
+                    cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
+                cred = credentials.Certificate(cred_dict)
             else:
                 cred = credentials.Certificate('firebase_credentials.json')
             firebase_admin.initialize_app(cred)
