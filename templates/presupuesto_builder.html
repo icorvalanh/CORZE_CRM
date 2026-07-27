@@ -306,7 +306,7 @@
       <div id="extrasContainer"></div>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border1);display:flex;align-items:center;gap:16px">
         <div class="form-group" style="margin:0;flex:1">
-          <label class="form-label">Diseño y tramitación SERNAC ($)</label>
+          <label class="form-label">Diseño y tramitación SEC ($)</label>
           <input class="form-input" type="number" id="sDisenoTram" value="150000" oninput="recalcular()">
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -516,10 +516,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function cargarProductos() {
   try {
     const [rP, rI, rB, rE] = await Promise.all([
-      fetch('/api/productos?categoria=Paneles&solo_activos=true'),
-      fetch('/api/productos?categoria=Inversores&solo_activos=true'),
-      fetch('/api/productos?categoria=Bater%C3%ADas&solo_activos=true'),
-      fetch('/api/productos?categoria=Estructuras&solo_activos=true'),
+      fetch('/api/productos?categoria=Panel%20Solar&solo_activos=true'),
+      fetch('/api/productos?categoria=Inversor&solo_activos=true'),
+      fetch('/api/productos?categoria=Bater%C3%ADa&solo_activos=true'),
+      fetch('/api/productos?categoria=Estructura%2FMounting&solo_activos=true'),
     ]);
     paneles     = await rP.json();
     inversores  = await rI.json();
