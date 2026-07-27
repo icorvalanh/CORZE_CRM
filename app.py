@@ -155,12 +155,7 @@ def _build_vitrina_cars():
 # ── AUTH ──────────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    # corze.cl → vitrina pública
-    # admin.corze.cl → panel admin
-    host = request.host.lower()
-    if 'admin.' in host:
-        return redirect(url_for('dashboard') if 'usuario' in session else url_for('login'))
-    return render_template('vitrina.html', cars=_build_vitrina_cars())
+    return redirect(url_for('dashboard') if 'usuario' in session else url_for('login'))
 
 @app.route('/admin', methods=['GET'])
 def admin():
