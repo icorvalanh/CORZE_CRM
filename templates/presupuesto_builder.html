@@ -43,9 +43,10 @@
       {% endif %}
     </h1>
   </div>
-  <div style="display:flex;gap:8px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
     {% if presupuesto %}
     <a href="{{ url_for('presupuesto_pdf', doc_id=presupuesto.id) }}" class="btn btn-secondary" target="_blank">📄 Ver PDF</a>
+    <a href="{{ url_for('presupuesto_pdf', doc_id=presupuesto.id) }}?download=1" class="btn btn-secondary" download>📥 Descargar</a>
     <button class="btn btn-secondary" onclick="enviarEmail()">📧 Enviar Email</button>
     {% endif %}
     <button class="btn btn-secondary" onclick="guardar('borrador')">💾 Guardar Borrador</button>

@@ -339,15 +339,30 @@ async function abrirPanel(id) {
   document.getElementById('panelOverlay').style.display = 'block';
   document.getElementById('panelBody').innerHTML = '<div style="text-align:center;color:var(--gray3);padding:32px">Cargando...</div>';
   try {
-    const r    = await fetch(`/api/leads/${id}`);
-    const lead = await r.json();
-    renderPanel(lead);
+    const [rLead, rPres] = await Promise.all([
+      fetch(`/api/leads/${id}`),
+      fetch(`/api/leads/${id}/presupuestos`),
+    ]);
+    const lead = await rLead.json();
+    const presupuestos = await rPres.json();
+    renderPanel(lead, presupuestos);
   } catch(e) { document.getElementById('panelBody').innerHTML = '<div style="color:var(--red);padding:20px">Error cargando</div>'; }
 }
 
-function renderPanel(lead) {
-  document.getElementById('panelTitle').textContent = `${lead.nombre || ''} ${lead.apellido || ''}`;
+function renderPanel(lead, presupuestos = []) {
+  document.getElementById('panelTitle').textContent = `${lead.nombre || ''} ${lead.apellido || ''}`.trim();
   const historial = (lead.historial || []).slice().reverse();
+  const fmtMoney = n => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
+  const estadoColor = {borrador:'var(--gray2)',enviado:'var(--blue)',aprobado:'var(--teal)',rechazado:'var(--red)'};
+
+  // Build "lo que pidió" section from campos específicos del formulario
+  const camposFormulario = [];
+  if (lead.consumo_estimado) camposFormulario.push(['💰 Cuenta mensual', lead.consumo_estimado]);
+  if (lead.tipo_proyecto)    camposFormulario.push(['🏠 Tipo proyecto', lead.tipo_proyecto]);
+  if (lead.ciudad)           camposFormulario.push(['📍 Ciudad', lead.ciudad]);
+  if (lead.region)           camposFormulario.push(['🗺️ Región', lead.region]);
+  if (lead.consumo_kwh)      camposFormulario.push(['⚡ Consumo', lead.consumo_kwh + ' kWh/mes']);
+
   document.getElementById('panelBody').innerHTML = `
     <div class="panel-section">
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
@@ -355,19 +370,48 @@ function renderPanel(lead) {
         ${lead.origen ? `<span class="badge" style="background:#1A1A3A;color:#9B59B6">${lead.origen}</span>` : ''}
         ${lead.tipo_proyecto ? `<span class="badge" style="background:#1A3A2A;color:var(--teal)">${lead.tipo_proyecto}</span>` : ''}
       </div>
-      <h4>Información</h4>
-      <div style="display:grid;gap:6px">
-        ${lead.email    ? `<div style="font-size:12px"><span style="color:var(--gray2)">Email: </span>${lead.email}</div>` : ''}
-        ${lead.telefono ? `<div style="font-size:12px"><span style="color:var(--gray2)">Tel: </span>${lead.telefono}</div>` : ''}
-        ${lead.empresa  ? `<div style="font-size:12px"><span style="color:var(--gray2)">Empresa: </span>${lead.empresa}</div>` : ''}
-        ${lead.region   ? `<div style="font-size:12px"><span style="color:var(--gray2)">Región: </span>${lead.region}</div>` : ''}
-        ${lead.consumo_kwh ? `<div style="font-size:12px"><span style="color:var(--gray2)">Consumo: </span>${lead.consumo_kwh} kWh/mes</div>` : ''}
-        ${lead.asignado_a ? `<div style="font-size:12px"><span style="color:var(--gray2)">Asesor: </span>${lead.asignado_a}</div>` : ''}
+
+      <h4>Contacto</h4>
+      <div style="display:grid;gap:5px">
+        ${lead.email    ? `<div style="font-size:12px">📧 <a href="mailto:${lead.email}" style="color:var(--blue)">${lead.email}</a></div>` : ''}
+        ${lead.telefono ? `<div style="font-size:12px">📞 <a href="tel:${lead.telefono}" style="color:var(--white)">${lead.telefono}</a></div>` : ''}
+        ${lead.empresa  ? `<div style="font-size:12px">🏢 <span style="color:var(--gray1)">${lead.empresa}</span></div>` : ''}
+        ${lead.asignado_a ? `<div style="font-size:12px">👤 <span style="color:var(--gray2)">Asesor:</span> ${lead.asignado_a}</div>` : ''}
         <div style="font-size:11px;color:var(--gray3)">Creado: ${(lead.created_at||'').slice(0,10)}</div>
       </div>
     </div>
 
-    ${lead.notas ? `<div class="panel-section"><h4>Notas</h4><div style="font-size:12px;color:var(--gray1);white-space:pre-wrap">${lead.notas}</div></div>` : ''}
+    ${camposFormulario.length ? `
+    <div class="panel-section">
+      <h4>📋 Lo que pidió</h4>
+      <div style="background:var(--card2);border-radius:8px;padding:10px 12px;display:grid;gap:6px">
+        ${camposFormulario.map(([k,v]) => `
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--gray2)">${k}</span>
+            <span style="color:var(--white);font-weight:600;text-align:right;max-width:60%">${v}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${lead.notas ? `<div class="panel-section"><h4>Notas</h4><div style="font-size:12px;color:var(--gray1);white-space:pre-wrap;background:var(--card2);border-radius:8px;padding:10px 12px">${lead.notas}</div></div>` : ''}
+
+    <div class="panel-section">
+      <h4>☀️ Propuestas enviadas</h4>
+      ${presupuestos.length ? presupuestos.map(p => `
+        <a href="/admin/presupuestos/${p.id}" style="display:flex;justify-content:space-between;align-items:center;
+           background:var(--card2);border-radius:8px;padding:10px 12px;margin-bottom:6px;
+           text-decoration:none;color:var(--white);border:1px solid var(--border2)">
+          <div>
+            <div style="font-size:12px;font-weight:700">${p.folio || p.id.slice(0,8)}</div>
+            <div style="font-size:10px;color:${estadoColor[p.estado]||'var(--gray2)'};text-transform:capitalize">${p.estado || '—'}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--blue)">${fmtMoney(p.total)}</div>
+        </a>`).join('') :
+        `<div style="font-size:12px;color:var(--gray3)">Sin propuestas aún</div>
+         <a href="/admin/presupuestos/nuevo" class="btn btn-secondary" style="display:inline-block;margin-top:8px;font-size:12px">
+           ➕ Crear propuesta
+         </a>`}
+    </div>
 
     <div class="panel-section">
       <h4>Cambiar etapa</h4>
@@ -465,10 +509,37 @@ async function guardarLead() {
   if (res.ok) {
     showToast(editLeadId ? 'Lead actualizado' : 'Lead creado', 'success');
     cerrarModalLead();
-    setTimeout(() => location.reload(), 800);
+    const lead = await (await fetch(`/api/leads/${res.id || editLeadId}`)).json();
+    if (editLeadId) {
+      // Update in-memory data and re-render card
+      const idx = leadsData.findIndex(l => l.id === editLeadId);
+      if (idx >= 0) leadsData[idx] = lead;
+      const oldCard = document.querySelector(`.lead-card[data-id="${editLeadId}"]`);
+      if (oldCard) oldCard.outerHTML = buildCard(lead);
+    } else {
+      // Prepend new card to "Nuevo Lead" column
+      leadsData.push(lead);
+      const col = document.getElementById('cards_Nuevo_Lead');
+      if (col) col.insertAdjacentHTML('afterbegin', buildCard(lead));
+    }
+    recalcularContadores();
   } else {
     showToast(res.error || 'Error', 'error');
   }
+}
+
+function buildCard(lead) {
+  return `<div class="lead-card" draggable="true" data-id="${lead.id}" data-etapa="${lead.etapa||'Nuevo Lead'}"
+               ondragstart="onDragStart(event,this)" onclick="abrirPanel('${lead.id}')">
+    <div class="lead-name">${lead.nombre||''} ${lead.apellido||''}</div>
+    ${lead.empresa ? `<div class="lead-empresa">${lead.empresa}</div>` : ''}
+    ${lead.tipo_proyecto ? `<div style="margin-top:4px"><span class="lead-tipo">${lead.tipo_proyecto}</span></div>` : ''}
+    ${lead.telefono ? `<div class="lead-tel">📞 ${lead.telefono}</div>` : ''}
+    <div class="lead-meta">
+      ${lead.asignado_a ? `<div class="lead-avatar" style="background:#1A2A3A;color:var(--blue)">${lead.asignado_a[0]}</div>` : ''}
+      <span class="lead-dias">${(lead.created_at||'').slice(0,10)}</span>
+    </div>
+  </div>`;
 }
 
 async function eliminarLead(id, nombre) {

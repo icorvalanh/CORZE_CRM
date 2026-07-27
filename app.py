@@ -1,7 +1,7 @@
 # app.py — VTA Web v2.1
 
 from flask import (Flask, render_template, request, redirect,
-                   url_for, session, jsonify, flash, Response)
+                   url_for, session, jsonify, flash, Response, make_response)
 from flask.json.provider import DefaultJSONProvider
 from functools import wraps
 import os, json, threading, imaplib
@@ -2797,7 +2797,13 @@ def presupuesto_pdf(doc_id):
     if not p:
         return '<h2>Presupuesto no encontrado</h2>', 404
     logo_b64 = get_logo_b64()
-    return render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64)
+    resp = make_response(render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64))
+    if request.args.get('download'):
+        nombre = (p.get('nombre_cliente','') or 'cliente').replace(' ', '_')
+        folio  = p.get('folio', doc_id[:8])
+        resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
+        resp.headers['Content-Type'] = 'text/html'
+    return resp
 
 @app.route('/api/presupuestos/<doc_id>/enviar-email', methods=['POST'])
 @login_required
@@ -2951,28 +2957,71 @@ def api_leer_boleta():
         if dist.lower() in txt.lower():
             datos['distribuidor'] = dist; break
 
-    # Consumos mensuales del gráfico
-    meses_map = {'ENE':'Ene','FEB':'Feb','MAR':'Mar','ABR':'Abr','MAY':'May','JUN':'Jun',
-                 'JUL':'Jul','AGO':'Ago','SEP':'Sep','OCT':'Oct','NOV':'Nov','DIC':'Dic'}
-    pat_meses = r'\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\b'
-    mes_matches = re.findall(pat_meses, txt, re.I)
-    # Find all kWh-range numbers after removing meter numbers (>9999)
-    num_matches = re.findall(r'\b([1-9]\d{1,3})\b', txt)
-    kwh_vals = [int(v) for v in num_matches if 50 <= int(v) <= 3000]
+    # ── Consumos mensuales del historial ─────────────────────────────────────
+    # Strategy:
+    #   1. Find the X-axis months line (≥5 month abbrevs on one line)
+    #   2. Extract numbers ONLY from the chart section (between "Consumo total
+    #      del periodo" and the months line) → avoids picking up year "2026",
+    #      address numbers, billing amounts from the rest of the document
+    #   3. Strip Y-axis scale values (always multiples of 50: 200,400,600,800,1000…)
+    #   4. Map bar values sequentially to months
+    #   5. Override current month and previous month with reliable anchor values
+    #      extracted from the comparison mini-charts after the months line
+    _MESES_KEY  = {'ENE':'Ene','FEB':'Feb','MAR':'Mar','ABR':'Abr','MAY':'May','JUN':'Jun',
+                   'JUL':'Jul','AGO':'Ago','SEP':'Sep','OCT':'Oct','NOV':'Nov','DIC':'Dic'}
+    _MESES_NORM = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    _MESES_ABR  = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
 
-    if mes_matches and kwh_vals:
-        # Deduplicate to last 12 unique months
-        seen, orden = {}, []
-        for mes in mes_matches:
-            k = mes.upper()
-            if k not in seen:
-                seen[k] = True
-                orden.append(k)
-        orden = orden[-12:]  # last 12
-        for i, mes_key in enumerate(orden):
-            if i < len(kwh_vals):
-                mes_norm = meses_map.get(mes_key, mes_key)
-                datos['consumos_mensuales'][mes_norm] = kwh_vals[i]
+    pat_mln = (r'((?:(?:ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+){4,}'
+               r'(?:ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC))')
+    m_ml = re.search(pat_mln, txt, re.I)
+
+    if m_ml:
+        meses_linea = m_ml.group(1).strip().upper().split()
+        pos_ml_start = m_ml.start()
+        pos_ml_end   = m_ml.end()
+
+        # Chart section: from right after "Consumo total del periodo…\n" to month line
+        m_ctdp = re.search(r'Consumo\s+total\s+del\s+periodo[^\n]*\n', txt[:pos_ml_start], re.I)
+        sec_start = m_ctdp.end() if m_ctdp else max(0, pos_ml_start - 800)
+        chart_sec = txt[sec_start:pos_ml_start]
+
+        # Raw numbers 50-2500 from chart section only
+        chart_raw = [int(v) for v in re.findall(r'\b(\d{2,4})\b', chart_sec)
+                     if 50 <= int(v) <= 2500]
+
+        # Y-axis values in Enel/CGE charts are ALWAYS multiples of 50 (200,400,600…)
+        # Skip the leading Y-axis block; keep values not divisible by 50
+        bar_vals = [v for v in chart_raw if v % 50 != 0]
+
+        # Sequential month → value mapping
+        consumos = {}
+        for i, mes_k in enumerate(meses_linea):
+            if i < len(bar_vals):
+                consumos[_MESES_KEY.get(mes_k, mes_k.title())] = bar_vals[i]
+
+        # ── Anchor overrides from comparison mini-charts (after month labels) ──
+        # Post-months text typically: current_val, same_yr_val, …, current_val, prev_val, …
+        texto_post = txt[pos_ml_end:]
+        post_raw = [int(v) for v in re.findall(r'\b(\d{3,4})\b', texto_post[:600])
+                    if 50 <= int(v) <= 5000 and int(v) % 50 != 0]
+        # post_raw should be: [current, same_yr_ago, current, last_month, …]
+
+        m_fecha = re.search(r'Fecha de emisi[oó]n:\s*\d+\s+(\w+)\s+(\d{4})', txt, re.I)
+        consumo_actual = datos.get('consumo_actual_kwh', 0)
+        if m_fecha and consumo_actual:
+            mes_raw = m_fecha.group(1)[:3].upper()
+            if mes_raw in _MESES_ABR:
+                idx_act   = _MESES_ABR.index(mes_raw)
+                mes_act_k = _MESES_NORM[idx_act]
+                mes_ant_k = _MESES_NORM[(idx_act - 1) % 12]
+                # Override current month with the known-correct bill value
+                consumos[mes_act_k] = consumo_actual
+                # Override previous month from comparison mini-chart
+                if len(post_raw) >= 4:
+                    consumos[mes_ant_k] = post_raw[3]
+
+        datos['consumos_mensuales'] = consumos
 
     datos['ok'] = True
     return jsonify(datos)
@@ -3131,6 +3180,23 @@ def api_leads_mover_etapa(doc_id):
                               f'{etapa_anterior} → {nueva_etapa}')
     return jsonify({'ok': ok, 'error': err})
 
+@app.route('/api/leads/<doc_id>/presupuestos', methods=['GET'])
+@login_required
+def api_leads_presupuestos(doc_id):
+    """Devuelve los presupuestos asociados a un lead (por email o lead_id)."""
+    lead = db.get_lead_by_id(doc_id)
+    if not lead:
+        return jsonify([])
+    email = (lead.get('email') or '').strip().lower()
+    todos = db.get_all_presupuestos()
+    match = []
+    for p in todos:
+        p_email = (p.get('email_cliente') or '').strip().lower()
+        if (email and p_email and email == p_email) or p.get('lead_id') == doc_id:
+            match.append({'id': p['id'], 'folio': p.get('folio',''), 'estado': p.get('estado',''),
+                          'total': p.get('total',0), 'created_at': p.get('created_at','')})
+    return jsonify(match)
+
 @app.route('/api/leads/importar-email', methods=['POST'])
 @login_required
 def api_leads_importar_email():
@@ -3208,9 +3274,25 @@ def api_leads_importar_eml():
                 charset = part.get_content_charset() or 'utf-8'
                 body = payload.decode(charset, errors='replace')
                 break
+        # Fallback: try HTML part if no plain text
+    if not body:
+        for part in msg.walk():
+            if part.get_content_type() == 'text/html':
+                payload = part.get_payload(decode=True)
+                if payload:
+                    charset = part.get_content_charset() or 'utf-8'
+                    html = payload.decode(charset, errors='replace')
+                    # Strip HTML tags
+                    import re as _re2
+                    body = _re2.sub(r'<br\s*/?>', '\n', html)
+                    body = _re2.sub(r'<[^>]+>', '', body)
+                    break
 
     if not body:
         return jsonify({'ok': False, 'error': 'No se encontró texto en el archivo EML'})
+
+    # Normalize line endings (CRLF → LF)
+    body = body.replace('\r\n', '\n').replace('\r', '\n')
 
     # Parsear pares pregunta/respuesta (bloques separados por líneas vacías)
     nombre = apellido = email_lead = telefono = ciudad = region = ''

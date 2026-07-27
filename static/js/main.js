@@ -24,6 +24,7 @@ function toast(msg, level = 'success', duration = 3000) {
   el.className   = `toast ${level}`;
   setTimeout(() => { el.className = 'toast hidden'; }, duration);
 }
+const showToast = toast;
 
 async function api(url, method = 'GET', body = null, timeout = 20000) {
   const controller = new AbortController();
