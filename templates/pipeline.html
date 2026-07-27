@@ -635,6 +635,7 @@ async function importarEML(input) {
     }
     if (d.duplicado) {
       showToast('⚠️ ' + d.msg + ' (lead ya existía)', 'warning');
+      setTimeout(() => location.reload(), 1500);
     } else {
       showToast(`✅ Lead creado: ${d.nombre} ${d.email ? '· '+d.email : ''}`, 'success');
       setTimeout(() => location.reload(), 1200);

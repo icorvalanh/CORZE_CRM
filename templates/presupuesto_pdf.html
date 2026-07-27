@@ -2,213 +2,425 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Presupuesto {{ p.folio }}</title>
+<title>Propuesta {{ p.folio }}</title>
 <style>
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#1a1a1a; font-size:12px; line-height:1.5; }
-  .page { max-width:860px; margin:0 auto; padding:32px 40px; }
-  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; border-bottom:3px solid #F5A623; padding-bottom:20px; }
-  .logo-wrap img { max-height:60px; max-width:180px; object-fit:contain; }
-  .empresa-info { text-align:right; }
-  .empresa-info h2 { font-size:18px; font-weight:800; color:#F5A623; }
-  .empresa-info p { font-size:11px; color:#555; }
-  .folio-box { background:#F5A623; color:#fff; border-radius:8px; padding:10px 18px; text-align:center; margin-bottom:16px; }
-  .folio-box .num { font-size:20px; font-weight:800; }
-  .folio-box .lbl { font-size:10px; opacity:.85; }
-  .section-title { font-size:11px; font-weight:700; color:#F5A623; text-transform:uppercase; letter-spacing:.06em; margin:18px 0 8px; border-bottom:1px solid #eee; padding-bottom:4px; }
-  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; }
-  .info-item { display:flex; gap:6px; }
-  .info-label { color:#888; font-size:11px; min-width:80px; }
-  .info-value { font-weight:600; font-size:12px; }
-  table.items { width:100%; border-collapse:collapse; margin-top:8px; }
-  table.items thead { background:#F5A623; color:#fff; }
-  table.items th { padding:8px 10px; text-align:left; font-size:11px; font-weight:700; }
-  table.items th:last-child, table.items td:last-child { text-align:right; }
-  table.items tbody tr:nth-child(even) { background:#f9f9f9; }
-  table.items td { padding:7px 10px; font-size:12px; border-bottom:1px solid #eee; }
-  .totals { margin-top:16px; width:280px; margin-left:auto; }
-  .total-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:12px; }
-  .total-row.grand { font-size:16px; font-weight:800; color:#F5A623; border-bottom:none; border-top:2px solid #F5A623; padding-top:10px; margin-top:6px; }
-  .notes { background:#fffbf0; border-left:3px solid #F5A623; padding:12px 16px; border-radius:0 8px 8px 0; margin-top:20px; font-size:11px; color:#444; }
-  .footer { margin-top:32px; padding-top:20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:flex-end; }
-  .firma-box { text-align:center; }
-  .firma-line { width:160px; border-top:1px solid #aaa; margin:40px auto 6px; }
-  .firma-label { font-size:11px; color:#888; }
-  .badge { display:inline-block; padding:3px 10px; border-radius:4px; font-size:10px; font-weight:700; text-transform:uppercase; }
-  .badge-borrador  { background:#eee; color:#666; }
-  .badge-enviado   { background:#d4edda; color:#155724; }
-  .badge-aprobado  { background:#cce5ff; color:#004085; }
-  .badge-rechazado { background:#f8d7da; color:#721c24; }
-  .validez-note { font-size:10px; color:#888; margin-top:6px; }
-  @media print {
-    body { background:#fff; }
-    .no-print { display:none !important; }
-    .page { padding:16px 24px; }
-  }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#fff; color:#1a1a1a; font-size:11px; line-height:1.45; }
+.page { max-width:900px; margin:0 auto; padding:28px 36px; }
+
+/* ── HEADER ── */
+.header { display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:4px solid #1C3A6B; margin-bottom:18px; }
+.header-right { text-align:right; }
+.header-title { font-size:16px; font-weight:900; color:#1C3A6B; text-transform:uppercase; letter-spacing:.06em; }
+.header-sub { font-size:9px; color:#666; margin-top:3px; }
+.folio-badge { display:inline-block; background:#F5A623; color:#fff; border-radius:6px; padding:6px 14px; margin-top:8px; font-size:13px; font-weight:800; }
+.folio-badge small { display:block; font-size:8px; font-weight:400; opacity:.85; }
+
+/* ── META ROW ── */
+.meta-row { display:flex; gap:24px; background:#f5f7fa; border-radius:6px; padding:8px 12px; margin-bottom:14px; font-size:10px; }
+.meta-item span { color:#888; margin-right:4px; }
+.meta-item strong { color:#1C3A6B; }
+
+/* ── SECTION BARS ── */
+.sec-bar { background:#1C3A6B; color:#fff; font-size:10px; font-weight:700; padding:5px 10px; text-transform:uppercase; letter-spacing:.08em; margin:14px 0 8px; border-radius:3px; }
+.sec-bar.gold { background:#F5A623; }
+
+/* ── PROPUESTA PARA grid ── */
+.client-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px 24px; margin-bottom:4px; }
+.fl { display:flex; align-items:baseline; gap:8px; padding:4px 0; border-bottom:1px dotted #ddd; }
+.fl .lbl { color:#888; font-size:10px; min-width:90px; flex-shrink:0; }
+.fl .val { font-weight:600; color:#1a1a1a; }
+
+/* ── MENSAJE ── */
+.mensaje-box { background:#fffbf0; border-left:3px solid #F5A623; padding:8px 12px; font-size:10px; color:#333; margin:4px 0 6px; border-radius:0 4px 4px 0; white-space:pre-line; }
+
+/* ── RESUMEN EJECUTIVO ── */
+.resumen-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:8px 0 4px; }
+.re-box { background:#1C3A6B; color:#fff; border-radius:8px; padding:12px 8px; text-align:center; }
+.re-box .rv { font-size:15px; font-weight:900; color:#F5A623; line-height:1; margin-bottom:5px; }
+.re-box .rl { font-size:8px; opacity:.75; text-transform:uppercase; letter-spacing:.04em; }
+
+/* ── ITEMS TABLE ── */
+table.items { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:4px; }
+table.items thead { background:#F5A623; color:#fff; }
+table.items th { padding:6px 8px; text-align:left; font-weight:700; }
+table.items th:nth-child(3), table.items td:nth-child(3) { text-align:center; }
+table.items th:nth-child(4), table.items td:nth-child(4),
+table.items th:nth-child(5), table.items td:nth-child(5) { text-align:right; }
+table.items td { padding:5px 8px; border-bottom:1px solid #eee; }
+table.items tbody tr:nth-child(even) { background:#f9f9f9; }
+
+/* ── PROPUESTA ECONÓMICA ── */
+.eco-wrap { display:flex; justify-content:flex-end; margin:12px 0 4px; }
+.eco-table { width:300px; font-size:11px; }
+.eco-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #eee; }
+.eco-row.desc { color:#c0392b; }
+.eco-row.total { font-size:14px; font-weight:800; color:#1C3A6B; border-top:2px solid #1C3A6B; border-bottom:none; padding-top:8px; margin-top:4px; }
+.eco-row.card  { font-size:11px; color:#888; border-bottom:none; }
+
+/* ── CONSUMO VS GENERACIÓN ── */
+.mes-table { width:100%; border-collapse:collapse; font-size:9px; }
+.mes-table th { background:#f0f0f0; padding:4px 6px; text-align:center; font-weight:700; color:#555; border-bottom:2px solid #ddd; }
+.mes-table td { padding:4px 6px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.mes-table td:first-child { font-weight:700; text-align:center; width:36px; }
+.mes-table td:nth-child(2), .mes-table td:nth-child(3) { text-align:right; width:70px; }
+.bar-cell { width:auto; }
+.bar-wrap { display:flex; flex-direction:column; gap:2px; }
+.bar { height:7px; border-radius:2px; min-width:1px; }
+.bar-cons { background:#F5A623; }
+.bar-gen  { background:#2ECC71; }
+.leyenda { display:flex; gap:16px; font-size:8px; margin:4px 0 8px; }
+.leyenda span { display:flex; align-items:center; gap:4px; }
+.leyenda span::before { content:''; display:inline-block; width:10px; height:7px; border-radius:2px; }
+.leyenda .lc::before { background:#F5A623; }
+.leyenda .lg::before { background:#2ECC71; }
+
+/* ── ROI 25 AÑOS ── */
+table.roi { width:100%; border-collapse:collapse; font-size:9px; margin:6px 0; }
+table.roi thead { background:#1C3A6B; color:#fff; }
+table.roi th { padding:4px 6px; text-align:right; font-weight:700; }
+table.roi th:first-child { text-align:center; width:30px; }
+table.roi td { padding:3px 6px; border-bottom:1px solid #eee; text-align:right; }
+table.roi td:first-child { text-align:center; font-weight:700; color:#1C3A6B; }
+table.roi tbody tr:nth-child(even) { background:#f9f9f9; }
+table.roi tbody tr.payback-row { background:#fffbf0; font-weight:700; color:#F5A623; }
+table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
+
+/* ── INDICADORES CLAVE ── */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:8px 0; }
+.kpi-box { border:2px solid #1C3A6B; border-radius:8px; padding:12px 8px; text-align:center; }
+.kpi-box .kv { font-size:18px; font-weight:900; color:#1C3A6B; }
+.kpi-box .ks { font-size:9px; color:#888; display:block; }
+.kpi-box .kl { font-size:9px; color:#555; margin-top:6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+
+/* ── CONDICIONES ── */
+.cond-box { background:#f5f7fa; border-radius:6px; padding:10px 14px; font-size:9.5px; color:#444; line-height:1.6; }
+.cond-box ul { padding-left:14px; }
+.cond-box li { margin:2px 0; }
+
+/* ── FOOTER ── */
+.footer { margin-top:20px; padding-top:12px; border-top:2px solid #1C3A6B; display:flex; justify-content:space-between; align-items:flex-end; font-size:9px; color:#666; }
+.sig-line { width:180px; border-top:1px solid #999; margin:44px 0 4px; }
+
+@media print {
+  .no-print { display:none !important; }
+  .page { padding:12px 20px; }
+  table.roi { font-size:8px; }
+}
 </style>
 </head>
 <body>
+{% set sd = p.get('solar_data') or {} %}
+{% set sk = solar_kpis or {} %}
 <div class="page">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="logo-wrap">
-      {% if logo_b64 %}
-      <img src="{{ logo_b64 }}" alt="Corze">
-      {% else %}
-      <div style="font-size:22px;font-weight:900;color:#F5A623">CORZE</div>
-      {% endif %}
-      <div style="font-size:10px;color:#888;margin-top:4px">Energía Solar</div>
-    </div>
-    <div class="empresa-info">
-      <h2>Corze Energía Solar</h2>
-      <p>contacto@corze.cl</p>
-      <p>Chile</p>
-      <div style="margin-top:8px">
-        <div class="folio-box">
-          <div class="lbl">PRESUPUESTO</div>
-          <div class="num">{{ p.folio }}</div>
-        </div>
-        <span class="badge badge-{{ p.estado }}">{{ p.estado }}</span>
+<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    {% if logo_b64 %}
+    <img src="{{ logo_b64 }}" alt="Corze" style="max-height:56px;max-width:160px;object-fit:contain">
+    {% else %}
+    <div style="font-size:22px;font-weight:900;color:#F5A623">CORZE</div>
+    {% endif %}
+    <div style="font-size:9px;color:#888;margin-top:3px">Energía Solar</div>
+  </div>
+  <div class="header-right">
+    <div class="header-title">Propuesta de sistema fotovoltaico</div>
+    <div class="header-sub">Huechuraba, Santiago &nbsp;·&nbsp; +56 9 8208 7316 &nbsp;·&nbsp; CORZE SpA</div>
+    <div>
+      <div class="folio-badge">
+        <small>N° Cotización</small>
+        {{ p.folio }}
       </div>
+      &nbsp;
+      <span style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid #ddd;vertical-align:top;margin-top:8px;color:#555">
+        {% if p.estado == 'enviado' %}✅ Enviado
+        {% elif p.estado == 'aprobado' %}🎉 Aprobado
+        {% elif p.estado == 'rechazado' %}❌ Rechazado
+        {% else %}📝 Borrador{% endif %}
+      </span>
     </div>
   </div>
+</div>
 
-  <!-- Fechas -->
-  <div style="display:flex;gap:24px;margin-bottom:16px">
-    <div><span style="color:#888;font-size:11px">Fecha emisión: </span><strong>{{ (p.created_at or '')[:10] }}</strong></div>
-    <div><span style="color:#888;font-size:11px">Validez: </span><strong>{{ p.validez_dias or 10 }} días</strong></div>
-    {% if p.trabajador_asignado %}
-    <div><span style="color:#888;font-size:11px">Asesor: </span><strong>{{ p.trabajador_asignado }}</strong></div>
-    {% endif %}
+<!-- ══ META ROW ════════════════════════════════════════════════════════════ -->
+{% set fecha_emision = (p.created_at or '')[:10] %}
+<div class="meta-row">
+  <div class="meta-item"><span>Fecha:</span><strong>{{ fecha_emision }}</strong></div>
+  <div class="meta-item"><span>Vigencia:</span><strong>{{ p.validez_dias or 10 }} días</strong></div>
+  {% if p.trabajador_asignado %}
+  <div class="meta-item"><span>Asesor:</span><strong>{{ p.trabajador_asignado }}</strong></div>
+  {% endif %}
+  {% if p.get('distribuidora') %}
+  <div class="meta-item"><span>Distribuidora:</span><strong>{{ p.distribuidora }}</strong></div>
+  {% endif %}
+</div>
+
+<!-- ══ PROPUESTA PARA ══════════════════════════════════════════════════════ -->
+<div class="sec-bar">Propuesta para</div>
+<div class="client-grid">
+  <div class="fl"><span class="lbl">Cliente</span><span class="val">{{ p.nombre_cliente or '' }} {{ p.apellido_cliente or '' }}</span></div>
+  {% if p.rut_cliente %}
+  <div class="fl"><span class="lbl">RUT</span><span class="val">{{ p.rut_cliente }}</span></div>
+  {% endif %}
+  {% if p.email_cliente %}
+  <div class="fl"><span class="lbl">Email</span><span class="val">{{ p.email_cliente }}</span></div>
+  {% endif %}
+  {% if p.telefono_cliente %}
+  <div class="fl"><span class="lbl">Teléfono</span><span class="val">{{ p.telefono_cliente }}</span></div>
+  {% endif %}
+  {% if p.direccion_cliente %}
+  <div class="fl"><span class="lbl">Dirección</span><span class="val">{{ p.direccion_cliente }}</span></div>
+  {% endif %}
+  {% if p.comuna_cliente %}
+  <div class="fl"><span class="lbl">Comuna</span><span class="val">{{ p.comuna_cliente }}</span></div>
+  {% endif %}
+  {% if sd.get('region') %}
+  <div class="fl"><span class="lbl">Región</span><span class="val">{{ sd.region }}</span></div>
+  {% endif %}
+</div>
+
+{% if p.notas %}
+<div class="sec-bar" style="margin-top:12px">Mensaje</div>
+<div class="mensaje-box">{{ p.notas }}</div>
+{% endif %}
+
+<!-- ══ RESUMEN EJECUTIVO ════════════════════════════════════════════════════ -->
+{% if sk %}
+<div class="sec-bar">Resumen ejecutivo</div>
+<div class="resumen-grid">
+  <div class="re-box">
+    <div class="rv">{{ sd.get('potencia_kwp','—') }} kWp</div>
+    <div class="rl">Potencia del sistema</div>
   </div>
-
-  <!-- Datos del cliente -->
-  <div class="section-title">Datos del cliente</div>
-  <div class="info-grid">
-    <div class="info-item">
-      <span class="info-label">Nombre:</span>
-      <span class="info-value">{{ p.nombre_cliente or '' }} {{ p.apellido_cliente or '' }}</span>
-    </div>
-    {% if p.rut_cliente %}
-    <div class="info-item">
-      <span class="info-label">RUT:</span>
-      <span class="info-value">{{ p.rut_cliente }}</span>
-    </div>
-    {% endif %}
-    {% if p.email_cliente %}
-    <div class="info-item">
-      <span class="info-label">Email:</span>
-      <span class="info-value">{{ p.email_cliente }}</span>
-    </div>
-    {% endif %}
-    {% if p.telefono_cliente %}
-    <div class="info-item">
-      <span class="info-label">Teléfono:</span>
-      <span class="info-value">{{ p.telefono_cliente }}</span>
-    </div>
-    {% endif %}
-    {% if p.direccion_cliente %}
-    <div class="info-item">
-      <span class="info-label">Dirección:</span>
-      <span class="info-value">{{ p.direccion_cliente }}{% if p.comuna_cliente %}, {{ p.comuna_cliente }}{% endif %}</span>
-    </div>
-    {% endif %}
+  <div class="re-box">
+    <div class="rv">{{ '{:,.0f}'.format(sk.gen_anual_kwh or 0).replace(',','.') }}</div>
+    <div class="rl">Generación anual (kWh)</div>
   </div>
+  <div class="re-box">
+    <div class="rv">{{ sk.cobertura_pct or '—' }}%</div>
+    <div class="rl">Cobertura del consumo</div>
+  </div>
+  <div class="re-box">
+    <div class="rv">${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</div>
+    <div class="rl">Inversión total</div>
+  </div>
+  <div class="re-box">
+    <div class="rv">{{ sk.payback_anios or '—' }} años</div>
+    <div class="rl">Payback estimado</div>
+  </div>
+</div>
+{% endif %}
 
-  <!-- Ítems -->
-  <div class="section-title">Detalle de productos y servicios</div>
-  <table class="items">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Descripción</th>
-        <th>Cód.</th>
-        <th>Cant.</th>
-        <th>P. Unitario</th>
-        <th>Desc.%</th>
-        <th>Subtotal</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for it in p.get('items') or [] %}
-      <tr>
-        <td style="color:#aaa">{{ loop.index }}</td>
-        <td><strong>{{ it.nombre }}</strong></td>
-        <td style="color:#aaa;font-size:10px">{{ it.codigo or '' }}</td>
-        <td style="text-align:center">{{ it.cantidad }}</td>
-        <td style="text-align:right">${{ '{:,.0f}'.format(it.precio_unitario or 0).replace(',','.') }}</td>
-        <td style="text-align:center">{% if it.descuento_pct %}{{ it.descuento_pct }}%{% else %}—{% endif %}</td>
-        <td style="text-align:right;font-weight:600">${{ '{:,.0f}'.format(it.subtotal or 0).replace(',','.') }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- ══ PROPUESTA TÉCNICA ═══════════════════════════════════════════════════ -->
+<div class="sec-bar">Propuesta técnica — equipos</div>
+<table class="items">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Descripción</th>
+      <th>Cód.</th>
+      <th>Cant.</th>
+      <th>P. Unitario</th>
+      <th>Desc.</th>
+      <th>Subtotal</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in p.get('items') or [] %}
+    <tr>
+      <td style="color:#aaa;text-align:center">{{ loop.index }}</td>
+      <td><strong>{{ it.nombre }}</strong></td>
+      <td style="color:#aaa;font-size:9px">{{ it.codigo or '—' }}</td>
+      <td style="text-align:center">{{ it.cantidad }}</td>
+      <td>${{ '{:,.0f}'.format(it.precio_unitario or 0).replace(',','.') }}</td>
+      <td style="text-align:center">{% if it.descuento_pct %}{{ it.descuento_pct }}%{% else %}—{% endif %}</td>
+      <td><strong>${{ '{:,.0f}'.format(it.subtotal or 0).replace(',','.') }}</strong></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
-  <!-- Totales -->
-  <div class="totals">
-    <div class="total-row">
-      <span>Subtotal</span>
+<!-- ══ PROPUESTA ECONÓMICA ═════════════════════════════════════════════════ -->
+<div class="sec-bar">Propuesta económica</div>
+<div class="eco-wrap">
+  <div class="eco-table">
+    <div class="eco-row">
+      <span>Precio lista</span>
       <span>${{ '{:,.0f}'.format(p.subtotal_bruto or 0).replace(',','.') }}</span>
     </div>
     {% if p.descuento_general_pct %}
-    <div class="total-row" style="color:#c0392b">
-      <span>Descuento general ({{ p.descuento_general_pct }}%)</span>
+    <div class="eco-row desc">
+      <span>Descuento ({{ p.descuento_general_pct }}%)</span>
       <span>− ${{ '{:,.0f}'.format(p.monto_descuento or 0).replace(',','.') }}</span>
     </div>
-    {% endif %}
-    <div class="total-row">
-      <span>Subtotal neto</span>
+    <div class="eco-row">
+      <span>Inversión neta</span>
       <span>${{ '{:,.0f}'.format(p.subtotal_neto or 0).replace(',','.') }}</span>
     </div>
+    {% endif %}
     {% if p.incluye_iva %}
-    <div class="total-row">
+    <div class="eco-row">
       <span>IVA (19%)</span>
       <span>${{ '{:,.0f}'.format(p.monto_iva or 0).replace(',','.') }}</span>
     </div>
     {% endif %}
-    <div class="total-row grand">
-      <span>TOTAL</span>
+    <div class="eco-row total">
+      <span>TOTAL con IVA</span>
       <span>${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</span>
     </div>
+    <div class="eco-row card" style="margin-top:4px;font-size:9px">
+      <span>Total con tarjeta (7%)</span>
+      <span>${{ '{:,.0f}'.format((p.total or 0) * 1.07).replace(',','.') }}</span>
+    </div>
   </div>
+</div>
 
-  <!-- Notas y condiciones -->
-  {% if p.notas %}
-  <div class="notes" style="margin-top:16px">
-    <strong>Notas:</strong><br>{{ p.notas }}
+<!-- ══ CONSUMO VS GENERACIÓN MENSUAL ══════════════════════════════════════ -->
+{% if sk and sk.gen_por_mes %}
+<div class="sec-bar">Consumo vs. generación mensual estimada</div>
+{% set ns_max = namespace(mx=1) %}
+{% for m in sk.gen_por_mes %}
+  {% if m.consumo > ns_max.mx %}{% set ns_max.mx = m.consumo %}{% endif %}
+  {% if m.generacion > ns_max.mx %}{% set ns_max.mx = m.generacion %}{% endif %}
+{% endfor %}
+{% set mx = ns_max.mx %}
+<div class="leyenda">
+  <span class="lc">Consumo (kWh)</span>
+  <span class="lg">Generación (kWh)</span>
+</div>
+<table class="mes-table">
+  <thead>
+    <tr>
+      <th>Mes</th>
+      <th>Consumo</th>
+      <th>Generación</th>
+      <th style="text-align:left;padding-left:8px">Distribución</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in sk.gen_por_mes %}
+    {% set cw = [(m.consumo / mx * 160) | int, 1] | max %}
+    {% set gw = [(m.generacion / mx * 160) | int, 1] | max %}
+    <tr>
+      <td>{{ m.mes }}</td>
+      <td>{{ '{:,.0f}'.format(m.consumo).replace(',','.') }}</td>
+      <td>{{ '{:,.0f}'.format(m.generacion).replace(',','.') }}</td>
+      <td class="bar-cell" style="padding-left:8px">
+        <div class="bar-wrap">
+          {% if m.consumo > 0 %}<div class="bar bar-cons" style="width:{{ cw }}px"></div>{% endif %}
+          <div class="bar bar-gen" style="width:{{ gw }}px"></div>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ══ RETORNO DE LA INVERSIÓN 25 AÑOS ════════════════════════════════════ -->
+{% if sk and sk.proyeccion %}
+<div class="sec-bar" style="margin-top:16px">Retorno de la inversión — flujo neto acumulado a 25 años</div>
+<table class="roi">
+  <thead>
+    <tr>
+      <th>Año</th>
+      <th>Generación (kWh)</th>
+      <th>Tarifa ($/kWh)</th>
+      <th>Ahorro anual ($)</th>
+      <th>Ahorro acumulado ($)</th>
+      <th>Flujo neto ($)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set pb = sk.payback_anios %}
+    {% for yr in sk.proyeccion %}
+    {% set is_pb = pb and yr.anio == (pb | int + 1) %}
+    <tr{% if is_pb %} class="payback-row"{% endif %}>
+      <td>{{ yr.anio }}</td>
+      <td>{{ '{:,.0f}'.format(yr.gen).replace(',','.') }}</td>
+      <td>{{ '{:,.0f}'.format(yr.tarifa).replace(',','.') }}</td>
+      <td>{{ '{:,.0f}'.format(yr.ahorro).replace(',','.') }}</td>
+      <td>{{ '{:,.0f}'.format(yr.acumulado).replace(',','.') }}</td>
+      <td style="{% if yr.neto >= 0 %}color:#27AE60;font-weight:700{% else %}color:#E74C3C{% endif %}">
+        {{ '{:,.0f}'.format(yr.neto).replace(',','.') }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ══ INDICADORES CLAVE ═══════════════════════════════════════════════════ -->
+{% if sk %}
+<div class="sec-bar">Indicadores clave</div>
+<div class="kpi-grid">
+  <div class="kpi-box">
+    <div class="kv">{{ sk.payback_anios or '—' }} <span class="ks">años</span></div>
+    <div class="kl">Payback</div>
   </div>
-  {% endif %}
+  <div class="kpi-box">
+    <div class="kv">${{ '{:,.1f}'.format((sk.ahorro_10 or 0)/1e6).replace(',','.') }}M <span class="ks">CLP</span></div>
+    <div class="kl">Ahorro 10 años</div>
+  </div>
+  <div class="kpi-box">
+    <div class="kv">${{ '{:,.1f}'.format((sk.ahorro_15 or 0)/1e6).replace(',','.') }}M <span class="ks">CLP</span></div>
+    <div class="kl">Ahorro 15 años</div>
+  </div>
+  <div class="kpi-box">
+    <div class="kv">${{ '{:,.1f}'.format((sk.ahorro_25 or 0)/1e6).replace(',','.') }}M <span class="ks">CLP</span></div>
+    <div class="kl">Ahorro 25 años</div>
+  </div>
+</div>
+{% if sk.co2_anual_ton %}
+<div style="font-size:9px;color:#27AE60;margin:4px 0 8px;text-align:center">
+  🌱 CO₂ evitado: <strong>{{ sk.co2_anual_ton }} ton/año</strong>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- ══ CONDICIONES GENERALES ═══════════════════════════════════════════════ -->
+<div class="sec-bar">Condiciones generales y aceptación</div>
+<div class="cond-box">
   {% if p.condiciones %}
-  <div class="notes" style="margin-top:10px">
-    <strong>Condiciones de venta:</strong><br>{{ p.condiciones }}
-  </div>
+  <p style="white-space:pre-line">{{ p.condiciones }}</p>
+  {% else %}
+  <ul>
+    <li>La presente cotización tiene una vigencia de <strong>{{ p.validez_dias or 10 }} días</strong> desde la fecha de emisión.</li>
+    <li>Los precios indicados incluyen instalación, puesta en marcha y tramitación ante distribuidora.</li>
+    <li>Los paneles y equipos cuentan con garantía de fábrica de acuerdo a ficha técnica de cada producto.</li>
+    <li>La generación estimada corresponde a valores referenciales basados en datos históricos de radiación solar.</li>
+    <li>El retorno de inversión proyectado considera un incremento tarifario del 5% anual y degradación de paneles del 0,5% anual.</li>
+    <li>La firma de este documento constituye aceptación de los términos y condiciones de la propuesta.</li>
+  </ul>
   {% endif %}
+</div>
 
-  <div class="validez-note">
-    Este presupuesto tiene una validez de {{ p.validez_dias or 10 }} días desde la fecha de emisión.
+<!-- ══ FOOTER + FIRMA ══════════════════════════════════════════════════════ -->
+<div class="footer">
+  <div>
+    <div style="font-size:10px;font-weight:700;color:#1C3A6B">CORZE SpA</div>
+    <div>Av. Las Torres 1277 · Huechuraba, Santiago</div>
+    <div>+56 9 8208 7316 · contacto@corze.cl</div>
   </div>
+  <div style="text-align:center">
+    <div class="sig-line"></div>
+    <div style="font-size:10px;font-weight:700">{{ p.trabajador_asignado or 'Asesor comercial' }}</div>
+    <div style="font-size:9px;color:#888">Corze Energía Solar</div>
+  </div>
+</div>
 
-  <!-- Footer -->
-  <div class="footer">
-    <div>
-      <div style="font-size:11px;color:#888">Generado por Corze Admin</div>
-      <div style="font-size:10px;color:#bbb">corze.cl · contacto@corze.cl</div>
-    </div>
-    <div class="firma-box">
-      <div class="firma-line"></div>
-      <div class="firma-label">{{ p.trabajador_asignado or 'Asesor comercial' }}</div>
-      <div style="font-size:10px;color:#bbb">Corze Energía Solar</div>
-    </div>
-  </div>
-
-  <!-- Botón imprimir -->
-  <div class="no-print" style="text-align:center;margin-top:24px">
-    <button onclick="window.print()"
-      style="background:#F5A623;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
-      🖨️ Imprimir / Guardar PDF
-    </button>
-  </div>
+<!-- ══ BOTÓN IMPRIMIR ══════════════════════════════════════════════════════ -->
+<div class="no-print" style="text-align:center;margin-top:24px">
+  <button onclick="window.print()"
+    style="background:#1C3A6B;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:10px">
+    🖨️ Imprimir / Guardar PDF
+  </button>
+  <a href="/admin/presupuestos"
+    style="background:#f0f0f0;color:#333;border:none;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none">
+    ← Volver
+  </a>
+</div>
 
 </div>
 </body>

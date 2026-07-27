@@ -2797,7 +2797,9 @@ def presupuesto_pdf(doc_id):
     if not p:
         return '<h2>Presupuesto no encontrado</h2>', 404
     logo_b64 = get_logo_b64()
-    resp = make_response(render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64))
+    sd = p.get('solar_data') or {}
+    solar_kpis = _calcular_solar_kpis(sd, p.get('total', 0)) if sd.get('potencia_kwp') else {}
+    resp = make_response(render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64, solar_kpis=solar_kpis))
     if request.args.get('download'):
         nombre = (p.get('nombre_cliente','') or 'cliente').replace(' ', '_')
         folio  = p.get('folio', doc_id[:8])
@@ -2824,7 +2826,9 @@ def api_presupuestos_enviar_email(doc_id):
         return jsonify({'ok': False, 'error': 'EMAIL_PASS no configurada en las variables de entorno'})
 
     logo_b64 = get_logo_b64()
-    html_body = render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64)
+    sd_email = p.get('solar_data') or {}
+    solar_kpis_email = _calcular_solar_kpis(sd_email, p.get('total', 0)) if sd_email.get('potencia_kwp') else {}
+    html_body = render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64, solar_kpis=solar_kpis_email)
 
     try:
         msg = MIMEMultipart('alternative')
@@ -2884,6 +2888,71 @@ _COMUNAS_REGION = {
     'LA SERENA':'Coquimbo','COQUIMBO':'Coquimbo','RANCAGUA':"O'Higgins",
     'TALCA':'Maule','CURICÓ':'Maule','VALDIVIA':'Los Ríos','ARICA':'Arica y Parinacota',
 }
+
+def _calcular_solar_kpis(sd: dict, total_proyecto: float = 0) -> dict:
+    """Recalcula KPIs solares a partir del solar_data guardado en un presupuesto."""
+    potencia_kwp = float(sd.get('potencia_kwp', 0))
+    if potencia_kwp <= 0:
+        return {}
+    region       = sd.get('region', 'Metropolitana de Santiago')
+    orientacion  = sd.get('orientacion', 'Norte')
+    pr           = float(sd.get('pr', 80)) / 100
+    tarifa_kwh   = float(sd.get('tarifa_kwh', 230))
+    consumos     = sd.get('consumos', {})
+    incremento   = 0.05
+    degradacion  = 0.005
+
+    hsp           = _HSP.get(region, 5.0)
+    factor_orient = _FACTOR_ORIENT.get(orientacion, 1.0)
+    MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+    gen_anual = potencia_kwp * hsp * 30.4 * 12 * pr * factor_orient
+    sum_f     = sum(_FACTOR_ESTACIONAL.values())
+
+    gen_por_mes   = []
+    consumo_anual = 0
+    for mes in MESES:
+        factor  = _FACTOR_ESTACIONAL.get(mes, 1.0)
+        gen_mes = gen_anual * factor / sum_f
+        c_mes   = float(consumos.get(mes, 0))
+        consumo_anual += c_mes
+        gen_por_mes.append({'mes': mes, 'consumo': round(c_mes, 1), 'generacion': round(gen_mes, 1)})
+
+    consumo_mensual_prom = consumo_anual / 12 if consumo_anual > 0 else 0
+    cobertura_pct        = gen_anual / consumo_anual * 100 if consumo_anual > 0 else 0
+
+    proyeccion, ahorro_acum, neto_acum, payback = [], 0, -total_proyecto, None
+    for anio in range(1, 26):
+        gen_a = gen_anual * ((1 - degradacion) ** (anio - 1))
+        tar_a = tarifa_kwh * ((1 + incremento) ** (anio - 1))
+        ah_a  = gen_a * tar_a
+        ahorro_acum += ah_a
+        neto_acum   += ah_a
+        if payback is None and neto_acum >= 0 and proyeccion:
+            frac    = -(neto_acum - ah_a) / ah_a
+            payback = anio - 1 + frac
+        proyeccion.append({'anio': anio, 'gen': round(gen_a, 1),
+                           'tarifa': round(tar_a, 1), 'ahorro': round(ah_a, 0),
+                           'acumulado': round(ahorro_acum, 0), 'neto': round(neto_acum, 0)})
+
+    co2_ton = gen_anual * 0.35 / 1000
+    return {
+        'gen_anual_kwh':        round(gen_anual, 1),
+        'gen_mensual_kwh':      round(gen_anual / 12, 1),
+        'consumo_anual':        round(consumo_anual, 1),
+        'consumo_mensual_prom': round(consumo_mensual_prom, 1),
+        'cobertura_pct':        round(cobertura_pct, 1),
+        'payback_anios':        round(payback, 1) if payback is not None else None,
+        'ahorro_anio1':         round(proyeccion[0]['ahorro'], 0) if proyeccion else 0,
+        'ahorro_10':            round(proyeccion[9]['acumulado'], 0)  if len(proyeccion) >= 10 else 0,
+        'ahorro_15':            round(proyeccion[14]['acumulado'], 0) if len(proyeccion) >= 15 else 0,
+        'ahorro_25':            round(proyeccion[24]['acumulado'], 0) if len(proyeccion) >= 25 else 0,
+        'co2_anual_ton':        round(co2_ton, 2),
+        'hsp':                  hsp,
+        'gen_por_mes':          gen_por_mes,
+        'proyeccion':           proyeccion,
+    }
+
 
 @app.route('/api/boleta/leer', methods=['POST'])
 @login_required
