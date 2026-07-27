@@ -6,7 +6,8 @@ from typing import Optional, List, Dict, Any
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-from config import ALERT_DAYS_WARNING, ALERT_DAYS_CRITICAL
+ALERT_DAYS_WARNING  = 30
+ALERT_DAYS_CRITICAL = 60
 
 
 class FirebaseDB:
