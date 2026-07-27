@@ -89,16 +89,23 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 .footer { margin-top:24px; padding-top:12px; border-top:2px solid #1C3A6B; display:flex; justify-content:space-between; align-items:flex-end; font-size:9px; color:#555; }
 .sig-line { width:180px; border-top:1px solid #999; margin:48px 0 4px; }
 
+/* ── PRINT BLOCK (evita que una sección se parta entre páginas) ── */
+.print-block { page-break-inside: avoid; }
+
 @media print {
   * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
   body { margin:0; }
   .no-print { display:none !important; }
   .page { max-width:100%; padding:10px 16px; margin:0; }
+  .print-block { page-break-inside:avoid !important; display:block !important; }
   .header { page-break-inside:avoid; }
   .meta-bar { page-break-inside:avoid; }
+  /* grid containers también ignoran page-break en Chrome → wrap con print-block */
   .re-grid { page-break-inside:avoid; }
   .kpi-grid { page-break-inside:avoid; }
-  .eco-wrap { page-break-inside:avoid; }
+  /* eco-wrap usa flex pero Chrome ignora page-break en flex → forzar block */
+  .eco-wrap { display:block !important; page-break-inside:avoid !important; }
+  .eco-box  { width:320px; margin-left:auto; }
   .footer { page-break-inside:avoid; }
   table.roi { font-size:8px; page-break-inside:avoid; }
   table.roi th, table.roi td { padding:2px 5px; }
@@ -107,7 +114,6 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
   .sec-bar { page-break-after:avoid; }
   .mensaje { page-break-inside:avoid; }
   .cond-box { page-break-inside:avoid; }
-  /* Forzar colores de fondo en backgrounds de secciones */
   .meta-bar, .re-box, table.eq thead, table.roi thead,
   .eco-row.total, .sec-bar { -webkit-print-color-adjust:exact !important; }
 }
@@ -126,7 +132,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     {% if logo_b64 %}
       <img src="{{ logo_b64 }}" alt="Corze" style="max-height:56px;max-width:155px;object-fit:contain;display:block">
     {% else %}
-      <div style="font-size:24px;font-weight:900;color:#F5A623">CORZE</div>
+      <img src="{{ url_for('static', filename='assets/logo_corze_negro.png') }}" alt="Corze" style="max-height:56px;max-width:155px;object-fit:contain;display:block">
     {% endif %}
     <div style="font-size:9px;color:#888;margin-top:3px">Energía Solar</div>
   </div>
@@ -188,6 +194,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 
 <!-- ══ RESUMEN EJECUTIVO ════════════════════════════════════════════════════ -->
 {% if sk %}
+<div class="print-block">
 <div class="sec-bar">Resumen ejecutivo</div>
 <div class="re-grid">
   <div class="re-box">
@@ -210,6 +217,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     <div class="re-val">{{ sk.payback_anios or '—' }} años</div>
     <div class="re-sub">Payback estimado</div>
   </div>
+</div>
 </div>
 {% endif %}
 
@@ -286,6 +294,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 </table>
 
 <!-- ══ PROPUESTA ECONÓMICA ════════════════════════════════════════════════ -->
+<div class="print-block">
 <div class="sec-bar">Propuesta económica</div>
 <p class="eco-note">Incluye equipos (paneles, inversor, batería si aplica), materiales, instalación, puesta en marcha, diseño y tramitación ante la distribuidora.</p>
 <div class="eco-wrap">
@@ -321,6 +330,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
   </div>
 </div>
 <p class="eco-cond">Condiciones: precio en pesos chilenos (CLP), IVA incluido. Incluye instalación, puesta en marcha y gestión de conexión ante la distribuidora. Garantías según fabricante de cada equipo.</p>
+</div>
 
 <!-- ══ CONSUMO VS. GENERACIÓN MENSUAL ESTIMADA ════════════════════════════ -->
 {% if sk and sk.gen_por_mes %}
@@ -484,6 +494,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 
 <!-- ══ INDICADORES CLAVE ═══════════════════════════════════════════════════ -->
 {% if sk %}
+<div class="print-block">
 <div class="sec-bar">Indicadores clave de retorno</div>
 <div class="kpi-grid">
   <div class="kpi-box">
@@ -508,6 +519,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
   🌱 CO₂ evitado: <strong>{{ sk.co2_anual_ton }} ton/año</strong> equivalente al consumo de {{ (sk.co2_anual_ton * 1000 / 130) | int }} hogares
 </div>
 {% endif %}
+</div>
 {% endif %}
 
 <!-- ══ CONDICIONES GENERALES Y ACEPTACIÓN ════════════════════════════════ -->
