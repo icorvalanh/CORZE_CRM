@@ -1,46 +1,72 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-.builder-grid { display:grid; grid-template-columns:1fr 380px; gap:16px; margin-top:8px; }
-.builder-card { background:var(--card); border:1px solid var(--border1); border-radius:12px; padding:20px; }
-.section-title { font-size:13px; font-weight:700; color:var(--blue); margin-bottom:14px; border-bottom:1px solid var(--border1); padding-bottom:8px; }
-.item-row { display:grid; grid-template-columns:3fr 80px 110px 70px 100px 36px; gap:6px; align-items:center; margin-bottom:6px; }
-.item-row input { background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:6px 8px; color:var(--white); font-size:12px; width:100%; }
-.item-row .sub { color:var(--green); font-weight:700; text-align:right; font-size:12px; padding-right:4px; }
-.total-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border1); font-size:13px; }
-.total-row.final { border-bottom:none; font-size:17px; font-weight:800; color:var(--blue); margin-top:8px; }
-.autocomplete-wrap { position:relative; }
-.autocomplete-list { position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--card2); border:1px solid var(--border2); border-radius:8px; max-height:200px; overflow-y:auto; }
-.autocomplete-item { padding:8px 12px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border1); }
-.autocomplete-item:hover { background:var(--card3); }
-.estado-badge { display:inline-block; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700; }
+.builder-grid { display:grid; grid-template-columns:1fr 390px; gap:16px; margin-top:8px; align-items:start; }
+.builder-card { background:var(--card); border:1px solid var(--border1); border-radius:12px; padding:20px; margin-bottom:12px; }
+.section-title { font-size:13px; font-weight:700; color:var(--blue); margin-bottom:14px; border-bottom:1px solid var(--border1); padding-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+.equip-table { width:100%; border-collapse:collapse; }
+.equip-table th { font-size:9px; color:var(--gray2); font-weight:700; text-transform:uppercase; padding:0 4px 8px 0; text-align:left; }
+.equip-table th.r { text-align:right; }
+.equip-table td { padding:4px 4px 4px 0; vertical-align:middle; }
+.equip-lbl { font-size:10px; color:var(--gray3); font-weight:600; padding:4px 0 2px; }
+.equip-select { background:var(--card2); border:1px solid var(--border2); border-radius:8px; padding:7px 8px; color:var(--white); font-size:12px; width:100%; }
+.equip-select:focus { border-color:var(--blue); outline:none; }
+.equip-qty { background:var(--card2); border:1px solid var(--border2); border-radius:8px; padding:7px 5px; color:var(--white); font-size:12px; width:58px; text-align:center; }
+.equip-qty:focus { border-color:var(--blue); outline:none; }
+.equip-display { background:var(--card3); border:1px solid var(--border1); border-radius:7px; padding:7px 8px; font-size:12px; font-weight:700; color:var(--blue); text-align:right; white-space:nowrap; display:block; }
+.equip-sub { color:#2ECC71; }
+.cons-wrap { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
 .mes-input-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .mes-input-wrap label { font-size:9px; color:var(--gray2); font-weight:600; text-transform:uppercase; }
-.mes-input-wrap input { width:100%; background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:5px 6px; color:var(--white); font-size:12px; text-align:center; }
+.mes-input-wrap input { width:100%; background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:6px 4px; color:var(--white); font-size:12px; text-align:center; }
+.mes-input-wrap input:focus { border-color:var(--blue); outline:none; }
+.gen-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.gen-box { background:var(--card2); border:1px solid var(--border2); border-radius:8px; padding:10px; text-align:center; }
+.gen-box .gval { font-size:16px; font-weight:800; color:#2ECC71; }
+.gen-box .glbl { font-size:9px; color:var(--gray3); margin-top:2px; text-transform:uppercase; font-weight:600; }
+.extra-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border1); }
+.extra-row:last-child { border-bottom:none; }
+.extra-check { accent-color:var(--blue); width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+.extra-label { flex:1; font-size:12px; color:var(--gray1); }
+.extra-unit { font-size:10px; color:var(--gray3); width:88px; text-align:right; flex-shrink:0; }
+.extra-qty { width:52px; background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:4px 5px; color:var(--white); font-size:12px; text-align:center; }
+.extra-qty:focus { border-color:var(--blue); outline:none; }
+.extra-qty:disabled { opacity:0.35; }
+.extra-sub { font-size:12px; font-weight:700; color:#2ECC71; width:96px; text-align:right; flex-shrink:0; }
+.price-section { padding:8px 0; border-bottom:1px solid var(--border1); }
+.price-section:last-child { border-bottom:none; }
+.price-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; font-size:12px; }
+.price-row .lbl { color:var(--gray2); }
+.price-row .val { font-weight:600; color:var(--white); }
+.price-row.bold .lbl { font-weight:600; color:var(--gray1); }
+.price-row.disc .val { color:var(--red); }
+.price-row.total-final { font-size:17px; font-weight:800; color:var(--blue); padding:10px 0 4px; }
+.price-row.sub-item .lbl { font-size:11px; padding-left:10px; color:var(--gray3); }
+.price-row.sub-item .val { font-size:11px; color:var(--gray2); }
+.inline-input { background:var(--card2); border:1px solid var(--border2); border-radius:6px; padding:3px 6px; color:var(--white); font-size:12px; text-align:right; }
+.inline-input:focus { border-color:var(--blue); outline:none; }
 .kpi-solar { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border1); font-size:12px; }
 .kpi-solar:last-child { border-bottom:none; }
 .kpi-solar .val { font-weight:700; color:var(--blue); }
 .kpi-solar .val.green { color:#2ECC71; }
 .kpi-solar .val.gold { color:#F5A623; }
-.chart-bar-wrap { margin-top:12px; }
-.chart-bar-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:10px; }
-.chart-bar-row .mes-lbl { width:28px; color:var(--gray2); }
-.chart-bar-row .bar { height:12px; border-radius:3px; min-width:2px; transition:width .3s; }
+.chart-bar-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:10px; }
+.chart-bar-row .mes-lbl { width:26px; color:var(--gray2); }
+.chart-bar-row .bar { height:10px; border-radius:2px; min-width:2px; transition:width .3s; }
 .boleta-banner { display:flex; align-items:center; gap:10px; background:var(--card2); border:1px dashed var(--border2); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+.estado-badge { display:inline-block; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700; }
+.display-stat { background:var(--card2); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:12px; }
+.display-stat .dv { font-weight:700; color:var(--blue); }
 </style>
 {% endblock %}
-{% block content %}
 
+{% block content %}
 <div class="page-header">
   <div style="display:flex;align-items:center;gap:12px">
     <a href="{{ url_for('presupuestos') }}" style="color:var(--gray2);text-decoration:none">← Presupuestos</a>
     <h1 class="page-title">
-      {% if presupuesto %}
-        {{ presupuesto.folio }}
-        <span class="estado-badge" id="estadoBadge"></span>
-      {% else %}
-        Nuevo Presupuesto
-      {% endif %}
+      {% if presupuesto %}{{ presupuesto.folio }}<span class="estado-badge" id="estadoBadge" style="margin-left:8px"></span>
+      {% else %}Nuevo Presupuesto{% endif %}
     </h1>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -50,19 +76,18 @@
     <button class="btn btn-secondary" onclick="enviarEmail()">📧 Enviar Email</button>
     {% endif %}
     <button class="btn btn-secondary" onclick="withBtn(this, () => guardar('borrador'))">💾 Guardar Borrador</button>
-    <button class="btn btn-primary" onclick="withBtn(this, () => guardar('enviado'))">✅ Guardar y Marcar Enviado</button>
+    <button class="btn btn-primary"   onclick="withBtn(this, () => guardar('enviado'))">✅ Guardar y Marcar Enviado</button>
   </div>
 </div>
 
 <div class="builder-grid">
 
-  <!-- ── Columna izquierda ── -->
+  <!-- ══ COLUMNA IZQUIERDA ══════════════════════════════════════════════════ -->
   <div>
 
-    <!-- CLIENTE -->
-    <div class="builder-card" style="margin-bottom:12px">
+    <!-- 1. Datos del Cliente -->
+    <div class="builder-card">
       <div class="section-title">👤 Datos del Cliente</div>
-      <!-- Upload boleta banner -->
       <div class="boleta-banner">
         <span style="font-size:20px">📄</span>
         <div style="flex:1">
@@ -96,8 +121,33 @@
           <input class="form-input" id="fRut" placeholder="12.345.678-9">
         </div>
         <div class="form-group">
+          <label class="form-label">Distribuidora</label>
+          <input class="form-input" id="fDistribuidora" placeholder="Enel, CGE, Frontel...">
+        </div>
+        <div class="form-group">
           <label class="form-label">Comuna</label>
-          <input class="form-input" id="fComuna" placeholder="Santiago" oninput="recalcularSolar()">
+          <input class="form-input" id="fComuna" placeholder="Santiago">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Región</label>
+          <select class="form-input" id="sRegion" onchange="recalcular()">
+            <option value="Metropolitana de Santiago">Metropolitana de Santiago (HSP 5.0)</option>
+            <option value="Valparaíso">Valparaíso (HSP 5.1)</option>
+            <option value="Coquimbo">Coquimbo (HSP 5.6)</option>
+            <option value="O'Higgins">O'Higgins (HSP 4.8)</option>
+            <option value="Maule">Maule (HSP 4.6)</option>
+            <option value="Ñuble">Ñuble (HSP 4.4)</option>
+            <option value="Biobío">Biobío (HSP 4.2)</option>
+            <option value="La Araucanía">La Araucanía (HSP 3.9)</option>
+            <option value="Los Ríos">Los Ríos (HSP 3.6)</option>
+            <option value="Los Lagos">Los Lagos (HSP 3.3)</option>
+            <option value="Aysén">Aysén (HSP 2.9)</option>
+            <option value="Magallanes">Magallanes (HSP 2.5)</option>
+            <option value="Atacama">Atacama (HSP 6.1)</option>
+            <option value="Antofagasta">Antofagasta (HSP 6.2)</option>
+            <option value="Tarapacá">Tarapacá (HSP 6.3)</option>
+            <option value="Arica y Parinacota">Arica y Parinacota (HSP 6.5)</option>
+          </select>
         </div>
         <div class="form-group" style="grid-column:1/-1">
           <label class="form-label">Dirección</label>
@@ -106,176 +156,253 @@
       </div>
     </div>
 
-    <!-- ANÁLISIS SOLAR -->
-    <div class="builder-card" style="margin-bottom:12px">
-      <div class="section-title" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between" onclick="toggleSolar()">
-        <span>☀️ Análisis Solar — Consumo y Generación</span>
-        <span id="solarArrow" style="font-size:11px;color:var(--gray2)">▼</span>
-      </div>
-      <div id="solarBody">
-
-        <!-- Consumo mensual -->
-        <div style="margin-bottom:14px">
-          <div style="font-size:11px;color:var(--gray2);margin-bottom:8px;font-weight:600">CONSUMO ELÉCTRICO MENSUAL (kWh) — rellenado desde la boleta</div>
-          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
-            {% for mes in ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'] %}
-            <div class="mes-input-wrap">
-              <label>{{ mes }}</label>
-              <input type="number" id="cons_{{ mes }}" min="0" placeholder="0" oninput="recalcularSolar()">
-            </div>
-            {% endfor %}
-          </div>
+    <!-- 2. Consumo Eléctrico -->
+    <div class="builder-card">
+      <div class="section-title">⚡ Consumo Eléctrico del Cliente</div>
+      <div style="font-size:10px;color:var(--gray2);font-weight:600;margin-bottom:8px">CONSUMO MENSUAL (kWh)</div>
+      <div class="cons-wrap">
+        {% for mes in ['Ene','Feb','Mar','Abr','May','Jun'] %}
+        <div class="mes-input-wrap">
+          <label>{{ mes }}</label>
+          <input type="number" id="cons_{{ mes }}" min="0" placeholder="0" oninput="recalcular()">
         </div>
+        {% endfor %}
+      </div>
+      <div class="cons-wrap" style="margin-top:6px">
+        {% for mes in ['Jul','Ago','Sep','Oct','Nov','Dic'] %}
+        <div class="mes-input-wrap">
+          <label>{{ mes }}</label>
+          <input type="number" id="cons_{{ mes }}" min="0" placeholder="0" oninput="recalcular()">
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+        <div class="form-group">
+          <label class="form-label">Tarifa eléctrica ($/kWh)</label>
+          <input class="form-input" type="number" id="sTarifa" value="230" oninput="recalcular()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Precio excedente ($/kWh)</label>
+          <input class="form-input" type="number" id="sExcedente" value="110" oninput="recalcular()">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+        <div class="display-stat">
+          <span style="color:var(--gray2)">Promedio mensual</span>
+          <span class="dv" id="dConsPromedio">—</span>
+        </div>
+        <div class="display-stat">
+          <span style="color:var(--gray2)">Total anual</span>
+          <span class="dv" id="dConsAnual">—</span>
+        </div>
+      </div>
+    </div>
 
-        <!-- Parámetros técnicos -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+    <!-- 3. Diseño del Sistema -->
+    <div class="builder-card">
+      <div class="section-title">🔧 Diseño del Sistema Fotovoltaico</div>
+
+      <!-- Paneles -->
+      <div class="equip-lbl">PANELES SOLARES</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
+        <select class="equip-select" id="selPanel" onchange="onPanelChange()">
+          <option value="">— Seleccionar panel —</option>
+        </select>
+        <input type="number" class="equip-qty" id="qPanel" min="0" value="0" oninput="recalcular()" placeholder="N°">
+        <span class="equip-display" id="dPanelKwp" title="Potencia del sistema">—</span>
+        <span class="equip-display equip-sub" id="dPanelSub">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 64px;gap:6px;margin-bottom:14px">
+        <div style="font-size:11px;color:var(--gray3);padding-left:2px" id="dPanelPrecio">Precio unitario: —</div>
+      </div>
+
+      <!-- Inversor -->
+      <div class="equip-lbl">INVERSOR</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
+        <select class="equip-select" id="selInversor" onchange="onInversorChange()">
+          <option value="">— Seleccionar inversor —</option>
+        </select>
+        <input type="number" class="equip-qty" id="qInversor" min="0" value="0" oninput="recalcular()" placeholder="N°">
+        <span class="equip-display" id="dInversorSpec" title="Especificación">—</span>
+        <span class="equip-display equip-sub" id="dInversorSub">—</span>
+      </div>
+      <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dInversorPrecio">Precio unitario: —</div>
+
+      <!-- Batería -->
+      <div class="equip-lbl">BATERÍA (opcional)</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
+        <select class="equip-select" id="selBateria" onchange="onBateriaChange()">
+          <option value="">— Sin batería —</option>
+        </select>
+        <input type="number" class="equip-qty" id="qBateria" min="0" value="0" oninput="recalcular()" placeholder="N°">
+        <span class="equip-display" id="dBateriaSpec" title="Especificación">—</span>
+        <span class="equip-display equip-sub" id="dBateriaSub">—</span>
+      </div>
+      <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dBateriaPrecio">Precio unitario: —</div>
+
+      <!-- Estructura -->
+      <div class="equip-lbl">ESTRUCTURA DE MONTAJE</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
+        <select class="equip-select" id="selEstructura" onchange="onEstructuraChange()">
+          <option value="">— Seleccionar estructura —</option>
+        </select>
+        <input type="number" class="equip-qty" id="qEstructura" min="0" value="0" oninput="recalcular()" placeholder="N°">
+        <span class="equip-display" id="dEstructuraSpec" title="Especificación">—</span>
+        <span class="equip-display equip-sub" id="dEstructuraSub">—</span>
+      </div>
+      <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dEstructuraPrecio">Precio unitario: —</div>
+
+      <!-- Parámetros técnicos -->
+      <div style="padding-top:12px;border-top:1px solid var(--border1)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group">
-            <label class="form-label">Región (HSP)</label>
-            <select class="form-input" id="sRegion" onchange="recalcularSolar()">
-              <option value="Metropolitana de Santiago">Metropolitana (5.0)</option>
-              <option value="Valparaíso">Valparaíso (5.1)</option>
-              <option value="Coquimbo">Coquimbo (5.6)</option>
-              <option value="Atacama">Atacama (6.1)</option>
-              <option value="Antofagasta">Antofagasta (6.2)</option>
-              <option value="Tarapacá">Tarapacá (6.3)</option>
-              <option value="Arica y Parinacota">Arica (6.5)</option>
-              <option value="O'Higgins">O'Higgins (4.8)</option>
-              <option value="Maule">Maule (4.6)</option>
-              <option value="Ñuble">Ñuble (4.4)</option>
-              <option value="Biobío">Biobío (4.2)</option>
-              <option value="La Araucanía">Araucanía (3.9)</option>
-              <option value="Los Ríos">Los Ríos (3.6)</option>
-              <option value="Los Lagos">Los Lagos (3.3)</option>
-              <option value="Aysén">Aysén (2.9)</option>
-              <option value="Magallanes">Magallanes (2.5)</option>
+            <label class="form-label">Orientación del techo</label>
+            <select class="form-input" id="sOrientacion" onchange="recalcular()">
+              <option value="Norte">Norte — 100%</option>
+              <option value="Nororiente">Nororiente — 95%</option>
+              <option value="Norponiente" selected>Norponiente — 95%</option>
+              <option value="Oriente">Oriente — 85%</option>
+              <option value="Poniente">Poniente — 85%</option>
+              <option value="Montaje al ras">Montaje al ras — 90%</option>
+              <option value="Suroriente">Suroriente — 50%</option>
+              <option value="Surponiente">Surponiente — 50%</option>
+              <option value="Sur">Sur — 40%</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Orientación</label>
-            <select class="form-input" id="sOrientacion" onchange="recalcularSolar()">
-              <option value="Norte">Norte (100%)</option>
-              <option value="Nororiente">Nororiente (95%)</option>
-              <option value="Norponiente" selected>Norponiente (95%)</option>
-              <option value="Oriente">Oriente (85%)</option>
-              <option value="Poniente">Poniente (85%)</option>
-              <option value="Horizontal">Horizontal (90%)</option>
-              <option value="Suroriente">Suroriente (50%)</option>
-              <option value="Surponiente">Surponiente (50%)</option>
-              <option value="Sur">Sur (40%)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Potencia sistema (kWp)</label>
-            <input class="form-input" type="number" id="sPotencia" step="0.01" placeholder="Auto desde ítems" oninput="recalcularSolar()">
-            <div id="potenciaAuto" style="font-size:10px;color:var(--gray3);margin-top:3px"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Tarifa eléctrica ($/kWh)</label>
-            <input class="form-input" type="number" id="sTarifa" value="230" oninput="recalcularSolar()">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Precio excedente ($/kWh)</label>
-            <input class="form-input" type="number" id="sExcedente" value="110" oninput="recalcularSolar()">
           </div>
           <div class="form-group">
             <label class="form-label">Performance Ratio (%)</label>
-            <input class="form-input" type="number" id="sPR" value="80" min="50" max="100" oninput="recalcularSolar()">
+            <input class="form-input" type="number" id="sPR" value="80" min="50" max="100" oninput="recalcular()">
           </div>
         </div>
+      </div>
 
-        <!-- Gráfico consumo vs generación -->
-        <div id="chartSolar" style="display:none">
-          <div style="font-size:11px;color:var(--gray2);font-weight:600;margin-bottom:6px">CONSUMO vs GENERACIÓN ESTIMADA</div>
-          <div id="chartBarras"></div>
-          <div style="display:flex;gap:16px;margin-top:6px;font-size:10px">
-            <span style="color:#F5A623">■ Consumo</span>
-            <span style="color:#2ECC71">■ Generación</span>
-          </div>
+      <!-- Generación estimada -->
+      <div class="gen-grid" id="genGrid" style="display:none">
+        <div class="gen-box">
+          <div class="gval" id="dKwp">—</div>
+          <div class="glbl">Potencia (kWp)</div>
         </div>
-
+        <div class="gen-box">
+          <div class="gval" id="dGenMensual">—</div>
+          <div class="glbl">Gen. mensual (kWh)</div>
+        </div>
+        <div class="gen-box">
+          <div class="gval" id="dGenAnual">—</div>
+          <div class="glbl">Gen. anual (kWh)</div>
+        </div>
+        <div class="gen-box" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:10px 16px">
+          <span style="font-size:12px;color:var(--gray2)">Cobertura estimada del consumo</span>
+          <span style="font-size:18px;font-weight:800;color:#2ECC71" id="dCobertura">—</span>
+        </div>
       </div>
     </div>
 
-    <!-- ITEMS -->
-    <div class="builder-card" style="margin-bottom:12px">
-      <div class="section-title">📦 Ítems del Presupuesto</div>
-      <div class="autocomplete-wrap" style="margin-bottom:12px">
-        <input class="form-input" id="productoSearch"
-               placeholder="🔍 Buscar producto por nombre o código..."
-               oninput="buscarProducto(this.value)" autocomplete="off">
-        <div id="autocompleteList" class="autocomplete-list" style="display:none"></div>
+    <!-- 4. Costos Adicionales -->
+    <div class="builder-card">
+      <div class="section-title">
+        <span>➕ Costos Adicionales</span>
+        <span style="font-size:11px;font-weight:400;color:var(--gray3)">Marcar los que apliquen</span>
       </div>
-      <div style="display:grid;grid-template-columns:3fr 80px 110px 70px 100px 36px;gap:6px;margin-bottom:4px">
-        <span style="font-size:10px;color:var(--gray2);font-weight:600">PRODUCTO</span>
-        <span style="font-size:10px;color:var(--gray2);font-weight:600">CANT.</span>
-        <span style="font-size:10px;color:var(--gray2);font-weight:600">P. UNITARIO</span>
-        <span style="font-size:10px;color:var(--gray2);font-weight:600">DESC.%</span>
-        <span style="font-size:10px;color:var(--gray2);font-weight:600;text-align:right">SUBTOTAL</span>
-        <span></span>
-      </div>
-      <div id="itemsContainer"></div>
-      <div id="emptyItems" style="text-align:center;color:var(--gray3);padding:24px;font-size:12px">
-        Busca y selecciona productos arriba para agregarlos
+      <div id="extrasContainer"></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border1);display:flex;align-items:center;gap:16px">
+        <div class="form-group" style="margin:0;flex:1">
+          <label class="form-label">Diseño y tramitación SERNAC ($)</label>
+          <input class="form-input" type="number" id="sDisenoTram" value="150000" oninput="recalcular()">
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;color:var(--gray3);margin-bottom:2px">Subtotal adicionales</div>
+          <div style="font-size:16px;font-weight:700;color:#2ECC71" id="dSubAdicionales">$0</div>
+        </div>
       </div>
     </div>
 
-    <!-- NOTAS -->
+    <!-- 5. Notas -->
     <div class="builder-card">
       <div class="section-title">📝 Notas y Condiciones</div>
       <div class="form-group">
         <label class="form-label">Mensaje para el cliente</label>
-        <textarea class="form-input" id="fNotas" rows="3" placeholder="Observaciones que verá el cliente..."></textarea>
+        <textarea class="form-input" id="fNotas" rows="3" placeholder="Observaciones que verá el cliente en la propuesta..."></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Condiciones de venta</label>
-        <textarea class="form-input" id="fCondiciones" rows="3"
-          placeholder="Ej: El precio incluye instalación básica. Garantía de 1 año en mano de obra..."></textarea>
+        <textarea class="form-input" id="fCondiciones" rows="2" placeholder="Ej: El precio incluye instalación básica. Garantía de 1 año en mano de obra..."></textarea>
       </div>
     </div>
 
-  </div>
+  </div><!-- /col izquierda -->
 
-  <!-- ── Columna derecha ── -->
+  <!-- ══ COLUMNA DERECHA ════════════════════════════════════════════════════ -->
   <div>
 
-    <!-- TOTALES -->
-    <div class="builder-card" style="margin-bottom:12px;position:sticky;top:16px">
-      <div class="section-title">💰 Totales</div>
+    <!-- Resumen Económico (sticky) -->
+    <div class="builder-card" style="position:sticky;top:16px">
+      <div class="section-title">💰 Resumen Económico</div>
 
-      <div class="total-row">
-        <span style="color:var(--gray1)">Subtotal bruto</span>
-        <span id="tSubtotalBruto" style="color:var(--white)">$0</span>
+      <!-- Equipos -->
+      <div class="price-section">
+        <div class="price-row sub-item"><span class="lbl">Paneles</span><span class="val" id="rPaneles">—</span></div>
+        <div class="price-row sub-item"><span class="lbl">Inversor</span><span class="val" id="rInversor">—</span></div>
+        <div class="price-row sub-item"><span class="lbl">Batería</span><span class="val" id="rBateria">—</span></div>
+        <div class="price-row sub-item"><span class="lbl">Estructura</span><span class="val" id="rEstructura">—</span></div>
+        <div class="price-row bold" style="margin-top:4px"><span class="lbl">Subtotal equipos</span><span class="val" id="rSubEquipos">$0</span></div>
       </div>
-      <div class="total-row" style="align-items:center">
-        <span style="color:var(--gray1)">Descuento general</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="number" id="fDescuentoGral" min="0" max="100" value="0"
-                 oninput="recalcular()" style="width:54px;background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:4px 6px;color:var(--white);font-size:12px;text-align:right">
-          <span style="color:var(--gray2);font-size:11px">%</span>
+
+      <!-- Instalación -->
+      <div class="price-section">
+        <div class="price-row sub-item"><span class="lbl">Instalación base</span><span class="val" id="rInstBase">—</span></div>
+        <div class="price-row sub-item"><span class="lbl">Costos adicionales</span><span class="val" id="rCostosAdic">$0</span></div>
+        <div class="price-row sub-item"><span class="lbl">Diseño y tramitación</span><span class="val" id="rDiseno">$150.000</span></div>
+        <div class="price-row bold" style="margin-top:4px"><span class="lbl">Subtotal directos</span><span class="val" id="rSubDirectos">$0</span></div>
+      </div>
+
+      <!-- Margen -->
+      <div class="price-section">
+        <div class="price-row">
+          <span class="lbl">Margen comercial</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <input type="number" id="fMargen" class="inline-input" value="25" min="0" max="100" style="width:48px" oninput="recalcular()">
+            <span style="font-size:11px;color:var(--gray3)">%</span>
+          </div>
+        </div>
+        <div class="price-row sub-item"><span class="lbl">Margen $</span><span class="val" id="rMargen">$0</span></div>
+        <div class="price-row bold"><span class="lbl">Precio lista</span><span class="val" id="rPrecioLista">$0</span></div>
+      </div>
+
+      <!-- Descuento -->
+      <div class="price-section">
+        <div class="price-row">
+          <span class="lbl">Descuento</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <input type="number" id="fDescuento" class="inline-input" value="0" min="0" max="100" style="width:48px" oninput="recalcular()">
+            <span style="font-size:11px;color:var(--gray3)">%</span>
+          </div>
+        </div>
+        <div class="price-row disc"><span class="lbl">− Descuento $</span><span class="val" id="rDescuento">$0</span></div>
+        <div class="price-row bold"><span class="lbl">Subtotal neto</span><span class="val" id="rSubNeto">$0</span></div>
+      </div>
+
+      <!-- IVA y Total -->
+      <div class="price-section">
+        <div class="price-row">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--gray2)">
+            <input type="checkbox" id="fIva" onchange="recalcular()" style="accent-color:var(--blue)"> IVA 19%
+          </label>
+          <span class="val" id="rIva" style="color:var(--gray3)">$0</span>
+        </div>
+        <div class="price-row total-final">
+          <span>TOTAL</span>
+          <span id="rTotal">$0</span>
+        </div>
+        <div class="price-row" style="font-size:11px;color:var(--gray3)">
+          <span>Total con tarjeta (+7%)</span>
+          <span id="rTotalTarjeta">$0</span>
         </div>
       </div>
-      <div class="total-row">
-        <span style="color:var(--red)">− Monto descuento</span>
-        <span id="tMontoDescuento" style="color:var(--red)">$0</span>
-      </div>
-      <div class="total-row">
-        <span style="color:var(--gray1)">Subtotal neto</span>
-        <span id="tSubtotalNeto" style="color:var(--white)">$0</span>
-      </div>
-      <div class="total-row" style="align-items:center">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--gray1)">
-          <input type="checkbox" id="fIva" onchange="recalcular()"> IVA (19%)
-        </label>
-        <span id="tIva" style="color:var(--gray2)">$0</span>
-      </div>
-      <div class="total-row final">
-        <span>TOTAL</span>
-        <span id="tTotal">$0</span>
-      </div>
 
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border1)">
+      <!-- Opciones -->
+      <div style="padding-top:12px;border-top:1px solid var(--border1)">
         <div class="form-group">
-          <label class="form-label">Trabajador asignado</label>
+          <label class="form-label">Vendedor</label>
           <select class="form-input" id="fTrabajador">
             <option value="">Sin asignar</option>
             {% for t in trabajadores %}
@@ -283,505 +410,576 @@
             {% endfor %}
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Validez (días)</label>
-          <input class="form-input" type="number" id="fValidez" value="10" min="1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Estado</label>
-          <select class="form-input" id="fEstado">
-            <option value="borrador">Borrador</option>
-            <option value="enviado">Enviado</option>
-            <option value="aprobado">Aprobado</option>
-            <option value="rechazado">Rechazado</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- KPIs SOLARES -->
-    <div class="builder-card" id="solarKpisCard" style="display:none">
-      <div class="section-title">⚡ Retorno Solar</div>
-      <div id="solarKpisBody">
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">Potencia del sistema</span>
-          <span class="val" id="kPotencia">—</span>
-        </div>
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">Generación anual</span>
-          <span class="val" id="kGenAnual">—</span>
-        </div>
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">Cobertura consumo</span>
-          <span class="val gold" id="kCobertura">—</span>
-        </div>
-        <div class="kpi-solar" style="background:var(--card2);border-radius:8px;padding:10px;margin-top:8px;border:none">
-          <span style="font-size:13px;font-weight:700;color:var(--white)">Payback</span>
-          <span class="val green" id="kPayback" style="font-size:18px">—</span>
-        </div>
-        <div class="kpi-solar" style="margin-top:4px">
-          <span style="color:var(--gray1)">Ahorro año 1</span>
-          <span class="val green" id="kAhorro1">—</span>
-        </div>
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">Ahorro acumulado 10 años</span>
-          <span class="val green" id="kAhorro10">—</span>
-        </div>
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">Ahorro acumulado 25 años</span>
-          <span class="val green" id="kAhorro25">—</span>
-        </div>
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">ROI a 25 años</span>
-          <span class="val gold" id="kRoi">—</span>
-        </div>
-        <div class="kpi-solar">
-          <span style="color:var(--gray1)">CO₂ evitado</span>
-          <span class="val" id="kCo2" style="color:#1ABC9C">—</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-group">
+            <label class="form-label">Validez (días)</label>
+            <input class="form-input" type="number" id="fValidez" value="10" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-input" id="fEstado">
+              <option value="borrador">Borrador</option>
+              <option value="enviado">Enviado</option>
+              <option value="aprobado">Aprobado</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
 
-  </div>
-</div>
+    <!-- KPIs Solares -->
+    <div class="builder-card" id="solarKpisCard" style="display:none;margin-top:0">
+      <div class="section-title">☀️ Retorno Solar</div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">Generación anual</span><span class="val" id="kGenAnual">—</span></div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">Payback estimado</span><span class="val green" style="font-size:16px" id="kPayback">—</span></div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">Ahorro año 1</span><span class="val green" id="kAhorro1">—</span></div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">Ahorro 10 años</span><span class="val green" id="kAhorro10">—</span></div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">Ahorro 25 años</span><span class="val green" id="kAhorro25">—</span></div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">ROI 25 años</span><span class="val gold" id="kRoi">—</span></div>
+      <div class="kpi-solar"><span style="color:var(--gray1)">CO₂ evitado/año</span><span class="val" style="color:#1ABC9C" id="kCo2">—</span></div>
+      <div id="chartSolar" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border1)">
+        <div style="font-size:10px;color:var(--gray2);font-weight:600;margin-bottom:6px">CONSUMO vs GENERACIÓN</div>
+        <div id="chartBarras"></div>
+        <div style="display:flex;gap:14px;margin-top:4px;font-size:10px">
+          <span style="color:#F5A623">■ Consumo</span>
+          <span style="color:#2ECC71">■ Generación</span>
+        </div>
+      </div>
+    </div>
 
+  </div><!-- /col derecha -->
+</div><!-- /builder-grid -->
 {% endblock %}
+
 {% block scripts %}
 <script>
 const PRESUPUESTO_ID = '{{ presupuesto.id if presupuesto else "" }}';
-let items = [];
-let productos = [];
-let solarVisible = true;
-let calcSolarTimeout = null;
-
-const fmt  = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
-const fmtK = n => { n = Math.round(n||0); if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString('es-CL'); };
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-// ── Cargar presupuesto existente ──────────────────────────────────────────
-{% if presupuesto %}
-const pData = {{ presupuesto|tojson }};
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('fNombreCliente').value   = pData.nombre_cliente   || '';
-  document.getElementById('fApellidoCliente').value = pData.apellido_cliente  || '';
-  document.getElementById('fEmail').value           = pData.email_cliente     || '';
-  document.getElementById('fTelefono').value        = pData.telefono_cliente  || '';
-  document.getElementById('fRut').value             = pData.rut_cliente       || '';
-  document.getElementById('fComuna').value          = pData.comuna_cliente    || '';
-  document.getElementById('fDireccion').value       = pData.direccion_cliente || '';
-  document.getElementById('fNotas').value           = pData.notas             || '';
-  document.getElementById('fCondiciones').value     = pData.condiciones       || '';
-  document.getElementById('fDescuentoGral').value   = pData.descuento_general_pct || 0;
-  document.getElementById('fIva').checked           = !!pData.incluye_iva;
-  document.getElementById('fTrabajador').value      = pData.trabajador_asignado   || '';
-  document.getElementById('fValidez').value         = pData.validez_dias      || 10;
-  document.getElementById('fEstado').value          = pData.estado            || 'borrador';
+// ── Constantes Excel ────────────────────────────────────────────────────────
+const ORIENT_FACTOR = {
+  'Norte':1.0,'Nororiente':0.95,'Norponiente':0.95,'Oriente':0.85,'Poniente':0.85,
+  'Montaje al ras':0.9,'Suroriente':0.5,'Surponiente':0.5,'Sur':0.4
+};
+const HSP_REGION = {
+  'Metropolitana de Santiago':5.0,'Valparaíso':5.1,'Coquimbo':5.6,"O'Higgins":4.8,
+  'Maule':4.6,'Ñuble':4.4,'Biobío':4.2,'La Araucanía':3.9,'Los Ríos':3.6,
+  'Los Lagos':3.3,'Aysén':2.9,'Magallanes':2.5,'Atacama':6.1,
+  'Antofagasta':6.2,'Tarapacá':6.3,'Arica y Parinacota':6.5
+};
+const FACT_EST = {
+  'Ene':1.2857,'Feb':1.2078,'Mar':1.1006,'Abr':0.9253,'May':0.7597,'Jun':0.6331,
+  'Jul':0.6623,'Ago':0.7987,'Sep':0.9545,'Oct':1.1104,'Nov':1.2468,'Dic':1.3149
+};
+const INSTALL_TABLE = {
+  4:1386555,5:1428571,6:1470588,7:1512605,8:1554622,9:1596639,10:1638655,
+  11:1764706,12:1932773,13:2100840,14:2184874,15:2268908,16:2352941,17:2436975,
+  18:2478992,19:2521008,20:2563025,21:2605042,22:2689076,23:2752101,24:2815126,
+  25:2878151,26:2941176,27:3004202,28:3067227,29:3130252,30:3193277,31:3256302,
+  32:3319328,33:3382353,34:3445378,35:3508403,36:3571429,37:3634454,38:3697479,
+  39:3760504,40:3823529,41:3886555,42:3949580,43:4012605,44:4075630,45:4138655,
+  46:4201681,47:4264706,48:4327731,49:4390756,50:4453782,51:4516807,52:4579832,
+  53:4642857,54:4705882,55:4768907,56:4831933,57:4894958,58:4957983,59:5021008
+};
+const EXTRAS_DEF = [
+  {id:'bat1',     label:'Instalación batería (1ª)',          unit:'primera bat.',   base:350000, perPanel:false},
+  {id:'bat2',     label:'Instalación batería adicional',     unit:'bat. adicional', base:150000, perPanel:false},
+  {id:'trif',     label:'Instalación trifásica / tableros',  unit:'instalación',    base:300000, perPanel:false},
+  {id:'canal_t',  label:'Canalizaciones trifásicas',         unit:'metro lineal',   base:13000,  perPanel:false},
+  {id:'canal_c',  label:'Canalizaciones zona costera',       unit:'metro lineal',   base:5000,   perPanel:false},
+  {id:'teja',     label:'Instalación teja colonial',         unit:'panel',          base:44000,  perPanel:true},
+  {id:'struct_m', label:'Estructura a la medida',            unit:'panel',          base:21008,  perPanel:true},
+  {id:'fuera_rm', label:'Extra fuera de RM',                 unit:'día',            base:60000,  perPanel:false},
+  {id:'noche',    label:'Extra noche temporada baja',        unit:'noche',          base:120000, perPanel:false},
+];
 
-  const eb = document.getElementById('estadoBadge');
-  if (eb) {
-    const colors = {borrador:'var(--blue)',enviado:'var(--green)',aprobado:'var(--teal)',rechazado:'var(--red)'};
-    eb.textContent = pData.estado || 'borrador';
-    eb.style.background = '#1A2A3A';
-    eb.style.color = colors[pData.estado] || 'var(--blue)';
-  }
+// ── Estado ──────────────────────────────────────────────────────────────────
+let paneles = [], inversores = [], baterias = [], estructuras = [];
+let selPanel = null, selInversor = null, selBateria = null, selEstructura = null;
+let calcTimer = null;
 
-  // Cargar datos solares guardados
-  const sd = pData.solar_data || {};
-  if (sd.consumos) {
-    MESES.forEach(m => {
-      const el = document.getElementById('cons_'+m);
-      if (el && sd.consumos[m]) el.value = sd.consumos[m];
-    });
-  }
-  if (sd.region)      document.getElementById('sRegion').value     = sd.region;
-  if (sd.orientacion) document.getElementById('sOrientacion').value = sd.orientacion;
-  if (sd.potencia_kwp)document.getElementById('sPotencia').value   = sd.potencia_kwp;
-  if (sd.tarifa_kwh)  document.getElementById('sTarifa').value     = sd.tarifa_kwh;
-  if (sd.excedente)   document.getElementById('sExcedente').value  = sd.excedente;
-  if (sd.pr)          document.getElementById('sPR').value         = sd.pr;
+const fmt  = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
+const fmtK = n => { n=Math.round(n||0); if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString('es-CL'); };
 
-  items = (pData.items || []).map((it, i) => ({...it, _key: i}));
-  renderItems();
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  renderExtras();
+  await cargarProductos();
+  {% if presupuesto %}
+  await cargarPresupuesto({{ presupuesto|tojson }});
+  {% endif %}
   recalcular();
-  recalcularSolar();
 });
-{% endif %}
 
-// ── Solar toggle ──────────────────────────────────────────────────────────
-function toggleSolar() {
-  solarVisible = !solarVisible;
-  document.getElementById('solarBody').style.display = solarVisible ? '' : 'none';
-  document.getElementById('solarArrow').textContent  = solarVisible ? '▼' : '▶';
-}
-
-// ── Leer boleta PDF ───────────────────────────────────────────────────────
-async function leerBoleta(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const statusEl = document.getElementById('boletaStatus');
-  statusEl.textContent = '⏳ Leyendo PDF...';
-  statusEl.style.color = 'var(--gray2)';
-
-  const fd = new FormData();
-  fd.append('archivo', file);
+// ── Cargar productos ──────────────────────────────────────────────────────────
+async function cargarProductos() {
   try {
-    const r = await fetch('/api/boleta/leer', { method:'POST', body: fd });
-    const d = await r.json();
-    if (!d.ok) { statusEl.textContent = '❌ ' + d.error; statusEl.style.color='var(--red)'; return; }
+    const [rP, rI, rB, rE] = await Promise.all([
+      fetch('/api/productos?categoria=Paneles&solo_activos=true'),
+      fetch('/api/productos?categoria=Inversores&solo_activos=true'),
+      fetch('/api/productos?categoria=Bater%C3%ADas&solo_activos=true'),
+      fetch('/api/productos?categoria=Estructuras&solo_activos=true'),
+    ]);
+    paneles     = await rP.json();
+    inversores  = await rI.json();
+    baterias    = await rB.json();
+    estructuras = await rE.json();
+  } catch(e) { console.error('Error cargando productos:', e); }
 
-    // Rellenar datos del cliente
-    if (d.nombre)    document.getElementById('fNombreCliente').value   = d.nombre;
-    if (d.apellido)  document.getElementById('fApellidoCliente').value = d.apellido;
-    if (d.rut)       document.getElementById('fRut').value             = d.rut;
-    if (d.direccion) document.getElementById('fDireccion').value       = d.direccion;
-    if (d.comuna)    document.getElementById('fComuna').value          = d.comuna;
-
-    // Rellenar región
-    if (d.region) {
-      const sel = document.getElementById('sRegion');
-      for (const opt of sel.options) {
-        if (opt.value === d.region) { sel.value = d.region; break; }
-      }
-    }
-
-    // Rellenar consumos mensuales
-    if (d.consumos_mensuales && Object.keys(d.consumos_mensuales).length) {
-      MESES.forEach(m => {
-        const el = document.getElementById('cons_'+m);
-        if (el && d.consumos_mensuales[m]) el.value = d.consumos_mensuales[m];
-      });
-    }
-
-    // Tarifa
-    if (d.tarifa_kwh && d.tarifa_kwh > 50) document.getElementById('sTarifa').value = d.tarifa_kwh;
-
-    const resumen = [];
-    if (d.nombre) resumen.push(d.nombre + ' ' + (d.apellido||''));
-    if (d.consumo_actual_kwh) resumen.push(d.consumo_actual_kwh + ' kWh');
-    if (d.distribuidor) resumen.push(d.distribuidor);
-    statusEl.textContent = '✅ Boleta leída: ' + resumen.join(' · ');
-    statusEl.style.color = '#2ECC71';
-
-    recalcularSolar();
-  } catch(e) {
-    statusEl.textContent = '❌ Error procesando boleta';
-    statusEl.style.color = 'var(--red)';
-  }
-  input.value = '';
+  const fillSel = (elId, arr, labelFn) => {
+    const sel = document.getElementById(elId);
+    arr.forEach(p => sel.appendChild(new Option(labelFn(p), p.id)));
+  };
+  fillSel('selPanel',    paneles,     p => p.nombre + (p.potencia_w ? ' · '+p.potencia_w+'W' : ''));
+  fillSel('selInversor', inversores,  p => p.nombre);
+  fillSel('selBateria',  baterias,    p => p.nombre);
+  fillSel('selEstructura',estructuras,p => p.nombre);
 }
 
-// ── Auto-detectar potencia desde ítems ───────────────────────────────────
-function detectarPotenciaKwp() {
-  let kWp = 0;
-  items.forEach(it => {
-    // Buscar "NNNw" o "NNN wp" o "NNN W" en el nombre (paneles solares)
-    const m = it.nombre.match(/(\d{2,4})\s*[Ww][Pp]?/);
-    if (m && it.cantidad) {
-      kWp += (parseInt(m[1]) * it.cantidad) / 1000;
+// ── Equipment changes ─────────────────────────────────────────────────────────
+function onPanelChange() {
+  selPanel = paneles.find(p => p.id === document.getElementById('selPanel').value) || null;
+  recalcular();
+}
+function onInversorChange() {
+  selInversor = inversores.find(p => p.id === document.getElementById('selInversor').value) || null;
+  recalcular();
+}
+function onBateriaChange() {
+  selBateria = baterias.find(p => p.id === document.getElementById('selBateria').value) || null;
+  recalcular();
+}
+function onEstructuraChange() {
+  selEstructura = estructuras.find(p => p.id === document.getElementById('selEstructura').value) || null;
+  recalcular();
+}
+
+// ── Extras ────────────────────────────────────────────────────────────────────
+function renderExtras() {
+  document.getElementById('extrasContainer').innerHTML = EXTRAS_DEF.map(ex => `
+    <div class="extra-row">
+      <input type="checkbox" class="extra-check" id="chk_${ex.id}" onchange="toggleExtra('${ex.id}')">
+      <span class="extra-label">${ex.label}</span>
+      <span class="extra-unit">${ex.unit}</span>
+      <input type="number" class="extra-qty" id="qty_${ex.id}" value="1" min="0" disabled oninput="recalcular()">
+      <span class="extra-sub" id="sub_${ex.id}">—</span>
+    </div>`).join('');
+}
+
+function toggleExtra(id) {
+  const chk = document.getElementById('chk_'+id);
+  const qty = document.getElementById('qty_'+id);
+  qty.disabled = !chk.checked;
+  if (chk.checked) {
+    const ex = EXTRAS_DEF.find(e => e.id === id);
+    if (ex && ex.perPanel) qty.value = parseInt(document.getElementById('qPanel').value)||1;
+  }
+  recalcular();
+}
+
+// ── Recalcular (main) ─────────────────────────────────────────────────────────
+function recalcular() {
+  const nPanel    = parseInt(document.getElementById('qPanel').value)    || 0;
+  const nInversor = parseInt(document.getElementById('qInversor').value) || 0;
+  const nBateria  = parseInt(document.getElementById('qBateria').value)  || 0;
+  const nEstruc   = parseInt(document.getElementById('qEstructura').value) || 0;
+
+  const pPanel    = selPanel    ? (parseInt(selPanel.precio_venta)    || 0) : 0;
+  const pInversor = selInversor ? (parseInt(selInversor.precio_venta) || 0) : 0;
+  const pBateria  = selBateria  ? (parseInt(selBateria.precio_venta)  || 0) : 0;
+  const pEstruc   = selEstructura?(parseInt(selEstructura.precio_venta)|| 0) : 0;
+
+  const subPaneles  = pPanel    * nPanel;
+  const subInversor = pInversor * nInversor;
+  const subBateria  = pBateria  * nBateria;
+  const subEstruc   = pEstruc   * nEstruc;
+  const subEquipos  = subPaneles + subInversor + subBateria + subEstruc;
+
+  // kWp
+  const potW = selPanel ? (parseInt(selPanel.potencia_w)||0) : 0;
+  const kWp  = potW * nPanel / 1000;
+
+  // Equipment display
+  document.getElementById('dPanelKwp').textContent   = kWp>0 ? kWp.toFixed(2)+' kWp' : (potW ? potW+'W ea.' : '—');
+  document.getElementById('dPanelSub').textContent   = nPanel>0 ? fmt(subPaneles) : '—';
+  document.getElementById('dPanelPrecio').textContent= selPanel ? 'Precio unitario: '+fmt(pPanel) : 'Precio unitario: —';
+  document.getElementById('dInversorSpec').textContent  = selInversor ? (selInversor.potencia_w ? selInversor.potencia_w+'W' : '—') : '—';
+  document.getElementById('dInversorSub').textContent   = nInversor>0 ? fmt(subInversor) : '—';
+  document.getElementById('dInversorPrecio').textContent= selInversor ? 'Precio unitario: '+fmt(pInversor) : 'Precio unitario: —';
+  document.getElementById('dBateriaSpec').textContent   = selBateria ? (selBateria.capacidad_kwh ? selBateria.capacidad_kwh+' kWh' : '—') : '—';
+  document.getElementById('dBateriaSub').textContent    = nBateria>0 ? fmt(subBateria) : '—';
+  document.getElementById('dBateriaPrecio').textContent = selBateria ? 'Precio unitario: '+fmt(pBateria) : 'Precio unitario: —';
+  document.getElementById('dEstructuraSpec').textContent = selEstructura ? (selEstructura.tipo||'—') : '—';
+  document.getElementById('dEstructuraSub').textContent  = nEstruc>0 ? fmt(subEstruc) : '—';
+  document.getElementById('dEstructuraPrecio').textContent= selEstructura ? 'Precio unitario: '+fmt(pEstruc) : 'Precio unitario: —';
+
+  // Consumo
+  let totalCons = 0;
+  MESES.forEach(m => { totalCons += parseFloat(document.getElementById('cons_'+m).value)||0; });
+  document.getElementById('dConsPromedio').textContent = totalCons>0 ? Math.round(totalCons/12)+' kWh/mes' : '—';
+  document.getElementById('dConsAnual').textContent    = totalCons>0 ? Math.round(totalCons)+' kWh/año'   : '—';
+
+  // Generación client-side (aproximada para display instantáneo)
+  const hsp    = HSP_REGION[document.getElementById('sRegion').value]      || 5.0;
+  const orientF= ORIENT_FACTOR[document.getElementById('sOrientacion').value]|| 1.0;
+  const pr     = (parseFloat(document.getElementById('sPR').value)||80)/100;
+  const genMes = kWp>0 ? kWp * hsp * 30.4 * pr * orientF : 0;
+  const genAnu = genMes * 12;
+  const cob    = totalCons>0 && genAnu>0 ? Math.min(genAnu/totalCons*100, 150) : 0;
+
+  if (kWp > 0) {
+    document.getElementById('genGrid').style.display = '';
+    document.getElementById('dKwp').textContent      = kWp.toFixed(2);
+    document.getElementById('dGenMensual').textContent = Math.round(genMes)+'';
+    document.getElementById('dGenAnual').textContent   = Math.round(genAnu)+'';
+    document.getElementById('dCobertura').textContent  = Math.round(cob)+'%';
+  } else {
+    document.getElementById('genGrid').style.display = 'none';
+  }
+
+  // Instalación
+  const nClamped = Math.min(Math.max(nPanel,4),59);
+  const instBase = nPanel>=4 ? (INSTALL_TABLE[nClamped]||0) : 0;
+
+  // Extras
+  let subAdic = 0;
+  EXTRAS_DEF.forEach(ex => {
+    const chk = document.getElementById('chk_'+ex.id);
+    const qty = document.getElementById('qty_'+ex.id);
+    const subEl = document.getElementById('sub_'+ex.id);
+    if (chk?.checked) {
+      const sub = ex.base * (parseFloat(qty?.value)||0);
+      subAdic += sub;
+      if (subEl) subEl.textContent = fmt(sub);
+    } else {
+      if (subEl) subEl.textContent = '—';
     }
   });
-  const manualKwp = parseFloat(document.getElementById('sPotencia').value);
-  const autoEl   = document.getElementById('potenciaAuto');
-  if (kWp > 0 && !manualKwp) {
-    autoEl.textContent = `Auto-detectado desde paneles: ${kWp.toFixed(2)} kWp`;
-    autoEl.style.color = 'var(--blue)';
-    return kWp;
-  }
-  autoEl.textContent = kWp > 0 ? `Paneles detectados: ${kWp.toFixed(2)} kWp` : '';
-  return manualKwp || kWp || 0;
+  const disenoTram = parseInt(document.getElementById('sDisenoTram').value)||0;
+  document.getElementById('dSubAdicionales').textContent = fmt(subAdic + disenoTram);
+
+  // Cadena de precios
+  const subDirectos = subEquipos + instBase + subAdic + disenoTram;
+  const margenPct   = parseFloat(document.getElementById('fMargen').value)||0;
+  const margen      = subDirectos * margenPct / 100;
+  const precioLista = subDirectos + margen;
+  const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
+  const descMonto   = precioLista * descPct / 100;
+  const subNeto     = precioLista - descMonto;
+  const inclIva     = document.getElementById('fIva').checked;
+  const iva         = inclIva ? subNeto * 0.19 : 0;
+  const total       = subNeto + iva;
+
+  // Panel derecho
+  document.getElementById('rPaneles').textContent    = subPaneles>0  ? fmt(subPaneles)  : '—';
+  document.getElementById('rInversor').textContent   = subInversor>0 ? fmt(subInversor) : '—';
+  document.getElementById('rBateria').textContent    = subBateria>0  ? fmt(subBateria)  : '—';
+  document.getElementById('rEstructura').textContent = subEstruc>0   ? fmt(subEstruc)   : '—';
+  document.getElementById('rSubEquipos').textContent = fmt(subEquipos);
+  document.getElementById('rInstBase').textContent   = instBase>0 ? fmt(instBase) : (nPanel>0?'N/A (< 4 paneles)':'—');
+  document.getElementById('rCostosAdic').textContent = fmt(subAdic);
+  document.getElementById('rDiseno').textContent     = fmt(disenoTram);
+  document.getElementById('rSubDirectos').textContent= fmt(subDirectos);
+  document.getElementById('rMargen').textContent     = fmt(margen);
+  document.getElementById('rPrecioLista').textContent= fmt(precioLista);
+  document.getElementById('rDescuento').textContent  = fmt(descMonto);
+  document.getElementById('rSubNeto').textContent    = fmt(subNeto);
+  document.getElementById('rIva').textContent        = fmt(iva);
+  document.getElementById('rTotal').textContent      = fmt(total);
+  document.getElementById('rTotalTarjeta').textContent = fmt(total*1.07);
+
+  // KPIs solares (debounced, backend)
+  clearTimeout(calcTimer);
+  calcTimer = setTimeout(() => actualizarKpisSolares(kWp, total), 700);
 }
 
-// ── Calcular solar ────────────────────────────────────────────────────────
-function recalcularSolar() {
-  clearTimeout(calcSolarTimeout);
-  calcSolarTimeout = setTimeout(_doCalcSolar, 400);
-}
-
-async function _doCalcSolar() {
-  const potencia = detectarPotenciaKwp();
-  if (potencia <= 0) {
-    document.getElementById('solarKpisCard').style.display = 'none';
-    document.getElementById('chartSolar').style.display   = 'none';
-    return;
-  }
-
+// ── Solar KPIs desde backend ──────────────────────────────────────────────────
+async function actualizarKpisSolares(kWp, totalProyecto) {
+  if (kWp <= 0) { document.getElementById('solarKpisCard').style.display='none'; return; }
   const consumos = {};
-  MESES.forEach(m => {
-    const v = parseFloat(document.getElementById('cons_'+m)?.value || 0);
-    if (v > 0) consumos[m] = v;
-  });
-
-  const totalProyecto = calcTotal();
+  MESES.forEach(m => { const v=parseFloat(document.getElementById('cons_'+m).value)||0; if(v>0) consumos[m]=v; });
   try {
     const r = await fetch('/api/cotizacion/calcular', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        potencia_kwp:     potencia,
-        region:           document.getElementById('sRegion').value,
-        orientacion:      document.getElementById('sOrientacion').value,
-        pr:               parseFloat(document.getElementById('sPR').value) || 80,
-        tarifa_kwh:       parseFloat(document.getElementById('sTarifa').value) || 230,
-        precio_excedente: parseFloat(document.getElementById('sExcedente').value) || 110,
-        incremento_anual: 5,
-        degradacion_anual:0.5,
-        total_proyecto:   totalProyecto,
-        consumos,
+        potencia_kwp: kWp,
+        region:       document.getElementById('sRegion').value,
+        orientacion:  document.getElementById('sOrientacion').value,
+        pr:           parseFloat(document.getElementById('sPR').value)||80,
+        tarifa_kwh:   parseFloat(document.getElementById('sTarifa').value)||230,
+        precio_excedente: parseFloat(document.getElementById('sExcedente').value)||110,
+        incremento_anual:5, degradacion_anual:0.5,
+        total_proyecto: totalProyecto, consumos,
       })
     });
     const d = await r.json();
     if (!d.ok) return;
-
-    // Actualizar KPIs
     document.getElementById('solarKpisCard').style.display = '';
-    document.getElementById('kPotencia').textContent  = potencia.toFixed(2) + ' kWp';
-    document.getElementById('kGenAnual').textContent  = d.gen_anual_kwh.toLocaleString('es-CL') + ' kWh/año';
-    document.getElementById('kCobertura').textContent = d.cobertura_pct + '%';
-    document.getElementById('kPayback').textContent   = d.payback_anios ? d.payback_anios + ' años' : '—';
-    document.getElementById('kAhorro1').textContent   = fmtK(d.ahorro_anio1) + '/año';
+    document.getElementById('kGenAnual').textContent  = (d.gen_anual_kwh||0).toLocaleString('es-CL')+' kWh';
+    document.getElementById('kPayback').textContent   = d.payback_anios ? d.payback_anios+' años' : '—';
+    document.getElementById('kAhorro1').textContent   = fmtK(d.ahorro_anio1)+'/año';
     document.getElementById('kAhorro10').textContent  = fmtK(d.ahorro_10);
     document.getElementById('kAhorro25').textContent  = fmtK(d.ahorro_25);
-    document.getElementById('kRoi').textContent       = d.roi_25 + '%';
-    document.getElementById('kCo2').textContent       = d.co2_anual_ton + ' ton/año';
-
-    // Gráfico de barras consumo vs generación
-    if (d.gen_por_mes && d.gen_por_mes.some(m => m.consumo > 0 || m.generacion > 0)) {
-      const maxVal = Math.max(...d.gen_por_mes.map(m => Math.max(m.consumo, m.generacion)));
-      const barsHtml = d.gen_por_mes.map(m => {
-        const cw = maxVal > 0 ? (m.consumo / maxVal * 120) : 0;
-        const gw = maxVal > 0 ? (m.generacion / maxVal * 120) : 0;
-        return `<div class="chart-bar-row">
+    document.getElementById('kRoi').textContent       = (d.roi_25||0)+'%';
+    document.getElementById('kCo2').textContent       = (d.co2_anual_ton||0)+' ton/año';
+    if (d.gen_por_mes?.some(m=>m.consumo>0||m.generacion>0)) {
+      const mx = Math.max(...d.gen_por_mes.map(m=>Math.max(m.consumo||0,m.generacion||0)));
+      document.getElementById('chartBarras').innerHTML = d.gen_por_mes.map(m=>`
+        <div class="chart-bar-row">
           <span class="mes-lbl">${m.mes}</span>
           <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-            ${m.consumo > 0 ? `<div class="bar" style="width:${cw}px;background:#F5A623" title="${m.consumo} kWh consumo"></div>` : ''}
-            <div class="bar" style="width:${gw}px;background:#2ECC71" title="${m.generacion} kWh generación"></div>
+            ${m.consumo>0?`<div class="bar" style="width:${mx>0?(m.consumo/mx*120):0}px;background:#F5A623"></div>`:''}
+            <div class="bar" style="width:${mx>0?(m.generacion/mx*120):0}px;background:#2ECC71"></div>
           </div>
-          <span style="font-size:9px;color:var(--gray3);width:50px;text-align:right">${m.generacion} kWh</span>
-        </div>`;
-      }).join('');
-      document.getElementById('chartBarras').innerHTML = barsHtml;
+          <span style="font-size:9px;color:var(--gray3);width:48px;text-align:right">${Math.round(m.generacion||0)} kWh</span>
+        </div>`).join('');
       document.getElementById('chartSolar').style.display = '';
     }
-  } catch(e) { console.error('Error calculando solar:', e); }
+  } catch(e) { console.error('KPIs solares error:', e); }
 }
 
-function calcTotal() {
-  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
-  const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
-  const neto          = subtotalItems * (1 - descPct / 100);
-  const inclIva       = document.getElementById('fIva').checked;
-  return neto * (inclIva ? 1.19 : 1);
-}
-
-// ── Búsqueda de productos ────────────────────────────────────────────────
-let searchTimeout;
-async function buscarProducto(q) {
-  clearTimeout(searchTimeout);
-  if (q.length < 2) { document.getElementById('autocompleteList').style.display='none'; return; }
-  searchTimeout = setTimeout(async () => {
-    const r = await fetch(`/api/productos?q=${encodeURIComponent(q)}&solo_activos=true`);
-    productos = await r.json();
-    const list = document.getElementById('autocompleteList');
-    if (!productos.length) { list.style.display='none'; return; }
-    list.innerHTML = productos.slice(0,10).map(p =>
-      `<div class="autocomplete-item" onclick="agregarItem(${JSON.stringify(p).replace(/"/g,'&quot;')})">
-        <strong>${p.nombre}</strong>
-        <span style="color:var(--gray2);margin-left:8px">${p.codigo||''}</span>
-        <span style="float:right;color:var(--green)">${fmt(p.precio_venta)}</span>
-      </div>`
-    ).join('');
-    list.style.display = 'block';
-  }, 280);
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.autocomplete-wrap'))
-    document.getElementById('autocompleteList').style.display='none';
-});
-
-function agregarItem(p) {
-  items.push({
-    _key:            Date.now(),
-    producto_id:     p.id,
-    nombre:          p.nombre,
-    codigo:          p.codigo || '',
-    categoria:       p.categoria || '',
-    cantidad:        1,
-    precio_unitario: parseInt(p.precio_venta) || 0,
-    descuento_pct:   0,
-    subtotal:        parseInt(p.precio_venta) || 0,
-  });
-  document.getElementById('productoSearch').value = '';
-  document.getElementById('autocompleteList').style.display = 'none';
-  renderItems();
-  recalcular();
-  recalcularSolar();
-}
-
-function renderItems() {
-  const cont  = document.getElementById('itemsContainer');
-  const empty = document.getElementById('emptyItems');
-  if (!items.length) { cont.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  cont.innerHTML = items.map((it, idx) => `
-    <div class="item-row" data-idx="${idx}">
-      <div style="font-size:12px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.nombre}">
-        ${it.nombre} <span style="color:var(--gray3);font-size:10px">${it.codigo||''}</span>
-      </div>
-      <input type="number" min="1" value="${it.cantidad}" onchange="updateItem(${idx},'cantidad',this.value)">
-      <input type="number" min="0" value="${it.precio_unitario}" onchange="updateItem(${idx},'precio_unitario',this.value)">
-      <input type="number" min="0" max="100" value="${it.descuento_pct}" onchange="updateItem(${idx},'descuento_pct',this.value)">
-      <span class="sub">${fmt(it.subtotal)}</span>
-      <button onclick="quitarItem(${idx})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px">×</button>
-    </div>
-  `).join('');
-}
-
-function updateItem(idx, field, val) {
-  items[idx][field] = parseFloat(val) || 0;
-  const it = items[idx];
-  it.subtotal = it.cantidad * it.precio_unitario * (1 - it.descuento_pct / 100);
-  renderItems();
-  recalcular();
-  recalcularSolar();
-}
-
-function quitarItem(idx) {
-  items.splice(idx, 1);
-  renderItems();
-  recalcular();
-  recalcularSolar();
-}
-
-function recalcular() {
-  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
-  const brutoBruto    = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
-  const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
-  const montoDesc     = subtotalItems * descPct / 100;
-  const neto          = subtotalItems - montoDesc;
-  const inclIva       = document.getElementById('fIva').checked;
-  const iva           = inclIva ? neto * 0.19 : 0;
-  const total         = neto + iva;
-
-  document.getElementById('tSubtotalBruto').textContent  = fmt(brutoBruto);
-  document.getElementById('tMontoDescuento').textContent = fmt(subtotalItems * descPct / 100);
-  document.getElementById('tSubtotalNeto').textContent   = fmt(neto);
-  document.getElementById('tIva').textContent            = fmt(iva);
-  document.getElementById('tTotal').textContent          = fmt(total);
-}
-
-// ── Guardar ───────────────────────────────────────────────────────────────
+// ── Guardar ───────────────────────────────────────────────────────────────────
 async function guardar(estadoOverride) {
   const nombre = document.getElementById('fNombreCliente').value.trim();
   if (!nombre) { showToast('El nombre del cliente es requerido', 'error'); return; }
 
-  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
-  const descPct       = parseFloat(document.getElementById('fDescuentoGral').value) || 0;
-  const montoDesc     = subtotalItems * descPct / 100;
-  const subtotalNeto  = subtotalItems - montoDesc;
-  const inclIva       = document.getElementById('fIva').checked;
-  const montoIva      = inclIva ? subtotalNeto * 0.19 : 0;
-  const total         = subtotalNeto + montoIva;
+  const nPanel    = parseInt(document.getElementById('qPanel').value)    || 0;
+  const nInversor = parseInt(document.getElementById('qInversor').value) || 0;
+  const nBateria  = parseInt(document.getElementById('qBateria').value)  || 0;
+  const nEstruc   = parseInt(document.getElementById('qEstructura').value) || 0;
 
-  // Guardar datos solares
-  const consumos = {};
-  MESES.forEach(m => {
-    const v = parseFloat(document.getElementById('cons_'+m)?.value||0);
-    if (v > 0) consumos[m] = v;
+  const pPanel    = selPanel    ? (parseInt(selPanel.precio_venta)    ||0) : 0;
+  const pInversor = selInversor ? (parseInt(selInversor.precio_venta) ||0) : 0;
+  const pBateria  = selBateria  ? (parseInt(selBateria.precio_venta)  ||0) : 0;
+  const pEstruc   = selEstructura?(parseInt(selEstructura.precio_venta)||0) : 0;
+
+  // Items array para compatibilidad con PDF
+  const items = [];
+  if (selPanel    && nPanel>0)    items.push({producto_id:selPanel.id,    nombre:selPanel.nombre,    codigo:selPanel.codigo||'',    categoria:'Paneles',    cantidad:nPanel,    precio_unitario:pPanel,    descuento_pct:0, subtotal:pPanel*nPanel});
+  if (selInversor && nInversor>0) items.push({producto_id:selInversor.id, nombre:selInversor.nombre, codigo:selInversor.codigo||'', categoria:'Inversores', cantidad:nInversor, precio_unitario:pInversor, descuento_pct:0, subtotal:pInversor*nInversor});
+  if (selBateria  && nBateria>0)  items.push({producto_id:selBateria.id,  nombre:selBateria.nombre,  codigo:selBateria.codigo||'',  categoria:'Baterías',  cantidad:nBateria,  precio_unitario:pBateria,  descuento_pct:0, subtotal:pBateria*nBateria});
+  if (selEstructura&&nEstruc>0)   items.push({producto_id:selEstructura.id,nombre:selEstructura.nombre,codigo:selEstructura.codigo||'',categoria:'Estructuras',cantidad:nEstruc,precio_unitario:pEstruc,  descuento_pct:0, subtotal:pEstruc*nEstruc});
+
+  // Extras
+  const extrasData = {};
+  let subAdic = 0;
+  EXTRAS_DEF.forEach(ex => {
+    const chk=document.getElementById('chk_'+ex.id);
+    const qty=document.getElementById('qty_'+ex.id);
+    if (chk?.checked) {
+      const q=parseFloat(qty?.value)||0, sub=ex.base*q;
+      extrasData[ex.id]={label:ex.label, cantidad:q, precio_unitario:ex.base, subtotal:sub};
+      subAdic+=sub;
+    }
   });
+  const disenoTram = parseInt(document.getElementById('sDisenoTram').value)||0;
+
+  // Cadena de precios
+  const subEquipos  = pPanel*nPanel + pInversor*nInversor + pBateria*nBateria + pEstruc*nEstruc;
+  const nClamped    = Math.min(Math.max(nPanel,4),59);
+  const instBase    = nPanel>=4 ? (INSTALL_TABLE[nClamped]||0) : 0;
+  const subDirectos = subEquipos + instBase + subAdic + disenoTram;
+  const margenPct   = parseFloat(document.getElementById('fMargen').value)||0;
+  const margen      = subDirectos * margenPct / 100;
+  const precioLista = subDirectos + margen;
+  const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
+  const descMonto   = precioLista * descPct / 100;
+  const subNeto     = precioLista - descMonto;
+  const inclIva     = document.getElementById('fIva').checked;
+  const iva         = inclIva ? subNeto*0.19 : 0;
+  const total       = subNeto + iva;
+
+  // Solar data
+  const consumos = {};
+  MESES.forEach(m => { const v=parseFloat(document.getElementById('cons_'+m).value)||0; if(v>0) consumos[m]=v; });
+  const potW = selPanel ? (parseInt(selPanel.potencia_w)||0) : 0;
+  const kWp  = potW * nPanel / 1000;
+
   const solar_data = {
     consumos,
-    region:        document.getElementById('sRegion').value,
-    orientacion:   document.getElementById('sOrientacion').value,
-    potencia_kwp:  parseFloat(document.getElementById('sPotencia').value)||0,
-    tarifa_kwh:    parseFloat(document.getElementById('sTarifa').value)||230,
-    excedente:     parseFloat(document.getElementById('sExcedente').value)||110,
-    pr:            parseFloat(document.getElementById('sPR').value)||80,
-    potencia_auto: detectarPotenciaKwp(),
+    region:       document.getElementById('sRegion').value,
+    orientacion:  document.getElementById('sOrientacion').value,
+    potencia_kwp: kWp,
+    tarifa_kwh:   parseFloat(document.getElementById('sTarifa').value)||230,
+    excedente:    parseFloat(document.getElementById('sExcedente').value)||110,
+    pr:           parseFloat(document.getElementById('sPR').value)||80,
+    potencia_auto:kWp,
+  };
+
+  const equipos_data = {
+    panel:     selPanel    ? {id:selPanel.id,    nombre:selPanel.nombre,    potencia_w:selPanel.potencia_w||0,    cantidad:nPanel,    precio:pPanel}    : null,
+    inversor:  selInversor ? {id:selInversor.id, nombre:selInversor.nombre, cantidad:nInversor, precio:pInversor} : null,
+    bateria:   selBateria  ? {id:selBateria.id,  nombre:selBateria.nombre,  cantidad:nBateria,  precio:pBateria}  : null,
+    estructura:selEstructura?{id:selEstructura.id,nombre:selEstructura.nombre,cantidad:nEstruc, precio:pEstruc}  : null,
   };
 
   const data = {
-    nombre_cliente:        nombre,
-    apellido_cliente:      document.getElementById('fApellidoCliente').value.trim(),
-    email_cliente:         document.getElementById('fEmail').value.trim(),
-    telefono_cliente:      document.getElementById('fTelefono').value.trim(),
-    rut_cliente:           document.getElementById('fRut').value.trim(),
-    direccion_cliente:     document.getElementById('fDireccion').value.trim(),
-    comuna_cliente:        document.getElementById('fComuna').value.trim(),
-    items:                 items.map(({_key,...it}) => it),
-    subtotal_bruto:        items.reduce((s,it)=>s+it.cantidad*it.precio_unitario,0),
-    descuento_general_pct: descPct,
-    monto_descuento:       montoDesc,
-    subtotal_neto:         subtotalNeto,
-    incluye_iva:           inclIva,
-    monto_iva:             montoIva,
+    nombre_cliente:       nombre,
+    apellido_cliente:     document.getElementById('fApellidoCliente').value.trim(),
+    email_cliente:        document.getElementById('fEmail').value.trim(),
+    telefono_cliente:     document.getElementById('fTelefono').value.trim(),
+    rut_cliente:          document.getElementById('fRut').value.trim(),
+    direccion_cliente:    document.getElementById('fDireccion').value.trim(),
+    comuna_cliente:       document.getElementById('fComuna').value.trim(),
+    distribuidora:        document.getElementById('fDistribuidora').value.trim(),
+    items, solar_data, equipos_data,
+    costos_adicionales:   extrasData,
+    instalacion_base:     instBase,
+    costo_diseno_tramitacion: disenoTram,
+    subtotal_equipos:     subEquipos,
+    subtotal_directos:    subDirectos,
+    margen_comercial_pct: margenPct,
+    margen_comercial:     margen,
+    subtotal_bruto:       precioLista,
+    descuento_general_pct:descPct,
+    monto_descuento:      descMonto,
+    subtotal_neto:        subNeto,
+    incluye_iva:          inclIva,
+    monto_iva:            iva,
     total,
-    notas:                 document.getElementById('fNotas').value.trim(),
-    condiciones:           document.getElementById('fCondiciones').value.trim(),
-    trabajador_asignado:   document.getElementById('fTrabajador').value,
-    validez_dias:          parseInt(document.getElementById('fValidez').value)||10,
-    estado:                estadoOverride || document.getElementById('fEstado').value,
-    solar_data,
+    notas:                document.getElementById('fNotas').value.trim(),
+    condiciones:          document.getElementById('fCondiciones').value.trim(),
+    trabajador_asignado:  document.getElementById('fTrabajador').value,
+    validez_dias:         parseInt(document.getElementById('fValidez').value)||10,
+    estado:               estadoOverride || document.getElementById('fEstado').value,
   };
 
   const url = PRESUPUESTO_ID ? `/api/presupuestos/${PRESUPUESTO_ID}/edit` : '/api/presupuestos/add';
   try {
-    const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const r   = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const res = await r.json();
-    if (res.ok) {
-      const docId  = res.id || PRESUPUESTO_ID;
-      const estado = estadoOverride || data.estado;
-      mostrarConfirmacion(nombre, docId, estado, data.total);
-    } else {
-      showToast(res.error || 'Error guardando', 'error');
-    }
-  } catch(e) {
-    showToast('Error de conexión', 'error');
-  }
+    if (res.ok) mostrarConfirmacion(nombre, res.id||PRESUPUESTO_ID, data.estado, total);
+    else showToast(res.error||'Error guardando', 'error');
+  } catch(e) { showToast('Error de conexión', 'error'); }
 }
 
+// ── Cargar presupuesto existente ───────────────────────────────────────────────
+async function cargarPresupuesto(p) {
+  document.getElementById('fNombreCliente').value   = p.nombre_cliente   ||'';
+  document.getElementById('fApellidoCliente').value = p.apellido_cliente  ||'';
+  document.getElementById('fEmail').value           = p.email_cliente     ||'';
+  document.getElementById('fTelefono').value        = p.telefono_cliente  ||'';
+  document.getElementById('fRut').value             = p.rut_cliente       ||'';
+  document.getElementById('fComuna').value          = p.comuna_cliente    ||'';
+  document.getElementById('fDireccion').value       = p.direccion_cliente ||'';
+  document.getElementById('fDistribuidora').value   = p.distribuidora     ||'';
+  document.getElementById('fNotas').value           = p.notas             ||'';
+  document.getElementById('fCondiciones').value     = p.condiciones       ||'';
+  document.getElementById('fTrabajador').value      = p.trabajador_asignado||'';
+  document.getElementById('fValidez').value         = p.validez_dias      ||10;
+  document.getElementById('fEstado').value          = p.estado            ||'borrador';
+  if (p.margen_comercial_pct!=null) document.getElementById('fMargen').value    = p.margen_comercial_pct;
+  if (p.descuento_general_pct)      document.getElementById('fDescuento').value = p.descuento_general_pct;
+  if (p.incluye_iva)                document.getElementById('fIva').checked     = true;
+  if (p.costo_diseno_tramitacion)   document.getElementById('sDisenoTram').value= p.costo_diseno_tramitacion;
+
+  const eb = document.getElementById('estadoBadge');
+  if (eb) {
+    const colors={borrador:'var(--blue)',enviado:'var(--green)',aprobado:'#1ABC9C',rechazado:'var(--red)'};
+    eb.textContent = p.estado||'borrador';
+    eb.style.cssText = 'background:#1A2A3A;color:'+(colors[p.estado]||'var(--blue)');
+  }
+
+  const sd = p.solar_data||{};
+  if (sd.consumos) MESES.forEach(m => { const el=document.getElementById('cons_'+m); if(el&&sd.consumos[m]) el.value=sd.consumos[m]; });
+  if (sd.region)      document.getElementById('sRegion').value     = sd.region;
+  if (sd.orientacion) document.getElementById('sOrientacion').value= sd.orientacion;
+  if (sd.tarifa_kwh)  document.getElementById('sTarifa').value     = sd.tarifa_kwh;
+  if (sd.excedente)   document.getElementById('sExcedente').value  = sd.excedente;
+  if (sd.pr)          document.getElementById('sPR').value         = sd.pr;
+
+  // Restaurar equipos
+  const eq = p.equipos_data||{};
+  if (eq.panel?.id) {
+    document.getElementById('selPanel').value = eq.panel.id;
+    onPanelChange();
+    document.getElementById('qPanel').value = eq.panel.cantidad||0;
+  }
+  if (eq.inversor?.id) {
+    document.getElementById('selInversor').value = eq.inversor.id;
+    onInversorChange();
+    document.getElementById('qInversor').value = eq.inversor.cantidad||0;
+  }
+  if (eq.bateria?.id) {
+    document.getElementById('selBateria').value = eq.bateria.id;
+    onBateriaChange();
+    document.getElementById('qBateria').value = eq.bateria.cantidad||0;
+  }
+  if (eq.estructura?.id) {
+    document.getElementById('selEstructura').value = eq.estructura.id;
+    onEstructuraChange();
+    document.getElementById('qEstructura').value = eq.estructura.cantidad||0;
+  }
+
+  // Restaurar extras
+  const extras = p.costos_adicionales||{};
+  Object.keys(extras).forEach(id => {
+    const chk=document.getElementById('chk_'+id), qty=document.getElementById('qty_'+id);
+    if (chk) { chk.checked=true; if(qty){qty.disabled=false; qty.value=extras[id].cantidad||1;} }
+  });
+
+  if (!Object.keys(eq).length && p.items?.length)
+    showToast('Presupuesto guardado en formato anterior — re-selecciona los equipos', 'info', 6000);
+}
+
+// ── Boleta PDF ────────────────────────────────────────────────────────────────
+async function leerBoleta(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const st = document.getElementById('boletaStatus');
+  st.textContent='⏳ Leyendo PDF...'; st.style.color='var(--gray2)';
+  const fd=new FormData(); fd.append('archivo',file);
+  try {
+    const r=await fetch('/api/boleta/leer',{method:'POST',body:fd});
+    const d=await r.json();
+    if (!d.ok){st.textContent='❌ '+d.error; st.style.color='var(--red)'; return;}
+    if(d.nombre)    document.getElementById('fNombreCliente').value=d.nombre;
+    if(d.apellido)  document.getElementById('fApellidoCliente').value=d.apellido;
+    if(d.rut)       document.getElementById('fRut').value=d.rut;
+    if(d.direccion) document.getElementById('fDireccion').value=d.direccion;
+    if(d.comuna)    document.getElementById('fComuna').value=d.comuna;
+    if(d.distribuidor) document.getElementById('fDistribuidora').value=d.distribuidor;
+    if(d.region){const sel=document.getElementById('sRegion'); for(const o of sel.options) if(o.value===d.region){sel.value=d.region;break;}}
+    if(d.consumos_mensuales) MESES.forEach(m=>{const el=document.getElementById('cons_'+m); if(el&&d.consumos_mensuales[m]) el.value=d.consumos_mensuales[m];});
+    if(d.tarifa_kwh&&d.tarifa_kwh>50) document.getElementById('sTarifa').value=d.tarifa_kwh;
+    const res=[];
+    if(d.nombre) res.push(d.nombre+' '+(d.apellido||''));
+    if(d.consumo_actual_kwh) res.push(d.consumo_actual_kwh+' kWh');
+    st.textContent='✅ '+(res.join(' · ')||'Boleta leída'); st.style.color='#2ECC71';
+    recalcular();
+  } catch(e){st.textContent='❌ Error procesando boleta'; st.style.color='var(--red)';}
+  input.value='';
+}
+
+// ── Modal y email ─────────────────────────────────────────────────────────────
 function mostrarConfirmacion(nombre, docId, estado, total) {
-  const fmt = n => '$' + Math.round(n||0).toLocaleString('es-CL');
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `
-    <div style="background:var(--card);border:1px solid var(--border1);border-radius:16px;padding:40px 48px;text-align:center;max-width:420px;width:90%">
-      <div style="font-size:48px;margin-bottom:12px">✅</div>
-      <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:6px">
-        Presupuesto ${estado === 'enviado' ? 'enviado' : 'guardado'}
-      </div>
-      <div style="font-size:14px;color:var(--gray2);margin-bottom:4px">${nombre}</div>
-      <div style="font-size:24px;font-weight:700;color:var(--blue);margin-bottom:24px">${fmt(total)}</div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <a href="/admin/presupuestos/${docId}/pdf" target="_blank"
-           style="background:var(--card2);border:1px solid var(--border2);color:var(--white);
-                  padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
-          📄 Ver PDF
-        </a>
-        <a href="/admin/presupuestos/${docId}/pdf?download=1" download
-           style="background:var(--card2);border:1px solid var(--border2);color:var(--white);
-                  padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
-          📥 Descargar
-        </a>
-        <a href="/admin/presupuestos"
-           style="background:var(--blue);color:var(--white);
-                  padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700">
-          ← Volver al listado
-        </a>
-      </div>
-      <div style="font-size:11px;color:var(--gray3);margin-top:16px">Redirigiendo en 5 segundos…</div>
-    </div>`;
-  document.body.appendChild(overlay);
-  setTimeout(() => { location.href = '/admin/presupuestos'; }, 5000);
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:var(--card);border:1px solid var(--border1);border-radius:16px;padding:40px 48px;text-align:center;max-width:420px;width:90%">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:6px">Presupuesto ${estado==='enviado'?'enviado':'guardado'}</div>
+    <div style="font-size:14px;color:var(--gray2);margin-bottom:4px">${nombre}</div>
+    <div style="font-size:24px;font-weight:700;color:var(--blue);margin-bottom:24px">${fmt(total)}</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="/admin/presupuestos/${docId}/pdf" target="_blank" style="background:var(--card2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">📄 Ver PDF</a>
+      <a href="/admin/presupuestos/${docId}/pdf?download=1" download style="background:var(--card2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">📥 Descargar</a>
+      <a href="/admin/presupuestos" style="background:var(--blue);color:var(--white);padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700">← Volver</a>
+    </div>
+    <div style="font-size:11px;color:var(--gray3);margin-top:16px">Redirigiendo en 5 segundos…</div>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{location.href='/admin/presupuestos';}, 5000);
 }
 
 async function enviarEmail() {
-  if (!PRESUPUESTO_ID) { showToast('Guarda el presupuesto primero', 'error'); return; }
+  if (!PRESUPUESTO_ID){showToast('Guarda el presupuesto primero','error');return;}
   if (!confirm('¿Enviar el presupuesto por email al cliente?')) return;
-  showToast('Enviando...', 'info');
-  const r = await fetch(`/api/presupuestos/${PRESUPUESTO_ID}/enviar-email`, { method:'POST' });
-  const d = await r.json();
-  if (d.ok) showToast('Email enviado correctamente', 'success');
-  else showToast(d.error || 'Error enviando email', 'error');
+  showToast('Enviando...','info');
+  const r=await fetch(`/api/presupuestos/${PRESUPUESTO_ID}/enviar-email`,{method:'POST'});
+  const d=await r.json();
+  if(d.ok) showToast('Email enviado correctamente','success');
+  else showToast(d.error||'Error enviando email','error');
 }
 </script>
 {% endblock %}
