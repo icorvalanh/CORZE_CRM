@@ -59,7 +59,7 @@
         <td>
           <a href="{{ url_for('presupuesto_ver', doc_id=p.id) }}" class="btn-icon" title="Ver/Editar">✏️</a>
           <a href="{{ url_for('presupuesto_pdf', doc_id=p.id) }}" class="btn-icon" title="Ver PDF" target="_blank">📄</a>
-          <button class="btn-icon" title="Eliminar" onclick="eliminar('{{ p.id }}','{{ p.folio }}')">🗑️</button>
+          <button class="btn-icon" title="Eliminar" onclick="eliminar('{{ p.id }}','{{ p.folio }}',this)">🗑️</button>
         </td>
       </tr>
       {% else %}
@@ -89,12 +89,18 @@ function filtrar() {
   document.getElementById('countLabel').textContent = count + ' presupuesto(s)';
 }
 
-async function eliminar(id, folio) {
+async function eliminar(id, folio, btn) {
   if (!confirm(`¿Eliminar presupuesto ${folio}?`)) return;
   const r = await fetch(`/api/presupuestos/${id}/delete`, { method: 'POST' });
   const d = await r.json();
-  if (d.ok) { showToast('Eliminado', 'success'); location.reload(); }
-  else showToast(d.error || 'Error', 'error');
+  if (d.ok) {
+    showToast('Presupuesto eliminado', 'success');
+    const fila = btn.closest('tr');
+    if (fila) fila.remove();
+    filtrar();
+  } else {
+    showToast(d.error || 'Error eliminando presupuesto', 'error');
+  }
 }
 
 filtrar();

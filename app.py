@@ -3520,14 +3520,21 @@ def api_trabajadores_list():
 @app.route('/api/trabajadores/add', methods=['POST'])
 @login_required
 def api_trabajadores_add():
-    data = request.get_json()
-    # Generar avatar desde iniciales si no se provee
-    if not data.get('avatar'):
-        n = (data.get('nombre', '') + ' ' + data.get('apellido', '')).strip()
-        parts = n.split()
-        data['avatar'] = ''.join(p[0].upper() for p in parts[:2]) if parts else '??'
-    ok, err = db.add_trabajador(data)
-    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+    try:
+        data = request.get_json(force=True)
+        if not data:
+            return jsonify({'ok': False, 'error': 'Datos vacíos o Content-Type incorrecto'})
+        if not data.get('nombre', '').strip():
+            return jsonify({'ok': False, 'error': 'El nombre es requerido'})
+        if not data.get('avatar'):
+            n = (data.get('nombre', '') + ' ' + data.get('apellido', '')).strip()
+            parts = n.split()
+            data['avatar'] = ''.join(p[0].upper() for p in parts[:2]) if parts else '??'
+        ok, err = db.add_trabajador(data)
+        return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+    except Exception as exc:
+        import traceback
+        return jsonify({'ok': False, 'error': f'Error interno: {exc}', 'trace': traceback.format_exc()[-300:]})
 
 @app.route('/api/trabajadores/<doc_id>/edit', methods=['POST'])
 @login_required

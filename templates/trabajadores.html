@@ -176,14 +176,22 @@ async function guardarTrabajador() {
     activo:        document.getElementById('tActivo').checked,
   };
   const url = editId ? `/api/trabajadores/${editId}/edit` : '/api/trabajadores/add';
-  const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-  const res = await r.json();
+  let res;
+  try {
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const text = await r.text();
+    try { res = JSON.parse(text); }
+    catch(e) { showToast('❌ Respuesta inválida del servidor: ' + text.slice(0,100), 'error', 8000); return; }
+  } catch(e) {
+    showToast('❌ Error de red: ' + e.message, 'error', 6000);
+    return;
+  }
   if (res.ok) {
     showToast(editId ? 'Trabajador actualizado' : 'Trabajador creado', 'success');
     cerrarModal();
     setTimeout(() => location.reload(), 600);
   } else {
-    showToast(res.error || 'Error', 'error');
+    showToast('❌ ' + (res.error || 'Error guardando trabajador'), 'error', 6000);
   }
 }
 
