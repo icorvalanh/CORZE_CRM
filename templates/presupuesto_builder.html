@@ -49,8 +49,8 @@
     <a href="{{ url_for('presupuesto_pdf', doc_id=presupuesto.id) }}?download=1" class="btn btn-secondary" download>📥 Descargar</a>
     <button class="btn btn-secondary" onclick="enviarEmail()">📧 Enviar Email</button>
     {% endif %}
-    <button class="btn btn-secondary" onclick="guardar('borrador')">💾 Guardar Borrador</button>
-    <button class="btn btn-primary" onclick="guardar('enviado')">✅ Guardar y Marcar Enviado</button>
+    <button class="btn btn-secondary" onclick="withBtn(this, () => guardar('borrador'))">💾 Guardar Borrador</button>
+    <button class="btn btn-primary" onclick="withBtn(this, () => guardar('enviado'))">✅ Guardar y Marcar Enviado</button>
   </div>
 </div>
 
@@ -724,8 +724,6 @@ async function guardar(estadoOverride) {
   };
 
   const url = PRESUPUESTO_ID ? `/api/presupuestos/${PRESUPUESTO_ID}/edit` : '/api/presupuestos/add';
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
   try {
     const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
     const res = await r.json();
@@ -735,11 +733,9 @@ async function guardar(estadoOverride) {
       mostrarConfirmacion(nombre, docId, estado, data.total);
     } else {
       showToast(res.error || 'Error guardando', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '✅ Guardar y Marcar Enviado'; }
     }
   } catch(e) {
     showToast('Error de conexión', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '✅ Guardar y Marcar Enviado'; }
   }
 }
 

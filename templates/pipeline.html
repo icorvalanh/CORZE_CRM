@@ -61,10 +61,8 @@
   <div style="display:flex;gap:8px">
     <button class="btn btn-secondary" id="btnCheckEmail" onclick="revisarBandeja()" title="Revisar contacto@corze.cl ahora">📬 Revisar bandeja</button>
     <button class="btn btn-secondary" onclick="abrirModalEmail()">📧 Importar email</button>
-    <label class="btn btn-secondary" style="cursor:pointer" title="Subir archivo .eml de formulario web">
-      📎 Subir EML
-      <input type="file" id="emlFileInput" accept=".eml" style="display:none" onchange="importarEML(this)">
-    </label>
+    <button class="btn btn-secondary" onclick="document.getElementById('emlFileInput').click()" title="Subir archivo .eml de formulario web">📎 Subir EML</button>
+    <input type="file" id="emlFileInput" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="importarEML(this)">
     <button class="btn btn-primary" onclick="abrirModalNuevoLead()">➕ Nuevo Lead</button>
   </div>
 </div>
@@ -209,7 +207,7 @@
   </div>
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="cerrarModalLead()">Cancelar</button>
-    <button class="btn btn-primary" onclick="guardarLead()">💾 Crear Lead</button>
+    <button class="btn btn-primary" onclick="withBtn(this, guardarLead)">💾 Crear Lead</button>
   </div>
  </div>
 </div>
@@ -244,7 +242,7 @@
   </div>
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="cerrarModalEmail()">Cancelar</button>
-    <button class="btn btn-primary" onclick="importarEmail()">📥 Crear Lead</button>
+    <button class="btn btn-primary" onclick="withBtn(this, importarEmail)">📥 Crear Lead</button>
   </div>
  </div>
 </div>
@@ -617,8 +615,10 @@ async function importarEmail() {
 
 // ── Importar EML ─────────────────────────────────────────────────────────────
 async function importarEML(input) {
+  console.log('[EML] onchange fired, files:', input.files.length);
   const file = input.files[0];
-  if (!file) return;
+  if (!file) { console.log('[EML] no file selected'); return; }
+  console.log('[EML] file:', file.name, file.size, 'bytes');
   input.value = '';
 
   showToast('⏳ Leyendo EML...', 'info', 6000);

@@ -26,6 +26,21 @@ function toast(msg, level = 'success', duration = 3000) {
 }
 const showToast = toast;
 
+// Deshabilita btn mientras corre fn async; lo restaura al terminar (éxito o error)
+async function withBtn(btn, asyncFn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.style.opacity = '0.65';
+  btn.innerHTML = '⏳ Guardando...';
+  try {
+    await asyncFn();
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.innerHTML = orig;
+  }
+}
+
 async function api(url, method = 'GET', body = null, timeout = 20000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);

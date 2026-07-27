@@ -37,7 +37,7 @@
         <input type="text" id="meta_ingresos_input" placeholder="$0" oninput="fmtMetaIngresos(this)" style="width:100%">
         <input type="hidden" id="meta_ingresos_val">
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="guardarMeta()">
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="withBtn(this, guardarMeta)">
         💾 Guardar meta
       </button>
     </div>
@@ -89,7 +89,7 @@
         <label>Monto mensual ($)</label>
         <input type="text" id="cf_monto" placeholder="$0" oninput="fmtCf(this)">
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="agregarCosto()">
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="withBtn(this, agregarCosto)">
         ➕ Agregar
       </button>
     </div>
@@ -148,7 +148,7 @@
         <label>Mensaje</label>
         <textarea id="wa_mensaje" rows="7" placeholder="Hola {{nombre}}, te contacto de VTA Automotora..."></textarea>
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="agregarTemplate()">
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="withBtn(this, agregarTemplate)">
         💾 Guardar template
       </button>
 
@@ -202,7 +202,7 @@
       </div>
 
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button class="btn btn-primary" onclick="guardarClaudeKey()">💾 Guardar API key</button>
+        <button class="btn btn-primary" onclick="withBtn(this, guardarClaudeKey)">💾 Guardar API key</button>
         <button class="btn btn-secondary" onclick="testClaude()">🔌 Probar conexión</button>
       </div>
       <div id="iaTestResult" style="margin-top:10px;font-size:11px;display:none"></div>
