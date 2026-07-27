@@ -1,0 +1,549 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">📊 Indicadores</h1>
+  <span class="page-sub" id="lastUpdate"></span>
+</div>
+
+<!-- KPIs Row 1 -->
+<div class="kpi-grid">
+
+  <!-- INVENTARIO ACTIVO -->
+  <div class="kpi-card" style="--accent:#00AEEF">
+    <div class="kpi-top"><span class="kpi-icon">🚗</span><span class="kpi-label">Inventario Activo</span></div>
+    <div class="kpi-value" style="color:#00AEEF">{{ stats.total_stock + stats.total_publicados + stats.total_reservados }}</div>
+    <div class="kpi-sub">
+      <span style="color:#3bafd4">{{ stats.total_stock }} stock</span> ·
+      <span style="color:#d4b93b">{{ stats.total_publicados }} publicados</span> ·
+      <span style="color:#9B59B6">{{ stats.total_reservados }} reservados</span>
+    </div>
+    <div class="kpi-sub" style="margin-top:5px;color:var(--gray2)">
+      Prom. <strong style="color:#00AEEF">{{ stats.dias_promedio_stock_activo | round(1) }} días</strong> en stock activo
+    </div>
+  </div>
+
+  <!-- VENTAS -->
+  <div class="kpi-card" style="--accent:#2ECC71">
+    <div class="kpi-top"><span class="kpi-icon">✅</span><span class="kpi-label">Ventas</span></div>
+    <div class="kpi-value" style="color:#2ECC71">{{ stats.vendidos_mes }}</div>
+    <div class="kpi-sub">este mes · <strong>{{ stats.vendidos_total }}</strong> total histórico</div>
+    <div class="kpi-sub" style="margin-top:5px;color:var(--gray2)">
+      Cierre promedio: <strong style="color:#2ECC71">{{ stats.tiempo_promedio_venta | round | int }} días</strong> desde ingreso
+    </div>
+  </div>
+
+  <!-- RENTABILIDAD -->
+  <div class="kpi-card" style="--accent:#F1C40F">
+    <div class="kpi-top"><span class="kpi-icon">💰</span><span class="kpi-label">Rentabilidad</span></div>
+    <div class="kpi-value" style="color:#F1C40F" id="gananciaTotal"></div>
+    <div class="kpi-sub" id="gananciaSub"></div>
+    <div class="kpi-sub" style="margin-top:5px;color:var(--gray2)">
+      Margen prom.: <strong id="margenPct" style="color:#F1C40F">—</strong>
+    </div>
+  </div>
+
+  <!-- PRECIO & ROTACIÓN -->
+  <div class="kpi-card" style="--accent:#9B59B6">
+    <div class="kpi-top"><span class="kpi-icon">🎯</span><span class="kpi-label">Precio Prom. Venta</span></div>
+    <div class="kpi-value" style="color:#9B59B6" id="precioPromedio">—</div>
+    <div class="kpi-sub">vehículos internos vendidos</div>
+    <div class="kpi-sub" style="margin-top:5px;color:var(--gray2)" id="vehiculos60sub"></div>
+  </div>
+
+</div>
+
+<!-- KPIs Row 2 -->
+<div class="kpi-grid" style="margin-top:10px">
+
+  <div class="kpi-card kpi-sm" style="--accent:#1ABC9C">
+    <div class="kpi-top"><span class="kpi-icon">📦</span><span class="kpi-label">Valor Inventario</span></div>
+    <div class="kpi-value kpi-value-sm" style="color:#1ABC9C" id="valorInv"></div>
+    <div class="kpi-sub">costo colabs · <span id="precioUnitSub"></span></div>
+  </div>
+
+  <div class="kpi-card kpi-sm" style="--accent:{% if stats.vehiculos_60dias > 0 %}#E67E22{% else %}#2ECC71{% endif %}">
+    <div class="kpi-top"><span class="kpi-icon">⏳</span><span class="kpi-label">Antigüedad Stock</span></div>
+    <div class="kpi-value kpi-value-sm" style="color:{% if stats.vehiculos_60dias > 0 %}#E67E22{% else %}#2ECC71{% endif %}">
+      {{ stats.vehiculos_60dias }}
+    </div>
+    <div class="kpi-sub">veh. con <strong>+60 días</strong> en stock · {{ stats.alerta_criticos }} críticos (+90d)</div>
+  </div>
+
+  <div class="kpi-card kpi-sm" style="--accent:#2ECC71">
+    <div class="kpi-top"><span class="kpi-icon">🤝</span><span class="kpi-label">Consignaciones</span></div>
+    <div class="kpi-value kpi-value-sm" style="color:#2ECC71">{{ stats.consignaciones_activas }}</div>
+    <div class="kpi-sub">activas · <strong>{{ stats.consignaciones_vendidas }}</strong> vendidas · <span id="comisTotal2"></span> comisiones</div>
+  </div>
+
+  <div class="kpi-card kpi-sm" style="--accent:#F1C40F">
+    <div class="kpi-top"><span class="kpi-icon">📋</span><span class="kpi-label">Comisiones</span></div>
+    <div class="kpi-value kpi-value-sm" style="color:#F1C40F" id="comisTotal"></div>
+    <div class="kpi-sub" id="comisMes"></div>
+  </div>
+
+</div>
+
+<!-- Metas del mes -->
+{% if meta %}
+<div class="chart-card" style="margin-top:12px;padding:16px 20px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div class="chart-title" style="margin:0">🎯 Meta del mes</div>
+    <a href="/admin/config" style="font-size:10px;color:var(--blue)">✏️ Editar meta</a>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="metaGrid">
+    {% set dias_mes = 31 %}
+    {% set hoy_dia  = meta.get('_dia_hoy', 15) %}
+
+    {% if meta.get('unidades') %}
+    {% set pu = [[(stats.vendidos_mes / meta.unidades * 100), 100] | min, 0] | max %}
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--gray2);font-weight:600">Unidades vendidas</span>
+        <span style="font-size:12px;font-weight:700;color:{% if stats.vendidos_mes >= meta.unidades %}#27ae60{% elif stats.vendidos_mes >= meta.unidades * 0.6 %}#F1C40F{% else %}#e74c3c{% endif %}">
+          {{ stats.vendidos_mes }} / {{ meta.unidades }}
+        </span>
+      </div>
+      <div style="background:var(--card2);border-radius:8px;height:14px;overflow:hidden">
+        <div style="width:{{ [stats.vendidos_mes / meta.unidades * 100, 100] | min | round }}%;height:100%;border-radius:8px;background:{% if stats.vendidos_mes >= meta.unidades %}#27ae60{% elif stats.vendidos_mes >= meta.unidades * 0.6 %}#F1C40F{% else %}#e74c3c{% endif %};transition:width .4s"></div>
+      </div>
+      <div style="font-size:9px;color:var(--gray3);margin-top:4px">
+        {{ (stats.vendidos_mes / meta.unidades * 100) | round(2) }}% completado
+      </div>
+    </div>
+    {% endif %}
+
+    {% if meta.get('ingresos') %}
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--gray2);font-weight:600">Meta de ingresos</span>
+        <span style="font-size:11px;color:var(--gray3)" id="metaIngPct">cargando...</span>
+      </div>
+      <div style="background:var(--card2);border-radius:8px;height:14px;overflow:hidden">
+        <div id="metaIngBar" style="width:0%;height:100%;border-radius:8px;background:#00AEEF;transition:width .4s"></div>
+      </div>
+      <div style="font-size:9px;color:var(--gray3);margin-top:4px">
+        Objetivo: <span id="metaIngObj">{{ meta.ingresos | int }}</span>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% else %}
+<div style="margin-top:12px;padding:12px 20px;background:var(--card);border:1px dashed var(--border2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+  <span style="font-size:12px;color:var(--gray3)">Sin meta definida para este mes</span>
+  <a href="/admin/config" class="btn btn-secondary" style="font-size:11px;padding:5px 14px">🎯 Definir meta</a>
+</div>
+{% endif %}
+
+<!-- Gráficos -->
+<div class="charts-grid" style="margin-top:12px">
+
+  <!-- Chart 1: Ventas y Ganancia — ancho completo -->
+  <div class="chart-card" style="grid-column:1/-1">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="chart-title" style="margin:0">📈 Ventas y Ganancia por Mes</div>
+      <div style="display:flex;gap:16px;font-size:11px">
+        <span style="color:#00AEEF">■ Internos</span>
+        <span style="color:#F1C40F">■ Consignaciones</span>
+        <span style="color:#2ECC71">● Ganancia total</span>
+      </div>
+    </div>
+    <canvas id="chartVentas" height="100"></canvas>
+  </div>
+
+  <!-- Chart 2: Stock por marca -->
+  <div class="chart-card">
+    <div class="chart-title">🏷️ Stock Actual por Marca</div>
+    <canvas id="chartMarcas" height="220"></canvas>
+  </div>
+
+  <!-- Chart 3: Estado inventario — mejorado con datos en barras -->
+  <div class="chart-card">
+    <div class="chart-title">📋 Estado del Inventario</div>
+    <div id="estadoCards" style="display:flex;flex-direction:column;gap:8px;padding:8px 0"></div>
+    <canvas id="chartEstado" height="120" style="margin-top:8px"></canvas>
+  </div>
+
+  <!-- Chart 4: Rentabilidad por marca -->
+  <div class="chart-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="chart-title" style="margin:0">💎 Rentabilidad por Marca</div>
+      <div style="font-size:10px;color:var(--gray3)">Solo vendidos</div>
+    </div>
+    <canvas id="chartRentabilidad" height="200"></canvas>
+  </div>
+
+  <!-- Chart 5: Antigüedad del stock activo -->
+  <div class="chart-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="chart-title" style="margin:0">⏳ Antigüedad del Stock Activo</div>
+      <div style="font-size:10px;color:var(--gray3)">Tiempo en inventario</div>
+    </div>
+    <div id="antigCards" style="display:flex;flex-direction:column;gap:8px;padding:4px 0"></div>
+    <canvas id="chartAntig" height="120" style="margin-top:10px"></canvas>
+  </div>
+
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const stats = {{ stats | tojson }};
+const meta  = {{ meta | tojson }};
+
+// ── Meta de ingresos: cargar real desde finanzas ──────────────────────────────
+(async () => {
+  const barEl = document.getElementById('metaIngBar');
+  const pctEl = document.getElementById('metaIngPct');
+  const objEl = document.getElementById('metaIngObj');
+  if (!barEl || !meta.ingresos) return;
+  try {
+    const now = new Date();
+    const mes = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const r   = await fetch(`/api/finanzas/resumen?mes=${mes}`);
+    const d   = await r.json();
+    const ing = d.ingresos || 0;
+    const pp  = Math.min(100, ing / meta.ingresos * 100);
+    const col = pp >= 100 ? '#27ae60' : pp >= 60 ? '#F1C40F' : '#e74c3c';
+    barEl.style.width      = pp.toFixed(2) + '%';
+    barEl.style.background = col;
+    pctEl.textContent      = pp.toFixed(2) + '%';
+    pctEl.style.color      = col;
+    if (objEl) {
+      const fmt = n => n >= 1e6 ? '$'+(n/1e6).toFixed(2)+'M' : '$'+(n/1e3).toFixed(1)+'K';
+      objEl.textContent = `${fmt(ing)} de ${fmt(meta.ingresos)}`;
+    }
+  } catch(e) { if (pctEl) pctEl.textContent = '—'; }
+})();
+
+// ── Formateo ──────────────────────────────────────────────────────────────────
+function clp(n) {
+  if (!n || n === 0) return '—';
+  if (Math.abs(n) >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (Math.abs(n) >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toLocaleString('es-CL');
+}
+function pct(n) { return (n == null ? '—' : n.toFixed(2) + '%'); }
+
+// ── KPIs ─────────────────────────────────────────────────────────────────────
+const ganTotal = (stats.ganancia_total || 0) + (stats.comisiones_total || 0);
+const ganMes   = (stats.ganancia_mes   || 0) + (stats.comisiones_mes   || 0);
+
+document.getElementById('gananciaTotal').textContent = clp(ganTotal);
+document.getElementById('gananciaSub').innerHTML =
+  `<span style="color:#00AEEF">${clp(stats.ganancia_total)} internos</span> · ` +
+  `<span style="color:#F1C40F">${clp(stats.comisiones_total)} comisiones</span><br>` +
+  `${clp(ganMes)} este mes`;
+document.getElementById('margenPct').textContent = pct(stats.margen_promedio_pct);
+
+const precioEl = document.getElementById('precioPromedio');
+precioEl.textContent = clp(stats.precio_promedio_venta);
+const v60 = stats.vehiculos_60dias || 0;
+document.getElementById('vehiculos60sub').innerHTML =
+  `<span style="color:${v60 > 0 ? '#E67E22':'#2ECC71'}">${v60} veh. con +60 días en stock</span>`;
+
+const totalActivos = (stats.total_stock||0) + (stats.total_publicados||0) + (stats.total_reservados||0);
+const precioUnit = totalActivos > 0 ? clp(Math.round((stats.valor_inventario||0) / totalActivos)) : '—';
+document.getElementById('valorInv').textContent   = clp(stats.valor_inventario);
+document.getElementById('precioUnitSub').textContent = precioUnit + ' / unidad';
+
+document.getElementById('comisTotal').textContent  = clp(stats.comisiones_total);
+document.getElementById('comisMes').textContent    = clp(stats.comisiones_mes) + ' este mes';
+document.getElementById('comisTotal2').textContent = clp(stats.comisiones_total);
+
+document.getElementById('lastUpdate').textContent =
+  'Actualizado: ' + new Date().toLocaleString('es-CL');
+
+// ── Chart defaults ────────────────────────────────────────────────────────────
+Chart.defaults.color       = '#8A95A3';
+Chart.defaults.borderColor = '#1E2D3D';
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.font.size   = 11;
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHART 1 — Ventas y Ganancia por Mes (mejorado)
+// ══════════════════════════════════════════════════════════════════════════════
+const ventas = stats.ventas_por_mes || [];
+
+// Formatear meses a nombres cortos
+function fmtMes(m) {
+  if (!m) return '';
+  const [y, mo] = m.split('-');
+  const meses = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return (meses[parseInt(mo)] || mo) + ' ' + y.slice(2);
+}
+
+new Chart('chartVentas', {
+  data: {
+    labels: ventas.map(v => fmtMes(v.mes)),
+    datasets: [
+      {
+        type: 'bar',
+        label: 'Unidades vendidas',
+        data: ventas.map(v => v.cantidad),
+        backgroundColor: '#00AEEF55',
+        borderColor: '#00AEEF',
+        borderWidth: 2,
+        borderRadius: 6,
+        yAxisID: 'y',
+      },
+      {
+        type: 'line',
+        label: 'Ganancia total (M$)',
+        data: ventas.map(v => +(v.ganancia / 1e6).toFixed(2)),
+        borderColor: '#2ECC71',
+        backgroundColor: '#2ECC7115',
+        pointBackgroundColor: '#2ECC71',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y1',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1A2230',
+        borderColor: '#263545',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ctx.datasetIndex === 0
+            ? ` ${ctx.raw} unidades`
+            : ` Ganancia: $${ctx.raw}M`
+        }
+      }
+    },
+    scales: {
+      y: {
+        grid: { color: '#1E2D3D' },
+        ticks: { color: '#8A95A3', precision: 0 },
+        title: { display: true, text: 'Unidades', color: '#4A5568', font: { size: 10 } }
+      },
+      y1: {
+        position: 'right',
+        grid: { drawOnChartArea: false },
+        ticks: { color: '#2ECC71', callback: v => '$' + v + 'M' },
+        title: { display: true, text: 'Ganancia', color: '#2ECC71', font: { size: 10 } }
+      },
+      x: { grid: { display: false }, ticks: { color: '#8A95A3' } }
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHART 2 — Stock por Marca (donut mejorado)
+// ══════════════════════════════════════════════════════════════════════════════
+const marcas  = stats.stock_por_marca || [];
+const palette = ['#00AEEF','#2ECC71','#F1C40F','#9B59B6','#E74C3C',
+                 '#1ABC9C','#E67E22','#3498DB','#E91E8C','#FF6B35'];
+
+new Chart('chartMarcas', {
+  type: 'doughnut',
+  data: {
+    labels: marcas.map(m => m.marca),
+    datasets: [{
+      data: marcas.map(m => m.cantidad),
+      backgroundColor: palette.slice(0, marcas.length),
+      borderColor: '#0E1318',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '60%',
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: { color: '#C8D0DC', boxWidth: 10, padding: 10, font: { size: 10 } }
+      },
+      tooltip: {
+        backgroundColor: '#1A2230',
+        borderColor: '#263545',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.raw} vehículo${ctx.raw!==1?'s':''}`
+        }
+      }
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHART 3 — Estado del Inventario (cards visuales + mini donut)
+// ══════════════════════════════════════════════════════════════════════════════
+const estados = stats.estado_data || [];
+const eMap = {
+  'En Stock':  { color: '#00AEEF', bg: '#0D2030', icon: '📦' },
+  'Publicado': { color: '#F1C40F', bg: '#2D2500', icon: '📢' },
+  'Reservado': { color: '#9B59B6', bg: '#2D1B47', icon: '🔒' },
+  'Vendido':   { color: '#2ECC71', bg: '#0D3B22', icon: '✅' },
+  'Devuelto':  { color: '#E74C3C', bg: '#3B0D0A', icon: '↩️' },
+};
+
+const totalItems = estados.reduce((s, e) => s + e.cantidad, 0);
+const estadoCards = document.getElementById('estadoCards');
+estados.forEach(e => {
+  const cfg = eMap[e.estado] || { color: '#4A5568', bg: '#1A2230', icon: '•' };
+  const pp  = totalItems > 0 ? (e.cantidad / totalItems * 100).toFixed(2) : '0.00';
+  estadoCards.innerHTML += `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;
+                background:${cfg.bg};border-radius:8px;border-left:3px solid ${cfg.color}">
+      <span style="font-size:14px">${cfg.icon}</span>
+      <span style="font-size:12px;font-weight:600;color:${cfg.color};flex:1">${e.estado}</span>
+      <span style="font-size:18px;font-weight:700;color:${cfg.color}">${e.cantidad}</span>
+      <div style="width:60px;background:#1A2230;border-radius:4px;height:6px">
+        <div style="width:${pp}%;background:${cfg.color};border-radius:4px;height:6px"></div>
+      </div>
+      <span style="font-size:10px;color:#4A5568;width:40px;text-align:right">${pp}%</span>
+    </div>`;
+});
+
+// Mini donut de estado
+new Chart('chartEstado', {
+  type: 'doughnut',
+  data: {
+    labels: estados.map(e => e.estado),
+    datasets: [{
+      data: estados.map(e => e.cantidad),
+      backgroundColor: estados.map(e => eMap[e.estado]?.color || '#4A5568'),
+      borderColor: '#0E1318',
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '70%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1A2230',
+        borderColor: '#263545',
+        borderWidth: 1,
+      }
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHART 4 — Rentabilidad por Marca
+// ══════════════════════════════════════════════════════════════════════════════
+const rent = stats.rentabilidad_marca || [];
+
+new Chart('chartRentabilidad', {
+  type: 'bar',
+  data: {
+    labels: rent.map(r => r.marca),
+    datasets: [{
+      label: 'Ganancia',
+      data: rent.map(r => +(r.ganancia_total / 1e6).toFixed(2)),
+      backgroundColor: rent.map((_, i) => palette[i % palette.length] + '99'),
+      borderColor:     rent.map((_, i) => palette[i % palette.length]),
+      borderWidth: 2,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1A2230',
+        borderColor: '#263545',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => {
+            const r = rent[ctx.dataIndex];
+            return [` Ganancia: ${clp(r.ganancia_total)}`, ` Unidades: ${r.vendidos}`];
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#1E2D3D' },
+        ticks: { color: '#8A95A3', callback: v => '$' + v + 'M' }
+      },
+      y: { grid: { display: false }, ticks: { color: '#8A95A3', font: { weight: '600' } } }
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHART 5 — Antigüedad del stock activo
+// ══════════════════════════════════════════════════════════════════════════════
+const antigData  = stats.stock_antiguedad || [];
+const antigColors = { '0-30d':'#2ECC71','31-60d':'#F1C40F','61-90d':'#E67E22','90+d':'#E74C3C' };
+const antigBgs    = { '0-30d':'#0D3B22','31-60d':'#2D2500','61-90d':'#3B2000','90+d':'#3B0D0A' };
+const totalAntig  = antigData.reduce((s, a) => s + a.cantidad, 0);
+
+const antigCards = document.getElementById('antigCards');
+antigData.forEach(a => {
+  const color = antigColors[a.rango] || '#4A5568';
+  const bg    = antigBgs[a.rango]    || '#1A2230';
+  const pp    = totalAntig > 0 ? (a.cantidad / totalAntig * 100).toFixed(2) : '0.00';
+  antigCards.innerHTML += `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;
+                background:${bg};border-radius:8px;border-left:3px solid ${color}">
+      <span style="font-size:12px;font-weight:700;color:${color};flex:1">${a.rango}</span>
+      <span style="font-size:17px;font-weight:700;color:${color}">${a.cantidad}</span>
+      <div style="width:60px;background:#1A2230;border-radius:4px;height:6px">
+        <div style="width:${pp}%;background:${color};border-radius:4px;height:6px"></div>
+      </div>
+      <span style="font-size:10px;color:#4A5568;width:40px;text-align:right">${pp}%</span>
+    </div>`;
+});
+
+new Chart('chartAntig', {
+  type: 'bar',
+  data: {
+    labels: antigData.map(a => a.rango),
+    datasets: [{
+      data: antigData.map(a => a.cantidad),
+      backgroundColor: antigData.map(a => (antigColors[a.rango] || '#4A5568') + 'AA'),
+      borderColor:     antigData.map(a => antigColors[a.rango]  || '#4A5568'),
+      borderWidth: 2,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1A2230',
+        borderColor: '#263545',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => {
+            const a = antigData[ctx.dataIndex];
+            const pp = totalAntig > 0 ? (a.cantidad / totalAntig * 100).toFixed(2) : '0.00';
+            return [` ${a.cantidad} vehículo${a.cantidad!==1?'s':''}`, ` ${pp}% del stock`];
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#8A95A3' } },
+      y: {
+        grid: { color: '#1E2D3D' },
+        ticks: { color: '#8A95A3', precision: 0 },
+        title: { display: true, text: 'Vehículos', color: '#4A5568', font: { size: 10 } }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

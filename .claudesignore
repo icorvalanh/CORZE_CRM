@@ -1,0 +1,67 @@
+# Entornos virtuales Python
+venv/
+.venv/
+env/
+.env/
+ENV/
+virtualenv/
+__pypackages__/
+
+# Caché Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.pyc
+
+# Caché de herramientas
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.cache/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Control de versiones
+.git/
+.hg/
+.svn/
+
+# Variables de entorno y secretos
+.env
+.env.*
+*.env
+.envrc
+secrets.json
+firebase_credentials.json
+*credentials*.json
+*secret*.json
+service_account*.json
+
+# Bases de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos compilados / empaquetados
+*.spec
+dist/

@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">📅 Calendario</h1>
+    <div style="display:flex;gap:6px">
+      <button class="tipo-btn" id="tabMes"    onclick="setVista('mes',this)">Mes</button>
+      <button class="tipo-btn active" id="tabSemana" onclick="setVista('semana',this)">Semana</button>
+      <button class="tipo-btn" id="tabAgenda" onclick="setVista('agenda',this)">Agenda</button>
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal()">➕ Nuevo evento</button>
+</div>
+
+<!-- Navegación mes -->
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+  <button class="btn btn-secondary" style="padding:5px 12px" onclick="navMes(-1)">← Anterior</button>
+  <h2 id="mesLabel" style="font-size:15px;font-weight:700;color:var(--text1);min-width:160px;text-align:center"></h2>
+  <button class="btn btn-secondary" style="padding:5px 12px" onclick="navMes(1)">Siguiente →</button>
+  <button class="btn btn-secondary" style="padding:5px 12px;margin-left:4px" onclick="irHoy()">Hoy</button>
+</div>
+
+<!-- Vista MES -->
+<div id="vistaMes" style="display:none">
+  <div class="cal-grid-header">
+    <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div>
+    <div>Jue</div><div>Vie</div><div>Sáb</div>
+  </div>
+  <div id="calGrid" class="cal-grid"></div>
+</div>
+
+<!-- Vista SEMANA -->
+<div id="vistaSemana" style="display:block">
+  <div class="semana-wrap">
+    <div class="semana-grid" id="semanaGrid"></div>
+  </div>
+</div>
+
+<!-- Vista AGENDA -->
+<div id="vistaAgenda" style="display:none">
+  <div id="agendaList" class="agenda-list"></div>
+</div>
+
+<!-- ══════════════ MODAL EVENTO ══════════════ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+ <div class="modal-box" style="max-width:560px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nuevo evento</span>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+
+    <div class="form-section">EVENTO</div>
+    <div class="form-row-4">
+      <div class="form-group col-2">
+        <label>Título *</label>
+        <input id="e_titulo" placeholder="Ej: Visita cliente — Patricio">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="e_tipo">
+          <option value="visita">🤝 Visita cliente</option>
+          <option value="tarea">📋 Tarea</option>
+          <option value="reunion">👥 Reunión</option>
+          <option value="llamada">📞 Llamada</option>
+          <option value="otro">📌 Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Responsable</label>
+        <select id="e_asignado">
+          <option value="Todos">👥 Todos</option>
+          <option value="Ignacio">Ignacio</option>
+          <option value="Nicolas">Nicolás</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-section">FECHA Y HORA</div>
+    <div class="form-row-4">
+      <div class="form-group">
+        <label>Fecha *</label>
+        <input id="e_fecha" type="date">
+      </div>
+      <div class="form-group">
+        <label>Hora inicio</label>
+        <input id="e_hora_inicio" type="time" value="09:00">
+      </div>
+      <div class="form-group">
+        <label>Hora fin</label>
+        <input id="e_hora_fin" type="time" value="10:00">
+      </div>
+      <div class="form-group">
+        <label>Todo el día</label>
+        <select id="e_todo_dia">
+          <option value="0">No</option>
+          <option value="1">Sí</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-section">DETALLES</div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="e_descripcion" rows="3" placeholder="Notas, dirección, detalles del evento..."></textarea>
+    </div>
+    <div class="form-row-4">
+      <div class="form-group col-2">
+        <label>Vehículo vinculado (opcional)</label>
+        <input id="e_vehiculo_search" placeholder="Buscar patente o modelo..."
+               oninput="buscarVehiculoCal(this.value)" autocomplete="off">
+        <div id="eVehiculoSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;position:relative;z-index:100"></div>
+        <div id="eVehiculoSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
+          <span id="eVehiculoDesc"></span>
+          <button onclick="limpiarVehiculoCal()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
+        </div>
+        <input type="hidden" id="e_vehiculo_id">
+        <input type="hidden" id="e_vehiculo_desc_hidden">
+      </div>
+      <div class="form-group col-2">
+        <label>Cliente (opcional)</label>
+        <input id="e_cliente" placeholder="Nombre del cliente">
+      </div>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button id="btnEliminarEvento" class="btn btn-secondary" style="color:var(--red);display:none" onclick="eliminarEvento()">🗑️ Eliminar</button>
+    <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarEvento()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+<style>
+/* ── Calendario grid mes ── */
+.cal-grid-header {
+  display:grid;grid-template-columns:repeat(7,1fr);
+  background:var(--card2);border-radius:10px 10px 0 0;
+  border:1px solid var(--border2);border-bottom:none;
+}
+.cal-grid-header > div {
+  padding:8px 0;text-align:center;font-size:11px;font-weight:700;
+  color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;
+}
+.cal-grid {
+  display:grid;grid-template-columns:repeat(7,1fr);
+  border:1px solid var(--border2);border-radius:0 0 10px 10px;
+  overflow:hidden;background:var(--card2);
+}
+.cal-cell {
+  min-height:100px;padding:6px;border-right:1px solid var(--border2);
+  border-bottom:1px solid var(--border2);position:relative;cursor:default;
+}
+.cal-cell:nth-child(7n) { border-right:none; }
+.cal-cell.otro-mes { background:var(--bg1);opacity:.5; }
+.cal-cell.hoy { background:var(--card3); }
+.cal-cell.hoy .cal-num { background:var(--blue);color:#fff;border-radius:50%;
+  width:22px;height:22px;display:flex;align-items:center;justify-content:center; }
+.cal-num { font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center; }
+.cal-ev {
+  font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+}
+.cal-ev:hover { opacity:.85; }
+.cal-mas { font-size:10px;color:var(--gray3);cursor:pointer; }
+.cal-mas:hover { color:var(--blue); }
+
+/* ── Vista semana ── */
+.semana-wrap { overflow-x:auto; }
+.semana-grid {
+  display:grid;grid-template-columns:60px repeat(7,1fr);
+  border:1px solid var(--border2);border-radius:10px;overflow:hidden;min-width:700px;
+}
+.semana-cabecera {
+  background:var(--card2);padding:8px 4px;text-align:center;font-size:11px;
+  font-weight:700;border-bottom:1px solid var(--border2);border-right:1px solid var(--border2);
+}
+.semana-cabecera:last-child { border-right:none; }
+.semana-cabecera.hoy { color:var(--blue); }
+.semana-hora {
+  background:var(--card2);padding:6px 8px;font-size:10px;color:var(--gray3);
+  border-right:1px solid var(--border2);border-bottom:1px solid var(--border2);
+  text-align:right;
+}
+.semana-celda {
+  min-height:52px;border-right:1px solid var(--border2);border-bottom:1px solid var(--border2);
+  padding:2px;position:relative;
+}
+.semana-celda:last-child { border-right:none; }
+
+/* ── Agenda ── */
+.agenda-list { display:flex;flex-direction:column;gap:4px; }
+.agenda-dia-header {
+  font-size:12px;font-weight:700;color:var(--text2);padding:10px 0 4px;
+  border-bottom:1px solid var(--border2);margin-top:8px;
+}
+.agenda-dia-header.hoy-label { color:var(--blue); }
+.agenda-ev-row {
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:var(--card2);border-radius:8px;cursor:pointer;
+  border-left:3px solid var(--blue);transition:background .15s;
+}
+.agenda-ev-row:hover { background:var(--card3); }
+.agenda-ev-hora { font-size:11px;color:var(--gray3);min-width:90px; }
+.agenda-ev-titulo { font-size:12px;font-weight:600;flex:1; }
+.agenda-ev-badge { font-size:10px;padding:2px 7px;border-radius:5px; }
+.agenda-ev-asig { font-size:10px;color:var(--gray3); }
+
+/* ── Colores tipo evento ── */
+.ev-visita  { background:#1a2f5c;color:#5B9BD5; }
+.ev-tarea   { background:#2D2500;color:#F1C40F; }
+.ev-reunion { background:#1a3b2b;color:#2ECC71; }
+.ev-llamada { background:#2d1a3b;color:#9B59B6; }
+.ev-otro    { background:#1a1a1a;color:#95A5A6; }
+.ev-tarea-ext { background:#2D2500;color:#F1C40F;border-left-color:#F1C40F !important; }
+</style>
+
+<script src="{{ url_for('static', filename='js/calendario.js') }}"></script>
+{% endblock %}

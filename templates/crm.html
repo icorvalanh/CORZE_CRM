@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="crm-layout">
+
+  <!-- ── Sidebar conversaciones ─────────────────────────────────────────── -->
+  <div class="conv-sidebar">
+    <div class="conv-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 class="conv-title" style="margin:0">💬 CRM</h2>
+        <div style="display:flex;gap:6px">
+          <button class="btn" style="font-size:10px;padding:4px 12px;background:var(--blue);color:#fff;font-weight:700" onclick="abrirNuevoLead()" title="Agregar lead manualmente">➕ Nuevo Lead</button>
+          <button id="btnChatView"   class="btn btn-secondary" style="font-size:10px;padding:4px 10px;background:var(--blue);color:#fff" onclick="setCRMView('chat')"   title="Vista Chat">💬 Chat</button>
+          <button id="btnKanbanView" class="btn btn-secondary" style="font-size:10px;padding:4px 10px" onclick="setCRMView('kanban')" title="Pipeline">📋 Pipeline</button>
+          <button id="calBtn"        class="btn btn-secondary" style="font-size:10px;padding:4px 10px" onclick="checkCalendar()">📅</button>
+          <button class="btn btn-secondary" style="font-size:10px;padding:4px 10px" onclick="loadConversaciones()">🔄</button>
+        </div>
+      </div>
+      <div class="conv-filters">
+        <button class="cf-btn active" onclick="filterConvs('',this)">Todas</button>
+        <button class="cf-btn" onclick="filterConvs('nuevo',this)">🔴 Nuevos</button>
+        <button class="cf-btn" onclick="filterConvs('en_atencion',this)">🟡 Atención</button>
+        <button class="cf-btn" onclick="filterConvs('resuelto',this)">✅ Resueltos</button>
+      </div>
+      <input type="text" class="conv-search" id="convSearch"
+             placeholder="🔍 Buscar cliente..."
+             oninput="searchConvs(this.value)">
+      <div class="conv-stats" id="convStats"></div>
+    </div>
+    <div class="conv-list" id="convList">
+      <div class="conv-loading">Cargando conversaciones...</div>
+    </div>
+  </div>
+
+  <!-- ── Panel de chat ───────────────────────────────────────────────────── -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-empty">
+      <div class="chat-empty-icon">💬</div>
+      <div class="chat-empty-title">Selecciona una conversación</div>
+      <div class="chat-empty-sub">
+        Los mensajes de WhatsApp y Facebook llegan aquí automáticamente.<br><br>
+        <small style="color:var(--gray3)">
+          Webhook: <code style="color:var(--blue)">{{ request.host_url }}webhook/meta</code>
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel de info del cliente ──────────────────────────────────────── -->
+  <div class="client-panel" id="clientPanel">
+    <div class="client-empty">
+      Selecciona una conversación<br>para ver los datos del cliente
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Modal Agendar Visita ══ -->
+<div class="modal-overlay" id="modalCal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+ <div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:480px;overflow:hidden" onclick="event.stopPropagation()">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--card);border-bottom:1px solid var(--border1)">
+    <span style="font-size:15px;font-weight:700;color:#2ECC71">📅 Agendar Visita</span>
+    <button onclick="closeCal()" style="background:none;border:none;color:var(--gray2);font-size:16px;cursor:pointer">✕</button>
+  </div>
+  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+    <div id="calConvRef" style="background:var(--card2);border-radius:8px;padding:10px;font-size:11px;color:var(--gray2)"></div>
+    <div class="form-group">
+      <label>Título del evento</label>
+      <input type="text" id="cal_titulo" value="Visita VTA Automotora">
+    </div>
+
+    <!-- Selector de vehículo -->
+    <div class="form-group">
+      <label>🚗 Vehículo de interés (opcional)</label>
+      <input type="text" id="cal_vehiculo_search"
+             class="client-input" placeholder="Buscar patente, marca o modelo..."
+             oninput="buscarVehiculoCal(this.value)" autocomplete="off">
+      <div id="cal_vehiculo_results"
+           style="background:var(--card2);border-radius:8px;margin-top:4px;overflow:hidden;max-height:160px;overflow-y:auto"></div>
+      <div id="cal_vehiculo_selected"
+           style="display:none;background:#0D2030;border:1px solid #00AEEF33;border-radius:8px;padding:8px 12px;margin-top:4px;font-size:11px;color:var(--blue);display:flex;align-items:center;justify-content:space-between">
+        <span id="cal_vehiculo_label"></span>
+        <button onclick="clearVehiculoCal()"
+                style="background:none;border:none;color:var(--gray3);cursor:pointer;font-size:14px">✕</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="form-group" style="grid-column:span 1">
+        <label>Fecha *</label>
+        <input type="date" id="cal_fecha">
+      </div>
+      <div class="form-group">
+        <label>Hora inicio</label>
+        <input type="time" id="cal_hora_ini" value="10:00">
+      </div>
+      <div class="form-group">
+        <label>Hora fin</label>
+        <input type="time" id="cal_hora_fin" value="11:00">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email del cliente (opcional — recibe invitación)</label>
+      <input type="email" id="cal_email" placeholder="cliente@email.com">
+    </div>
+    <div class="form-group">
+      <label>Descripción / Notas</label>
+      <textarea id="cal_desc" rows="3" placeholder="Vehículo de interés, detalles..."></textarea>
+    </div>
+    <div id="calResult" style="min-height:20px;font-size:11px;font-weight:600"></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;background:var(--card);border-top:1px solid var(--border1)">
+    <button class="btn btn-secondary" onclick="closeCal()">Cancelar</button>
+    <button class="btn" style="background:#0D3B22;color:#2ECC71;font-weight:700" onclick="confirmarAgenda()">📅 Crear en Calendar</button>
+  </div>
+ </div>
+</div>
+
+<!-- ══ Modal Nuevo Lead ══ -->
+<div class="modal-overlay" id="modalNuevoLead" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+ <div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:460px" onclick="event.stopPropagation()">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--card);border-bottom:1px solid var(--border1)">
+    <span style="font-size:15px;font-weight:700;color:var(--blue)">➕ Nuevo Lead</span>
+    <button onclick="cerrarNuevoLead()" style="background:none;border:none;color:var(--gray2);font-size:18px;cursor:pointer">✕</button>
+  </div>
+  <div style="padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+    <div class="form-group"><label>Nombre *</label>
+      <input type="text" id="nl_nombre" placeholder="Nombre del cliente" class="client-input"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>Teléfono *</label>
+        <input type="text" id="nl_telefono" placeholder="+56 9 XXXX XXXX" class="client-input"></div>
+      <div class="form-group"><label>Email</label>
+        <input type="email" id="nl_email" placeholder="correo@email.com" class="client-input"></div>
+    </div>
+    <div class="form-group"><label>Vehículo de interés</label>
+      <input type="text" id="nl_vehiculo" placeholder="Ej: BMW 320i 2020" class="client-input"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>Canal</label>
+        <select id="nl_canal" class="client-input">
+          <option value="llamada">📞 Llamada</option>
+          <option value="presencial">🤝 Presencial</option>
+          <option value="manual">📝 Manual</option>
+          <option value="instagram">📸 Instagram</option>
+          <option value="facebook">💬 Facebook</option>
+          <option value="email">📧 Email</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Etapa inicial</label>
+        <select id="nl_etapa" class="client-input">
+          <option>Nuevo</option><option>Contactado</option><option>Agendado</option>
+          <option>Fotografiado</option><option>En Venta</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Notas</label>
+      <textarea id="nl_notas" rows="3" class="client-input" placeholder="Detalles, precio que busca..."></textarea></div>
+    <div id="nlStatus" style="font-size:11px;min-height:16px"></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;background:var(--card);border-top:1px solid var(--border1)">
+    <button class="btn btn-secondary" onclick="cerrarNuevoLead()">Cancelar</button>
+    <button class="btn" style="background:var(--blue);color:#fff;font-weight:700" onclick="guardarNuevoLead()">➕ Crear Lead</button>
+  </div>
+ </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<style>
+/* ── CRM Kanban ─────────────────────────────────────────────────────────────── */
+#kanbanView {
+  display: none;
+  position: fixed; inset: 60px 0 0 220px;
+  overflow-x: auto; overflow-y: hidden;
+  background: var(--bg);
+  padding: 16px;
+}
+.kb-board { display:flex;gap:10px;height:100%;min-width:max-content }
+.kb-col { background:var(--card);border:0.5px solid var(--border2);border-radius:14px;width:220px;min-width:220px;display:flex;flex-direction:column;overflow:hidden }
+.kb-col-head { padding:10px 12px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid var(--border1);display:flex;align-items:center;justify-content:space-between }
+.kb-count { background:var(--card2);color:var(--gray2);font-size:10px;padding:1px 7px;border-radius:10px }
+.kb-cards { flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px }
+.kb-cards.drag-over { background:rgba(0,174,239,.06) }
+.kb-card { background:var(--card2);border:0.5px solid var(--border2);border-radius:10px;padding:10px 12px;cursor:grab;transition:box-shadow .15s;font-size:11px }
+.kb-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.4);border-color:var(--border) }
+.kb-card.dragging { opacity:.5;cursor:grabbing }
+.kb-card-name { font-weight:600;color:var(--white);margin-bottom:3px }
+.kb-card-tel  { color:var(--gray2);font-size:10px }
+.kb-card-veh  { color:var(--blue);font-size:10px;margin-top:4px }
+.kb-card-assigned { font-size:9px;color:var(--gray3);margin-top:3px }
+.kb-card-footer { display:flex;justify-content:space-between;align-items:center;margin-top:6px }
+.kb-canal-badge { font-size:9px;padding:1px 6px;border-radius:6px;background:var(--card);color:var(--gray2) }
+.kb-open-btn { background:none;border:none;color:var(--blue);font-size:10px;cursor:pointer;padding:0 }
+.kb-nuevo     { border-top:2px solid #E74C3C }
+.kb-contactado{ border-top:2px solid #F39C12 }
+.kb-agendado  { border-top:2px solid #3498DB }
+.kb-fotografiado { border-top:2px solid #9B59B6 }
+.kb-en-venta  { border-top:2px solid #00AEEF }
+.kb-vendido   { border-top:2px solid #2ECC71 }
+.kb-descartado{ border-top:2px solid #7F8C8D }
+</style>
+
+<!-- Kanban board -->
+<div id="kanbanView">
+  <div id="kanbanBoard" class="kb-board"></div>
+</div>
+
+<script>
+window.CRM_USERS = {{ config.USERS.keys()|list|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/crm.js') }}?v=300"></script>
+<script>
+// ── Vista Chat / Kanban ──────────────────────────────────────────────────────
+function setCRMView(view) {
+  const chat   = document.querySelector('.crm-layout');
+  const kanban = document.getElementById('kanbanView');
+  const btnC   = document.getElementById('btnChatView');
+  const btnK   = document.getElementById('btnKanbanView');
+
+  if (view === 'kanban') {
+    chat.style.display   = 'none';
+    kanban.style.display = 'block';
+    btnC.style.background = ''; btnC.style.color = '';
+    btnK.style.background = 'var(--blue)'; btnK.style.color = '#fff';
+    loadKanban();
+  } else {
+    chat.style.display   = '';
+    kanban.style.display = 'none';
+    btnC.style.background = 'var(--blue)'; btnC.style.color = '#fff';
+    btnK.style.background = ''; btnK.style.color = '';
+  }
+}
+
+// ── Kanban ────────────────────────────────────────────────────────────────────
+const ETAPA_COLORS = {
+  'Nuevo':'kb-nuevo','Contactado':'kb-contactado','Agendado':'kb-agendado',
+  'Fotografiado':'kb-fotografiado','En Venta':'kb-en-venta',
+  'Vendido':'kb-vendido','Descartado':'kb-descartado'
+};
+let kbDragId = null;
+
+async function loadKanban() {
+  const board = document.getElementById('kanbanBoard');
+  board.innerHTML = '<div style="color:var(--gray3);padding:20px">⏳ Cargando pipeline...</div>';
+  const data = await api('/api/crm/kanban');
+  if (!data.ok) { board.innerHTML = '<div style="color:var(--red)">Error cargando pipeline</div>'; return; }
+
+  // Si todos están vacíos, mostrar botón de migración
+  const total = Object.values(data.grupos).reduce((s,v)=>s+v.length, 0);
+  if (total === 0) {
+    board.innerHTML = `
+      <div style="padding:30px;color:var(--gray2);text-align:center;width:100%">
+        <div style="font-size:32px;margin-bottom:12px">📋</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">Las conversaciones aún no tienen etapa asignada</div>
+        <div style="font-size:12px;color:var(--gray3);margin-bottom:16px">Haz clic para mover todas a "Nuevo" y empezar a usar el Pipeline</div>
+        <button class="btn" onclick="migrarCRM()" style="background:var(--blue);color:#fff;padding:10px 24px;font-size:13px">
+          ✅ Inicializar Pipeline
+        </button>
+      </div>`;
+    return;
+  }
+
+  board.innerHTML = data.etapas.map(etapa => {
+    const cards = (data.grupos[etapa] || []);
+    const cls   = ETAPA_COLORS[etapa] || '';
+    return `
+      <div class="kb-col ${cls}" id="kb-${etapa}">
+        <div class="kb-col-head" style="color:var(--gray1)">
+          ${etapa} <span class="kb-count">${cards.length}</span>
+        </div>
+        <div class="kb-cards" id="kbc-${etapa}"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="kbDrop(event,'${etapa}')">
+          ${cards.map(c => kbCardHTML(c)).join('') || '<div style="padding:8px;color:var(--gray3);font-size:11px;text-align:center">Vacío</div>'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function migrarCRM() {
+  const r = await api('/admin/migrate/crm');
+  if (r.ok) {
+    toast(`✅ ${r.updated} conversaciones movidas a Nuevo`, 'success');
+    loadKanban();
+  } else {
+    toast('Error: ' + r.error, 'error');
+  }
+}
+
+function kbCardHTML(c) {
+  const canal = c.canal === 'whatsapp' ? '📱 WA' : c.canal === 'messenger' ? '💬 FB' : '📩';
+  return `
+    <div class="kb-card" id="kbcard-${c.id}" draggable="true"
+         ondragstart="kbDragStart(event,'${c.id}')">
+      <div class="kb-card-name">${escapeHTML(c.nombre)}</div>
+      <div class="kb-card-tel">${c.telefono}</div>
+      ${c.vehiculo ? `<div class="kb-card-veh">🚗 ${escapeHTML(c.vehiculo)}</div>` : ''}
+      ${c.asignado ? `<div class="kb-card-assigned">👤 ${c.asignado}</div>` : ''}
+      <div class="kb-card-footer">
+        <span class="kb-canal-badge">${canal}</span>
+        <button class="kb-open-btn" onclick="abrirDesdeKanban('${c.id}')">Ver chat →</button>
+      </div>
+    </div>`;
+}
+
+function kbDragStart(e, id) {
+  kbDragId = id; e.dataTransfer.effectAllowed = 'move';
+  document.getElementById('kbcard-'+id)?.classList.add('dragging');
+}
+
+async function kbDrop(e, etapa) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!kbDragId) return;
+  document.getElementById('kbcard-'+kbDragId)?.classList.remove('dragging');
+  await api(`/api/crm/conversacion/${kbDragId}/etapa`, 'PUT', { etapa });
+  kbDragId = null;
+  loadKanban();
+}
+
+function abrirDesdeKanban(convId) {
+  setCRMView('chat');
+  setTimeout(() => {
+    const el = document.querySelector(`[data-conv="${convId}"]`);
+    if (el) el.click();
+  }, 200);
+}
+
+function escapeHTML(s) { return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+</script>
+let calConvId    = null;
+let calVehiculo  = null;  // vehículo seleccionado
+
+async function buscarVehiculoCal(q) {
+  const results = document.getElementById('cal_vehiculo_results');
+  if (!q || q.length < 2) { results.innerHTML = ''; return; }
+  const rows = await api(`/api/inventario?q=${encodeURIComponent(q)}`);
+  results.innerHTML = rows.slice(0, 6).map(r => {
+    const tipo  = r.tipo_registro === 'CONSIGNACIÓN' ? '🤝' : '🏢';
+    const label = `${tipo} ${r.patente || '—'} · ${r.marca || ''} ${r.modelo || ''} ${r.anio || ''}`;
+    return `<div style="padding:8px 12px;font-size:11px;color:var(--gray1);cursor:pointer;border-bottom:0.5px solid var(--border1)"
+                 onmouseover="this.style.background='var(--card3)'"
+                 onmouseout="this.style.background=''"
+                 onclick="selectVehiculoCal('${r.id}', '${label.replace(/'/g,"\\'")}', '${(r.marca||'')} ${(r.modelo||'')} ${(r.anio||'')} patente ${(r.patente||'')}')">
+              ${label}
+            </div>`;
+  }).join('') || '<div style="padding:8px 12px;font-size:11px;color:var(--gray3)">Sin resultados</div>';
+}
+
+function selectVehiculoCal(id, label, descripcion) {
+  calVehiculo = { id, label, descripcion };
+  document.getElementById('cal_vehiculo_results').innerHTML = '';
+  document.getElementById('cal_vehiculo_search').value = '';
+  const sel = document.getElementById('cal_vehiculo_selected');
+  document.getElementById('cal_vehiculo_label').textContent = label;
+  sel.style.display = 'flex';
+  // Actualizar título automáticamente
+  const tit = document.getElementById('cal_titulo');
+  if (tit.value === 'Visita VTA Automotora' || tit.value.startsWith('Visita VTA —')) {
+    tit.value = `Visita VTA — ${label}`;
+  }
+  // Agregar al campo descripción
+  const desc = document.getElementById('cal_desc');
+  if (!desc.value.includes('Vehículo:')) {
+    desc.value = `Vehículo: ${descripcion}\n` + desc.value;
+  }
+}
+
+function clearVehiculoCal() {
+  calVehiculo = null;
+  document.getElementById('cal_vehiculo_selected').style.display = 'none';
+  document.getElementById('cal_vehiculo_label').textContent = '';
+}
+
+async function checkCalendar() {
+  const r = await api('/api/calendar/status');
+  if (r.connected) {
+    openCalModal(null);
+  } else {
+    if (confirm('Para usar Google Calendar necesitas conectar tu cuenta Google.\n\n¿Conectar ahora?')) {
+      window.location.href = '/oauth/google';
+    }
+  }
+}
+
+function openCalModal(convId) {
+  calConvId = convId;
+  const modal = document.getElementById('modalCal');
+  const ref   = document.getElementById('calConvRef');
+
+  // Hoy como fecha mínima
+  document.getElementById('cal_fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cal_fecha').min   = new Date().toISOString().split('T')[0];
+  document.getElementById('calResult').textContent     = '';
+  document.getElementById('cal_vehiculo_results').innerHTML = '';
+  document.getElementById('cal_vehiculo_search').value = '';
+  document.getElementById('cal_vehiculo_selected').style.display = 'none';
+  calVehiculo = null;
+
+  if (convId) {
+    const conv = allConvs?.find(c => c.id === convId);
+    if (conv) {
+      document.getElementById('cal_titulo').value =
+        `Visita VTA — ${conv.nombre_cliente || conv.telefono || 'Cliente'}`;
+      document.getElementById('cal_email').value  = conv.email || '';
+      document.getElementById('cal_desc').value   =
+        `Cliente: ${conv.nombre_cliente || '—'}\nTeléfono: ${conv.telefono || '—'}\n${conv.notas || ''}`;
+      ref.innerHTML = `<strong>${conv.nombre_cliente || 'Cliente'}</strong> · ${conv.telefono || ''}`;
+    }
+  } else {
+    ref.textContent = 'Visita general — sin cliente específico';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeCal() {
+  document.getElementById('modalCal').style.display = 'none';
+}
+
+async function confirmarAgenda() {
+  const fecha   = document.getElementById('cal_fecha').value;
+  const horaIni = document.getElementById('cal_hora_ini').value;
+  const horaFin = document.getElementById('cal_hora_fin').value;
+  const resEl   = document.getElementById('calResult');
+
+  if (!fecha) { resEl.style.color='var(--red)'; resEl.textContent='⚠️ Selecciona una fecha'; return; }
+  if (horaIni >= horaFin) { resEl.style.color='var(--red)'; resEl.textContent='⚠️ La hora de fin debe ser mayor a la de inicio'; return; }
+
+  resEl.style.color='var(--gray2)';
+  resEl.textContent = 'Creando evento...';
+
+  const r = await api('/api/calendar/agendar', 'POST', {
+    titulo:          document.getElementById('cal_titulo').value,
+    fecha,
+    hora_ini:        horaIni,
+    hora_fin:        horaFin,
+    email_cliente:   document.getElementById('cal_email').value,
+    descripcion:     document.getElementById('cal_desc').value,
+  });
+
+  if (r.ok) {
+    resEl.style.color = 'var(--green)';
+    resEl.innerHTML   = `✅ Evento creado — <a href="${r.link}" target="_blank" style="color:var(--blue)">Ver en Google Calendar</a>`;
+    setTimeout(closeCal, 3000);
+    if (window.toast) toast('📅 Visita agendada en Google Calendar', 'success');
+  } else if (r.auth_url) {
+    resEl.style.color = 'var(--yellow)';
+    resEl.textContent = 'Token expirado — reconectando...';
+    setTimeout(() => { window.location.href = r.auth_url; }, 1500);
+  } else {
+    resEl.style.color = 'var(--red)';
+    resEl.textContent = '❌ Error: ' + (r.error || 'desconocido');
+  }
+}
+
+// Revisar si venimos del callback de Google
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('calendar') === 'conectado') {
+  if (window.toast) toast('📅 Google Calendar conectado correctamente', 'success');
+}
+</script>
+{% endblock %}

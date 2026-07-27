@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+{% block title %}Car Hunter — VTA{% endblock %}
+
+{% block content %}
+<style>
+/* ── Car Hunter styles ───────────────────────────────────────────────── */
+.ch-wrap        { display:flex; gap:16px; height:calc(100vh - 80px); }
+.ch-panel-left  { flex:1; display:flex; flex-direction:column; min-width:0; }
+.ch-panel-right { width:340px; flex-shrink:0; background:var(--card); border-radius:12px;
+                  border:1px solid var(--border); overflow-y:auto; display:none; flex-direction:column; }
+.ch-panel-right.open { display:flex; }
+
+/* toolbar */
+.ch-toolbar     { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+.ch-toolbar input,
+.ch-toolbar select { background:var(--card); border:1px solid var(--border); color:var(--text);
+                     padding:6px 10px; border-radius:8px; font-size:13px; }
+.ch-toolbar input   { flex:1; min-width:160px; }
+
+/* stats strip */
+.ch-stats       { display:flex; gap:0; background:var(--card); border:1px solid var(--border);
+                  border-radius:10px; padding:10px 16px; margin-bottom:12px; flex-wrap:wrap; }
+.ch-stat        { flex:1; min-width:80px; text-align:center; padding:0 8px; }
+.ch-stat + .ch-stat { border-left:1px solid var(--border); }
+.ch-stat-val    { font-size:22px; font-weight:700; color:var(--accent); }
+.ch-stat-lbl    { font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-top:2px; }
+
+/* table */
+.ch-table-wrap  { flex:1; overflow-y:auto; border-radius:10px; border:1px solid var(--border); }
+table.ch-table  { width:100%; border-collapse:collapse; font-size:13px; }
+table.ch-table th { position:sticky; top:0; background:var(--card-dark,#1a1a1a);
+                    padding:10px 12px; text-align:left; font-size:11px; text-transform:uppercase;
+                    color:var(--text-muted); border-bottom:1px solid var(--border); }
+table.ch-table td { padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+table.ch-table tr:last-child td { border-bottom:none; }
+table.ch-table tr:hover td { background:rgba(255,255,255,.04); cursor:pointer; }
+table.ch-table tr.selected td { background:rgba(0,174,239,.08); }
+
+/* priority badges */
+.pri-alta   { background:#27AE6022;color:#27AE60;border:1px solid #27AE6044;
+               padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600; }
+.pri-media  { background:#F39C1222;color:#F39C12;border:1px solid #F39C1244;
+               padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600; }
+.pri-baja   { background:#95a5a622;color:#95a5a6;border:1px solid #95a5a644;
+               padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600; }
+
+/* estado badges */
+.est-buscando   { background:#00AEEF22;color:#00AEEF;border:1px solid #00AEEF44;
+                  padding:2px 8px;border-radius:20px;font-size:11px; }
+.est-encontrado { background:#27AE6022;color:#27AE60;border:1px solid #27AE6044;
+                  padding:2px 8px;border-radius:20px;font-size:11px; }
+.est-cerrado    { background:#95a5a622;color:#95a5a6;border:1px solid #95a5a644;
+                  padding:2px 8px;border-radius:20px;font-size:11px; }
+
+/* detail panel */
+.ch-detail-header { padding:16px; border-bottom:1px solid var(--border);
+                    display:flex; justify-content:space-between; align-items:flex-start; }
+.ch-detail-body   { padding:16px; flex:1; }
+.ch-section-lbl   { font-size:10px; color:var(--accent); font-weight:700;
+                    text-transform:uppercase; letter-spacing:1px; margin:14px 0 6px; }
+.ch-row           { display:flex; justify-content:space-between; align-items:flex-start;
+                    padding:5px 0; border-bottom:1px solid #ffffff08; font-size:13px; }
+.ch-lbl           { color:var(--text-muted); font-size:12px; flex-shrink:0; margin-right:8px; }
+.ch-val           { text-align:right; word-break:break-word; }
+.ch-modelos       { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.ch-modelo-tag    { background:rgba(0,174,239,.15); color:var(--accent); font-size:11px;
+                    padding:2px 8px; border-radius:10px; }
+.ch-detail-actions { padding:12px 16px; border-top:1px solid var(--border);
+                     display:flex; gap:8px; }
+.ch-detail-actions button { flex:1; }
+
+/* modal */
+.ch-modal .modal-body { max-height:70vh; overflow-y:auto; }
+.ch-tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:16px; }
+.ch-tab  { flex:1; text-align:center; padding:8px 4px; font-size:12px; color:var(--text-muted);
+           cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; }
+.ch-tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+.ch-tab-pane   { display:none; }
+.ch-tab-pane.active { display:block; }
+
+/* modelos chips editor */
+.modelos-input-wrap { display:flex; flex-wrap:wrap; gap:6px; background:var(--bg);
+                      border:1px solid var(--border); border-radius:8px;
+                      padding:6px 8px; min-height:38px; align-items:center; cursor:text; }
+.modelos-chip  { background:rgba(0,174,239,.15); color:var(--accent); font-size:12px;
+                 padding:2px 8px; border-radius:10px; display:flex; align-items:center; gap:4px; }
+.modelos-chip button { background:none; border:none; color:var(--accent); cursor:pointer;
+                       font-size:12px; padding:0; line-height:1; }
+.modelos-input-wrap input { background:transparent; border:none; color:var(--text);
+                             outline:none; min-width:80px; font-size:13px; flex:1; }
+</style>
+
+<div class="page-header" style="margin-bottom:16px">
+  <div>
+    <h1 class="page-title">Car Hunter</h1>
+    <p class="page-subtitle">Vehículos buscados por clientes</p>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" onclick="seedKR()" id="btn-seed-kr">Cargar Lista KR</button>
+    <button class="btn btn-danger" onclick="clearKR()" id="btn-clear-kr">Limpiar Lista KR</button>
+    <button class="btn btn-primary" onclick="openModal()">+ Nuevo</button>
+  </div>
+</div>
+
+<div class="ch-wrap">
+  <!-- LEFT: toolbar + stats + table -->
+  <div class="ch-panel-left">
+    <div class="ch-toolbar">
+      <input id="ch-search" type="text" placeholder="Buscar cliente, marca, modelo…" oninput="loadList()">
+      <select id="ch-cliente" onchange="loadList()">
+        <option value="">Todos los clientes</option>
+        <option>KR Automotora</option>
+        <option>Particular</option>
+      </select>
+      <select id="ch-prioridad" onchange="loadList()">
+        <option value="">Todas las prioridades</option>
+        <option>Alta</option>
+        <option>Media</option>
+        <option>Baja</option>
+      </select>
+      <select id="ch-estado" onchange="loadList()">
+        <option value="">Todos los estados</option>
+        <option>Buscando</option>
+        <option>Encontrado</option>
+        <option>Cerrado</option>
+      </select>
+    </div>
+
+    <div class="ch-stats" id="ch-stats">
+      <div class="ch-stat"><div class="ch-stat-val" id="s-total">—</div><div class="ch-stat-lbl">Total</div></div>
+      <div class="ch-stat"><div class="ch-stat-val" id="s-buscando" style="color:#00AEEF">—</div><div class="ch-stat-lbl">Buscando</div></div>
+      <div class="ch-stat"><div class="ch-stat-val" id="s-encontrado" style="color:#27AE60">—</div><div class="ch-stat-lbl">Encontrado</div></div>
+      <div class="ch-stat"><div class="ch-stat-val" id="s-alta" style="color:#E74C3C">—</div><div class="ch-stat-lbl">Prioridad Alta</div></div>
+    </div>
+
+    <div class="ch-table-wrap">
+      <table class="ch-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Marca</th>
+            <th>Modelos</th>
+            <th>Año</th>
+            <th>KM máx</th>
+            <th>Presupuesto</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="ch-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: detail panel -->
+  <div class="ch-panel-right" id="ch-detail">
+    <div class="ch-detail-header">
+      <div>
+        <div style="font-size:16px;font-weight:700" id="d-title">—</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="d-subtitle">—</div>
+      </div>
+      <button class="btn btn-icon" onclick="closeDetail()" title="Cerrar">✕</button>
+    </div>
+    <div class="ch-detail-body" id="d-body"></div>
+    <div class="ch-detail-actions">
+      <button class="btn btn-secondary" onclick="editCurrent()">Editar</button>
+      <button class="btn btn-danger" onclick="deleteCurrent()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="ch-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal ch-modal" style="max-width:600px;width:95%">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Nueva búsqueda</h2>
+      <button class="btn btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ch-tabs">
+        <div class="ch-tab active" onclick="switchTab(0)">Cliente</div>
+        <div class="ch-tab" onclick="switchTab(1)">Vehículo</div>
+        <div class="ch-tab" onclick="switchTab(2)">Preferencias</div>
+        <div class="ch-tab" onclick="switchTab(3)">Notas</div>
+      </div>
+
+      <!-- TAB 0: Cliente -->
+      <div class="ch-tab-pane active" id="tab-0">
+        <div class="form-group">
+          <label class="form-label">Cliente *</label>
+          <input id="f-cliente" class="form-input" type="text" placeholder="Ej: KR Automotora, Juan Pérez…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Presupuesto máximo (CLP)</label>
+          <input id="f-presupuesto" class="form-input" type="text" inputmode="numeric"
+                 oninput="fmtNumInput(this)" placeholder="15.000.000">
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Prioridad</label>
+            <select id="f-prioridad" class="form-input">
+              <option>Alta</option>
+              <option>Media</option>
+              <option>Baja</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="f-estado" class="form-input">
+              <option>Buscando</option>
+              <option>Encontrado</option>
+              <option>Cerrado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 1: Vehículo -->
+      <div class="ch-tab-pane" id="tab-1">
+        <div class="form-group">
+          <label class="form-label">Marca *</label>
+          <select id="f-marca" class="form-input">
+            <option value="">— Seleccionar —</option>
+            {% for m in marcas %}
+            <option>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelos aceptados <small style="color:var(--text-muted)">(Enter para agregar)</small></label>
+          <div class="modelos-input-wrap" id="modelos-wrap" onclick="document.getElementById('modelo-input').focus()">
+            <input id="modelo-input" type="text" placeholder="Escribe un modelo y presiona Enter…"
+                   onkeydown="addModeloChip(event)">
+          </div>
+          <input type="hidden" id="f-modelos" value="[]">
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Año mínimo</label>
+            <select id="f-anio-min" class="form-input">
+              <option value="0">Sin límite</option>
+              {% for y in range(2026,1989,-1) %}
+              <option value="{{ y }}">{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Año máximo</label>
+            <select id="f-anio-max" class="form-input">
+              <option value="0">Sin límite</option>
+              {% for y in range(2026,1989,-1) %}
+              <option value="{{ y }}">{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">KM máximo</label>
+            <input id="f-km-max" class="form-input" type="text" inputmode="numeric"
+                   oninput="fmtNumInput(this)" placeholder="150.000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dueños máx</label>
+            <input id="f-duenos" class="form-input" type="number" min="0" max="10" placeholder="Sin límite">
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Preferencias -->
+      <div class="ch-tab-pane" id="tab-2">
+        <div class="form-group">
+          <label class="form-label">Transmisión</label>
+          <select id="f-transmision" class="form-input">
+            <option value="">Indiferente</option>
+            {% for t in transmisiones %}
+            <option>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Combustible</label>
+          <select id="f-combustible" class="form-input">
+            <option value="">Indiferente</option>
+            {% for c in combustibles %}
+            <option>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Colores preferidos <small style="color:var(--text-muted)">(Enter para agregar)</small></label>
+          <div class="modelos-input-wrap" id="colores-wrap" onclick="document.getElementById('color-input').focus()">
+            <input id="color-input" type="text" placeholder="Ej: Blanco, Gris…"
+                   onkeydown="addColorChip(event)">
+          </div>
+          <input type="hidden" id="f-colores" value="[]">
+        </div>
+      </div>
+
+      <!-- TAB 3: Notas -->
+      <div class="ch-tab-pane" id="tab-3">
+        <div class="form-group">
+          <label class="form-label">Notas adicionales</label>
+          <textarea id="f-notas" class="form-input" rows="6"
+                    placeholder="Detalles específicos del cliente, urgencia, contacto, etc."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Creado por</label>
+          <input id="f-creado-por" class="form-input" type="text" readonly
+                 value="{{ session.get('usuario', '') if session else '' }}">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRecord()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _data    = [];
+let _current = null;
+let _editId  = null;
+let _modelosList = [];
+let _coloresList = [];
+
+// ── Load & render ────────────────────────────────────────────────────────────
+async function loadList() {
+  const q  = document.getElementById('ch-search').value;
+  const cl = document.getElementById('ch-cliente').value;
+  const pr = document.getElementById('ch-prioridad').value;
+  const es = document.getElementById('ch-estado').value;
+  const params = new URLSearchParams({ q, cliente: cl, prioridad: pr, estado: es });
+  _data = await api('/api/carhunter?' + params);
+  renderTable();
+  renderStats();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('ch-tbody');
+  if (!_data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Sin registros</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _data.map(r => `
+    <tr onclick="showDetail('${r.id}')" ${_current?.id === r.id ? 'class="selected"' : ''}>
+      <td><strong>${r.cliente || '—'}</strong></td>
+      <td>${r.marca || '—'}</td>
+      <td>${(r.modelos||[]).slice(0,3).join(', ')}${(r.modelos||[]).length>3?'…':''}</td>
+      <td>${rangoAnio(r)}</td>
+      <td>${r.km_max ? Number(r.km_max).toLocaleString('es-CL') + ' km' : '—'}</td>
+      <td>${r.presupuesto_max ? clp(r.presupuesto_max) : '—'}</td>
+      <td>${priBadge(r.prioridad)}</td>
+      <td>${estBadge(r.estado)}</td>
+    </tr>`).join('');
+}
+
+function rangoAnio(r) {
+  const min = r.anio_min || 0;
+  const max = r.anio_max || 0;
+  if (!min && !max) return '—';
+  if (min && !max)  return min + ' en adelante';
+  if (!min && max)  return 'hasta ' + max;
+  return min + ' – ' + max;
+}
+
+function priBadge(p) {
+  const cls = { 'Alta': 'pri-alta', 'Media': 'pri-media', 'Baja': 'pri-baja' };
+  return `<span class="${cls[p]||'pri-baja'}">${p||'—'}</span>`;
+}
+
+function estBadge(e) {
+  const cls = { 'Buscando': 'est-buscando', 'Encontrado': 'est-encontrado', 'Cerrado': 'est-cerrado' };
+  return `<span class="${cls[e]||'est-buscando'}">${e||'—'}</span>`;
+}
+
+function renderStats() {
+  const total      = _data.length;
+  const buscando   = _data.filter(r => r.estado === 'Buscando').length;
+  const encontrado = _data.filter(r => r.estado === 'Encontrado').length;
+  const alta       = _data.filter(r => r.prioridad === 'Alta').length;
+  document.getElementById('s-total').textContent     = total;
+  document.getElementById('s-buscando').textContent  = buscando;
+  document.getElementById('s-encontrado').textContent= encontrado;
+  document.getElementById('s-alta').textContent      = alta;
+}
+
+// ── Detail panel ─────────────────────────────────────────────────────────────
+function showDetail(id) {
+  _current = _data.find(r => r.id === id);
+  if (!_current) return;
+  renderTable();
+  const r = _current;
+  document.getElementById('d-title').textContent    = r.marca + (r.modelos?.length ? ' · ' + r.modelos.join(', ') : '');
+  document.getElementById('d-subtitle').textContent = r.cliente || '—';
+
+  const modeloHtml = (r.modelos||[]).map(m => `<span class="ch-modelo-tag">${m}</span>`).join('');
+  const colorHtml  = (r.colores_preferidos||[]).length
+    ? (r.colores_preferidos||[]).map(c=>`<span class="ch-modelo-tag">${c}</span>`).join('')
+    : '<span style="color:var(--text-muted)">Indiferente</span>';
+
+  document.getElementById('d-body').innerHTML = `
+    <div class="ch-section-lbl">Identificación</div>
+    <div class="ch-row"><span class="ch-lbl">Cliente</span><span class="ch-val">${r.cliente||'—'}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Estado</span><span class="ch-val">${estBadge(r.estado)}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Prioridad</span><span class="ch-val">${priBadge(r.prioridad)}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Presupuesto</span><span class="ch-val">${r.presupuesto_max ? clp(r.presupuesto_max) : '—'}</span></div>
+
+    <div class="ch-section-lbl">Vehículo</div>
+    <div class="ch-row"><span class="ch-lbl">Marca</span><span class="ch-val">${r.marca||'—'}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Modelos</span><span class="ch-val"><div class="ch-modelos">${modeloHtml||'<span style="color:var(--text-muted)">—</span>'}</div></span></div>
+    <div class="ch-row"><span class="ch-lbl">Año</span><span class="ch-val">${rangoAnio(r)}</span></div>
+    <div class="ch-row"><span class="ch-lbl">KM máx</span><span class="ch-val">${r.km_max ? Number(r.km_max).toLocaleString('es-CL') + ' km' : '—'}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Dueños máx</span><span class="ch-val">${r.duenos_max || '—'}</span></div>
+
+    <div class="ch-section-lbl">Preferencias</div>
+    <div class="ch-row"><span class="ch-lbl">Transmisión</span><span class="ch-val">${r.transmision||'Indiferente'}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Combustible</span><span class="ch-val">${r.combustible||'Indiferente'}</span></div>
+    <div class="ch-row"><span class="ch-lbl">Colores</span><span class="ch-val"><div class="ch-modelos">${colorHtml}</div></span></div>
+
+    ${r.notas ? `<div class="ch-section-lbl">Notas</div><div style="font-size:13px;color:var(--text-muted);line-height:1.5;padding:4px 0">${r.notas}</div>` : ''}
+    <div style="font-size:11px;color:var(--text-muted);margin-top:12px">Creado por: ${r.creado_por||'—'}</div>
+  `;
+  document.getElementById('ch-detail').classList.add('open');
+}
+
+function closeDetail() {
+  _current = null;
+  document.getElementById('ch-detail').classList.remove('open');
+  renderTable();
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+let _activeTab = 0;
+
+function switchTab(i) {
+  _activeTab = i;
+  document.querySelectorAll('.ch-tab').forEach((t,idx)  => t.classList.toggle('active', idx===i));
+  document.querySelectorAll('.ch-tab-pane').forEach((p,idx) => p.classList.toggle('active', idx===i));
+}
+
+function openModal(record=null) {
+  _editId = record?.id || null;
+  _modelosList = record?.modelos ? [...record.modelos] : [];
+  _coloresList  = Array.isArray(record?.colores_preferidos) ? [...record.colores_preferidos] : [];
+
+  document.getElementById('modal-title').textContent = _editId ? 'Editar búsqueda' : 'Nueva búsqueda';
+  document.getElementById('f-cliente').value      = record?.cliente || '';
+  document.getElementById('f-presupuesto').value  = record?.presupuesto_max
+    ? Number(record.presupuesto_max).toLocaleString('es-CL') : '';
+  document.getElementById('f-prioridad').value    = record?.prioridad || 'Alta';
+  document.getElementById('f-estado').value       = record?.estado    || 'Buscando';
+  document.getElementById('f-marca').value        = record?.marca     || '';
+  document.getElementById('f-anio-min').value     = record?.anio_min  || 0;
+  document.getElementById('f-anio-max').value     = record?.anio_max  || 0;
+  document.getElementById('f-km-max').value       = record?.km_max
+    ? Number(record.km_max).toLocaleString('es-CL') : '';
+  document.getElementById('f-duenos').value       = record?.duenos_max || '';
+  document.getElementById('f-transmision').value  = record?.transmision || '';
+  document.getElementById('f-combustible').value  = record?.combustible || '';
+  document.getElementById('f-notas').value        = record?.notas || '';
+  document.getElementById('modelo-input').value   = '';
+  document.getElementById('color-input').value    = '';
+
+  renderModeloChips();
+  renderColorChips();
+  switchTab(0);
+  document.getElementById('ch-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('ch-modal').classList.remove('open');
+}
+
+// Chips para modelos
+function renderModeloChips() {
+  const wrap = document.getElementById('modelos-wrap');
+  const input = document.getElementById('modelo-input');
+  wrap.innerHTML = '';
+  _modelosList.forEach((m, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'modelos-chip';
+    chip.innerHTML = `${m}<button type="button" onclick="removeModelo(${i})">×</button>`;
+    wrap.appendChild(chip);
+  });
+  wrap.appendChild(input);
+  document.getElementById('f-modelos').value = JSON.stringify(_modelosList);
+}
+
+function addModeloChip(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const val = e.target.value.trim();
+  if (val && !_modelosList.includes(val)) _modelosList.push(val);
+  e.target.value = '';
+  renderModeloChips();
+  document.getElementById('modelo-input').focus();
+}
+
+function removeModelo(i) {
+  _modelosList.splice(i, 1);
+  renderModeloChips();
+}
+
+// Chips para colores
+function renderColorChips() {
+  const wrap = document.getElementById('colores-wrap');
+  const input = document.getElementById('color-input');
+  wrap.innerHTML = '';
+  _coloresList.forEach((c, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'modelos-chip';
+    chip.innerHTML = `${c}<button type="button" onclick="removeColor(${i})">×</button>`;
+    wrap.appendChild(chip);
+  });
+  wrap.appendChild(input);
+  document.getElementById('f-colores').value = JSON.stringify(_coloresList);
+}
+
+function addColorChip(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const val = e.target.value.trim();
+  if (val && !_coloresList.includes(val)) _coloresList.push(val);
+  e.target.value = '';
+  renderColorChips();
+  document.getElementById('color-input').focus();
+}
+
+function removeColor(i) {
+  _coloresList.splice(i, 1);
+  renderColorChips();
+}
+
+function pInt(v) { return parseInt(String(v||0).replace(/\D/g,'')) || 0; }
+
+async function saveRecord() {
+  const cliente = document.getElementById('f-cliente').value.trim();
+  const marca   = document.getElementById('f-marca').value;
+  if (!cliente) { toast('El cliente es obligatorio', 'error'); switchTab(0); return; }
+  if (!marca)   { toast('Selecciona una marca', 'error'); switchTab(1); return; }
+
+  const payload = {
+    cliente,
+    marca,
+    modelos:           _modelosList,
+    anio_min:          parseInt(document.getElementById('f-anio-min').value) || 0,
+    anio_max:          parseInt(document.getElementById('f-anio-max').value) || 0,
+    km_max:            pInt(document.getElementById('f-km-max').value),
+    duenos_max:        parseInt(document.getElementById('f-duenos').value) || 0,
+    transmision:       document.getElementById('f-transmision').value,
+    combustible:       document.getElementById('f-combustible').value,
+    colores_preferidos:_coloresList,
+    presupuesto_max:   pInt(document.getElementById('f-presupuesto').value),
+    prioridad:         document.getElementById('f-prioridad').value,
+    estado:            document.getElementById('f-estado').value,
+    notas:             document.getElementById('f-notas').value.trim(),
+  };
+
+  let res;
+  if (_editId) {
+    res = await api(`/api/carhunter/${_editId}`, 'PUT', payload);
+  } else {
+    res = await api('/api/carhunter', 'POST', payload);
+  }
+
+  if (res.ok || res.id) {
+    toast(_editId ? 'Búsqueda actualizada' : 'Búsqueda creada');
+    closeModal();
+    await loadList();
+    if (_editId) showDetail(_editId);
+    else if (res.id) showDetail(res.id);
+  } else {
+    toast(res.error || 'Error al guardar', 'error');
+  }
+}
+
+function editCurrent() {
+  if (!_current) return;
+  openModal(_current);
+}
+
+async function deleteCurrent() {
+  if (!_current) return;
+  if (!confirm(`¿Eliminar búsqueda de ${_current.marca} para ${_current.cliente}?`)) return;
+  const res = await api(`/api/carhunter/${_current.id}`, 'DELETE');
+  if (res.ok) {
+    toast('Registro eliminado');
+    closeDetail();
+    await loadList();
+  } else {
+    toast('Error al eliminar', 'error');
+  }
+}
+
+async function seedKR() {
+  const btn = document.getElementById('btn-seed-kr');
+  if (!confirm('¿Cargar lista de deseos de KR Automotora? Se crearán registros nuevos.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Cargando…';
+  const res = await api('/api/carhunter/seed-kr', 'POST');
+  btn.disabled = false;
+  btn.textContent = 'Cargar Lista KR';
+  if (res.ok) {
+    const parts = [];
+    if (res.creados)     parts.push(`${res.creados} creados`);
+    if (res.actualizados) parts.push(`${res.actualizados} actualizados`);
+    if (res.sin_cambios)  parts.push(`${res.sin_cambios} sin cambios`);
+    toast('Lista KR: ' + (parts.join(', ') || 'todo al día'));
+    await loadList();
+  } else {
+    toast('Error al cargar lista KR', 'error');
+  }
+}
+
+async function clearKR() {
+  const btn = document.getElementById('btn-clear-kr');
+  if (!confirm('¿Eliminar TODOS los registros de KR Automotora? Esta acción no se puede deshacer.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Eliminando…';
+  const res = await api('/api/carhunter/clear-kr', 'DELETE');
+  btn.disabled = false;
+  btn.textContent = 'Limpiar Lista KR';
+  if (res.ok) {
+    toast(`Lista KR eliminada — ${res.eliminados} registros borrados`);
+    closeDetail();
+    await loadList();
+  } else {
+    toast('Error al limpiar lista KR', 'error');
+  }
+}
+
+// Kick off
+loadList();
+</script>
+{% endblock %}

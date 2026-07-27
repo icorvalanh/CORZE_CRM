@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTA — Iniciar Sesión</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='assets/logo.png') }}" type="image/png">
+<style>
+  /* ── Particles background ────────────────────────────────────────────── */
+  #particles-js {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: #080B10;
+  }
+
+  /* ── Login layout encima de particles ────────────────────────────────── */
+  .login-body {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 560px;
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .login-logo {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .login-logo-img {
+    max-width: 220px;
+    max-height: 80px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 20px rgba(0, 174, 239, 0.4));
+  }
+
+  /* Card con efecto glassmorphism */
+  .login-card {
+    background: rgba(19, 25, 32, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 174, 239, 0.2);
+    border-radius: 20px;
+    padding: 28px 28px 20px;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(0, 174, 239, 0.08),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .login-title {
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 4px;
+    color: #EEF2F7;
+  }
+
+  .login-subtitle {
+    font-size: 10px;
+    color: #4A5568;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .user-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .user-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(26, 34, 48, 0.9);
+    border: 2px solid #263545;
+    border-radius: 14px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .user-card:hover  { border-color: var(--user-color); background: rgba(31, 42, 58, 0.95); }
+  .user-card.selected {
+    border-color: var(--user-color);
+    background: rgba(31, 42, 58, 0.95);
+    box-shadow: 0 0 20px rgba(0,174,239,0.15);
+  }
+
+  .user-card-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(26,34,48,0.9);
+    color: var(--user-color);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 7px;
+    border: 2px solid rgba(255,255,255,0.06);
+    transition: all .2s;
+  }
+  .user-card.selected .user-card-avatar {
+    box-shadow: 0 0 16px var(--user-color);
+  }
+
+  .user-card-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #C8D0DC;
+  }
+
+  .login-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 12px 0;
+  }
+
+  .pin-display {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: #2D3748;
+    user-select: none;
+    letter-spacing: 4px;
+  }
+
+  .pin-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .pin-btn {
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(26, 34, 48, 0.8);
+    color: #EEF2F7;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .12s;
+    backdrop-filter: blur(4px);
+  }
+  .pin-btn:hover  { background: rgba(31,42,58,0.95); border-color: rgba(0,174,239,0.3); }
+  .pin-btn:active { transform: scale(0.95); }
+
+  .pin-btn-ok {
+    background: rgba(0, 174, 239, 0.85);
+    border-color: #00AEEF;
+  }
+  .pin-btn-ok:hover { background: rgba(0, 144, 201, 0.95); }
+
+  .pin-btn-del {
+    background: rgba(31, 42, 58, 0.7);
+    color: #8A95A3;
+  }
+
+  .login-status {
+    min-height: 24px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 12px;
+    padding: 4px 12px;
+    border-radius: 8px;
+    transition: all .2s;
+  }
+  .login-status.error   { color: #E74C3C; background: rgba(231,76,60,0.1); }
+  .login-status.success { color: #2ECC71; background: rgba(46,204,113,0.1); }
+  .login-status.warning { color: #F1C40F; background: rgba(241,196,15,0.1); }
+</style>
+</head>
+<body>
+
+<!-- Particles background -->
+<div id="particles-js"></div>
+
+<!-- Login UI -->
+<div class="login-body">
+  <div class="login-container">
+
+    <div class="login-logo">
+      <img src="{{ url_for('static', filename='assets/logo.png') }}"
+           alt="VTA" class="login-logo-img">
+    </div>
+
+    <div class="login-card">
+      <h2 class="login-title">Selecciona tu usuario</h2>
+      <p class="login-subtitle">Ingresa el PIN con los botones o con el teclado</p>
+
+      <div class="user-cards">
+        {% for username, info in users.items() %}
+        <div class="user-card" data-user="{{ username }}"
+             style="--user-color: {{ info.color }}">
+          <div class="user-card-avatar">{{ info.avatar }}</div>
+          <div class="user-card-name">{{ username.split()[0] }}</div>
+          <div style="font-size:9px;color:{{ info.color }};margin-top:3px;opacity:.8;text-transform:uppercase;letter-spacing:.06em">
+            {{ info.role|default('admin') }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="login-divider"></div>
+
+      <div class="pin-display" id="pinDisplay">
+        <span class="pin-dot" id="d0">○</span>
+        <span class="pin-dot" id="d1">○</span>
+        <span class="pin-dot" id="d2">○</span>
+        <span class="pin-dot" id="d3">○</span>
+      </div>
+
+      <div class="pin-pad">
+        {% for k in ['1','2','3','4','5','6','7','8','9','⌫','0','✓'] %}
+        <button class="pin-btn
+          {% if k == '✓' %}pin-btn-ok
+          {% elif k == '⌫' %}pin-btn-del
+          {% endif %}"
+          data-key="{{ k }}">{{ k }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="login-status" id="loginStatus"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- particles.js desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script>
+// ── Particles config — colores VTA ─────────────────────────────────────────
+particlesJS('particles-js', {
+  particles: {
+    number:    { value: 60, density: { enable: true, value_area: 900 } },
+    color:     { value: ['#00AEEF', '#0090C9', '#FFFFFF', '#003D5C'] },
+    shape:     { type: 'circle' },
+    opacity:   { value: 0.35, random: true,
+                 anim: { enable: true, speed: 0.6, opacity_min: 0.05, sync: false } },
+    size:      { value: 3, random: true,
+                 anim: { enable: false, speed: 4, size_min: 0.3, sync: false } },
+    line_linked:{ enable: true, distance: 160, color: '#00AEEF',
+                  opacity: 0.12, width: 1 },
+    move: {
+      enable: true, speed: 1.4, direction: 'none',
+      random: true, straight: false, out_mode: 'out',
+      attract: { enable: false }
+    }
+  },
+  interactivity: {
+    detect_on: 'canvas',
+    events: {
+      onhover: { enable: true, mode: 'grab' },
+      onclick:  { enable: true, mode: 'push' },
+      resize:   true
+    },
+    modes: {
+      grab:   { distance: 180, line_linked: { opacity: 0.5 } },
+      push:   { particles_nb: 3 },
+      repulse:{ distance: 150 }
+    }
+  },
+  retina_detect: true
+});
+
+// ── Login logic ─────────────────────────────────────────────────────────────
+const USERS = {{ users | tojson }};
+let selectedUser = null;
+let pin = '';
+
+document.querySelectorAll('.user-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.user-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedUser = card.dataset.user;
+    pin = '';
+    updateDisplay();
+    setStatus('');
+  });
+});
+
+document.querySelectorAll('.pin-btn').forEach(btn => {
+  btn.addEventListener('click', () => handleKey(btn.dataset.key));
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') handleKey(e.key);
+  else if (e.key === 'Backspace') handleKey('⌫');
+  else if (e.key === 'Enter') handleKey('✓');
+});
+
+function handleKey(key) {
+  if (!selectedUser && key !== '⌫' && key !== '✓') {
+    setStatus('Selecciona un usuario primero', 'warning'); return;
+  }
+  if (key === '⌫') {
+    pin = pin.slice(0, -1); setStatus(''); updateDisplay();
+  } else if (key === '✓') {
+    verifyPin();
+  } else if (pin.length < 4) {
+    pin += key; setStatus(''); updateDisplay();
+    if (pin.length === 4) setTimeout(verifyPin, 120);
+  }
+}
+
+function updateDisplay() {
+  const color = selectedUser ? USERS[selectedUser].color : '#2D3748';
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('d' + i);
+    dot.textContent = i < pin.length ? '●' : '○';
+    dot.style.color = i < pin.length ? color : '#2D3748';
+    dot.style.textShadow = i < pin.length ? `0 0 12px ${color}` : 'none';
+  }
+}
+
+async function verifyPin() {
+  if (!selectedUser) return;
+  if (pin.length < 4) { setStatus('Ingresa los 4 dígitos', 'warning'); return; }
+
+  const res  = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario: selectedUser, pin })
+  });
+  const data = await res.json();
+
+  if (data.ok) {
+    setStatus(data.msg, 'success');
+    // Dots en verde con glow
+    const color = USERS[selectedUser].color;
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById('d' + i);
+      dot.textContent = '✓';
+      dot.style.color = '#2ECC71';
+      dot.style.textShadow = '0 0 16px #2ECC71';
+    }
+    const role = USERS[selectedUser]?.role || 'admin';
+    setTimeout(() => {
+      window.location.href = role === 'flipping' ? '/admin/flipping' : '/admin/dashboard';
+    }, 1300);
+  } else {
+    setStatus(data.msg, 'error');
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById('d' + i);
+      dot.textContent = '✕';
+      dot.style.color = '#E74C3C';
+      dot.style.textShadow = '0 0 12px #E74C3C';
+    }
+    const card = document.querySelector('.user-card.selected');
+    if (card) card.style.borderColor = '#E74C3C';
+    pin = '';
+    setTimeout(() => {
+      updateDisplay();
+      if (card) card.style.borderColor = USERS[selectedUser]?.color || '#263545';
+    }, 900);
+  }
+}
+
+function setStatus(msg, level = '') {
+  const el = document.getElementById('loginStatus');
+  el.textContent = msg;
+  el.className = 'login-status ' + level;
+}
+</script>
+</body>
+</html>

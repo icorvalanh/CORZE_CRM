@@ -1,0 +1,1001 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+/* ── Calificaciones ───────────────────────────────── */
+.badge-calif {
+  display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+}
+.badge-bueno    { background:#1A3A1A; color:#2ECC71; border:1px solid #27AE6066; }
+.badge-regular  { background:#3A3000; color:#F1C40F; border:1px solid #F1C40F66; }
+.badge-descartado { background:#3A1010; color:#E74C3C; border:1px solid #E74C3C66; }
+.badge-pendiente  { background:#1A2A3A; color:#8A95A3; border:1px solid #8A95A344; }
+
+/* ── Legal checks ─────────────────────────────────── */
+.legal-item {
+  display:flex; align-items:center; gap:8px; padding:5px 0;
+  border-bottom:1px solid var(--border1); font-size:12px;
+}
+.legal-item:last-child { border-bottom:none; }
+.legal-ok   { color:var(--green); font-size:16px; }
+.legal-warn { color:var(--red);   font-size:16px; }
+.legal-nd   { color:var(--gray3); font-size:16px; }
+
+/* ── Costos dinámicos ─────────────────────────────── */
+.costo-row {
+  display:grid; grid-template-columns:1fr 140px 32px; gap:6px;
+  align-items:center; margin-bottom:6px;
+}
+.costo-row input { background:var(--card2); border:1px solid var(--border2); color:var(--white);
+  border-radius:6px; padding:6px 10px; font-size:12px; width:100%; }
+
+/* ── Participantes simulación ─────────────────────── */
+.part-row {
+  display:grid; grid-template-columns:1fr 100px 110px; gap:8px;
+  align-items:center; padding:8px 0; border-bottom:1px solid var(--border1);
+}
+.part-row:last-child { border-bottom:none; }
+.part-pct-input {
+  background:var(--card2); border:1px solid var(--border2); color:var(--white);
+  border-radius:6px; padding:5px 8px; font-size:13px; text-align:right; width:100%;
+}
+.part-ganancia { font-size:13px; font-weight:700; text-align:right; }
+
+/* ── Ganancia neta highlight ──────────────────────── */
+.ganancia-positiva { color:var(--green); }
+.ganancia-negativa { color:var(--red); }
+.ganancia-neutral  { color:var(--gray2); }
+
+/* ── Link de publicación ──────────────────────────── */
+.link-pub {
+  display:inline-flex; align-items:center; gap:6px;
+  color:var(--blue); text-decoration:none; font-size:12px;
+  padding:4px 10px; border:1px solid var(--blue)44;
+  border-radius:6px; transition:.15s;
+}
+.link-pub:hover { background:#003D5C33; }
+
+/* ── Tabs del modal ───────────────────────────────── */
+.modal-tabs { display:flex; gap:0; border-bottom:1px solid var(--border1); margin-bottom:18px; }
+.mtab {
+  padding:10px 18px; font-size:12px; font-weight:600; color:var(--gray2);
+  cursor:pointer; border-bottom:2px solid transparent; transition:.15s;
+}
+.mtab.active { color:var(--blue); border-bottom-color:var(--blue); }
+
+/* ── Flip detail panel ────────────────────────────── */
+.flip-stat { display:flex; justify-content:space-between; align-items:baseline;
+  padding:6px 0; border-bottom:1px solid var(--border1); font-size:12px; }
+.flip-stat:last-child { border-bottom:none; }
+.flip-stat-label { color:var(--gray2); }
+.flip-stat-val   { font-weight:700; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">🔄 Flipping</h1>
+    <span class="badge-count" id="rowCount">Cargando...</span>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <button class="btn btn-primary" onclick="openModal()">➕ Agregar</button>
+    <button class="btn btn-secondary" onclick="editSelected()">✏️ Editar</button>
+    <button class="btn btn-danger" onclick="deleteSelected()">🗑️ Eliminar</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn btn-secondary" onclick="loadRows()">🔄 Actualizar</button>
+  </div>
+  <div class="toolbar-right" style="display:flex;gap:8px;align-items:center">
+    <select class="filter-select" onchange="filterCalif(this.value)" id="filterCalif">
+      <option value="">Todas las calificaciones</option>
+      <option value="Negocio bueno">🟢 Negocio bueno</option>
+      <option value="Negocio regular">🟡 Negocio regular</option>
+      <option value="Descartado">🔴 Descartado</option>
+    </select>
+    <select class="filter-select" onchange="filterEstadoF(this.value)" id="filterEstado">
+      <option value="">Todos los estados</option>
+      <option value="En evaluación">En evaluación</option>
+      <option value="Aceptado">Aceptado</option>
+      <option value="Comprado">Comprado</option>
+      <option value="Descartado">Descartado</option>
+    </select>
+    <input type="text" class="search-input" placeholder="🔍 Buscar patente, marca, modelo..."
+           oninput="searchRows(this.value)">
+  </div>
+</div>
+
+<!-- Stats strip -->
+<div class="stats-strip" id="statsStrip"></div>
+
+<!-- Tabla + Panel detalle -->
+<div class="table-layout">
+  <div class="table-wrap">
+    <table class="vta-table" id="mainTable">
+      <thead>
+        <tr>
+          <th>Patente</th><th>Marca</th><th>Modelo</th><th>Año</th><th>KM</th>
+          <th>P.Compra Est.</th><th>P.Venta Est.</th><th>Costos</th>
+          <th>Ganancia Neta</th><th>Legal</th><th>Calificación</th>
+          <th>Estado</th><th>Fecha</th><th>Creado por</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty">Selecciona un vehículo<br>para ver los detalles</div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL AGREGAR / EDITAR ══════════ -->
+<div class="modal-overlay" id="mainModal" style="display:none">
+  <div class="modal-box" style="max-width:700px;width:95%">
+    <div class="modal-header">
+      <span id="modalTitle">Agregar Flipping</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-tabs">
+      <div class="mtab active" onclick="switchTab('vehiculo')">🚗 Vehículo</div>
+      <div class="mtab" onclick="switchTab('financiero')">💰 Financiero</div>
+      <div class="mtab" onclick="switchTab('legal')">📋 Legal</div>
+      <div class="mtab" onclick="switchTab('calificacion')">🏷️ Calificación</div>
+    </div>
+
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+
+      <!-- TAB: Vehículo -->
+      <div id="tab-vehiculo">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group">
+            <label class="form-label">Patente</label>
+            <input type="text" id="f_patente" class="form-input" placeholder="ABC123"
+                   oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Año</label>
+            <input type="number" id="f_anio" class="form-input" placeholder="2019" min="1950" max="2027">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Marca</label>
+            <select id="f_marca" class="form-input">
+              <option value="">— Selecciona —</option>
+              {% for m in marcas %}<option>{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modelo</label>
+            <input type="text" id="f_modelo" class="form-input" placeholder="Ej: Corolla XEI">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo vehículo</label>
+            <select id="f_tipo_vehiculo" class="form-input">
+              <option value="">— Selecciona —</option>
+              {% for t in tipos %}<option>{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <input type="text" id="f_color" class="form-input" placeholder="Blanco">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kilómetros</label>
+            <input type="text" inputmode="numeric" id="f_km" class="form-input" placeholder="80.000" oninput="fmtNumInput(this)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Combustible</label>
+            <select id="f_combustible" class="form-input">
+              <option value="">— Selecciona —</option>
+              {% for c in combustibles %}<option>{{ c }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Transmisión</label>
+            <select id="f_transmision" class="form-input">
+              <option value="">— Selecciona —</option>
+              {% for t in transmisiones %}<option>{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">N° Dueños anteriores</label>
+            <input type="number" id="f_duenos" class="form-input" placeholder="1" min="0">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px">
+          <label class="form-label">🔗 Link publicación (Facebook Marketplace / Chileautos)</label>
+          <input type="url" id="f_link" class="form-input" placeholder="https://www.facebook.com/marketplace/...">
+          <small style="color:var(--gray3)">Se mostrará como botón "Ver Vehículo" clickeable</small>
+        </div>
+      </div>
+
+      <!-- TAB: Financiero -->
+      <div id="tab-financiero" style="display:none">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group">
+            <label class="form-label">Precio compra estimado (CLP)</label>
+            <input type="text" inputmode="numeric" id="f_precio_compra" class="form-input" placeholder="8.000.000"
+                   oninput="fmtNumInput(this);recalcGanancia()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Precio venta estimado (CLP)</label>
+            <input type="text" inputmode="numeric" id="f_precio_venta" class="form-input" placeholder="10.000.000"
+                   oninput="fmtNumInput(this);recalcGanancia()">
+          </div>
+        </div>
+
+        <div style="margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;font-size:13px">Costos / Gastos del negocio</span>
+          <button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:11px"
+                  onclick="addCostoRow()">+ Agregar</button>
+        </div>
+
+        <div id="costosContainer"></div>
+
+        <!-- Resumen financiero en tiempo real -->
+        <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-top:16px">
+          <div class="flip-stat">
+            <span class="flip-stat-label">Precio compra estimado</span>
+            <span class="flip-stat-val" id="res_compra">$0</span>
+          </div>
+          <div class="flip-stat">
+            <span class="flip-stat-label">Precio venta estimado</span>
+            <span class="flip-stat-val" id="res_venta">$0</span>
+          </div>
+          <div class="flip-stat">
+            <span class="flip-stat-label">Total costos</span>
+            <span class="flip-stat-val" style="color:var(--red)" id="res_costos">$0</span>
+          </div>
+          <div class="flip-stat" style="border-top:2px solid var(--border2);padding-top:10px;margin-top:4px">
+            <span class="flip-stat-label" style="font-weight:700">Ganancia Neta estimada</span>
+            <span class="flip-stat-val" id="res_ganancia" style="font-size:16px">$0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Legal -->
+      <div id="tab-legal" style="display:none">
+        <p style="color:var(--gray2);font-size:12px;margin-bottom:16px">
+          Verificación de documentos legales del vehículo y del vendedor.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+
+          <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:16px">
+            <p style="font-weight:600;margin-bottom:12px;font-size:12px;color:var(--blue)">📄 DOCUMENTOS DEL VEHÍCULO</p>
+            <div class="legal-item">
+              <input type="checkbox" id="f_permiso" class="form-checkbox">
+              <label for="f_permiso">Permiso de circulación vigente</label>
+            </div>
+            <div class="legal-item">
+              <input type="checkbox" id="f_soap" class="form-checkbox">
+              <label for="f_soap">SOAP vigente</label>
+            </div>
+            <div class="legal-item">
+              <input type="checkbox" id="f_revision" class="form-checkbox">
+              <label for="f_revision">Revisión técnica al día</label>
+            </div>
+            <div class="legal-item">
+              <input type="checkbox" id="f_sin_prendas" class="form-checkbox">
+              <label for="f_sin_prendas">Sin prendas / gravámenes</label>
+            </div>
+            <div class="legal-item" style="border:none;padding-bottom:0">
+              <input type="checkbox" id="f_docs_ok" class="form-checkbox">
+              <label for="f_docs_ok">Documentos en orden general</label>
+            </div>
+          </div>
+
+          <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:16px">
+            <p style="font-weight:600;margin-bottom:12px;font-size:12px;color:var(--yellow)">👤 SITUACIÓN LEGAL DEL VENDEDOR</p>
+            <div class="legal-item">
+              <input type="checkbox" id="f_sin_embargo" class="form-checkbox">
+              <label for="f_sin_embargo">Vendedor sin orden de embargo</label>
+            </div>
+            <div class="legal-item" style="border:none;padding-bottom:0">
+              <input type="checkbox" id="f_sin_alimentos" class="form-checkbox">
+              <label for="f_sin_alimentos">Vendedor sin deuda de pensión alimenticia</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Notas legales / observaciones</label>
+            <textarea id="f_notas_legal" class="form-input" rows="3"
+                      placeholder="Ej: Se verificó por Autofact, pendiente revisar prendas..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Calificación -->
+      <div id="tab-calificacion" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Calificación del negocio</label>
+          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+            <button type="button" class="btn" id="btn_bueno"
+                    onclick="setCalif('Negocio bueno')"
+                    style="border:2px solid var(--border2);padding:12px 20px">
+              🟢 Negocio Bueno
+            </button>
+            <button type="button" class="btn" id="btn_regular"
+                    onclick="setCalif('Negocio regular')"
+                    style="border:2px solid var(--border2);padding:12px 20px">
+              🟡 Negocio Regular
+            </button>
+            <button type="button" class="btn" id="btn_descartado"
+                    onclick="setCalif('Descartado')"
+                    style="border:2px solid var(--border2);padding:12px 20px">
+              🔴 Descartado
+            </button>
+          </div>
+          <input type="hidden" id="f_calificacion" value="">
+        </div>
+
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">Estado del negocio</label>
+          <select id="f_estado" class="form-input">
+            <option value="En evaluación">En evaluación</option>
+            <option value="Aceptado">Aceptado</option>
+            <option value="Comprado">Comprado</option>
+            <option value="Descartado">Descartado</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notas generales</label>
+          <textarea id="f_notas" class="form-input" rows="4"
+                    placeholder="Observaciones generales del negocio..."></textarea>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRecord()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL SIMULAR GANANCIAS ══════════ -->
+<div class="modal-overlay" id="simModal" style="display:none">
+  <div class="modal-box" style="max-width:520px;width:95%">
+    <div class="modal-header">
+      <span>💰 Simular Ganancias</span>
+      <button class="modal-close" onclick="closeSim()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+
+      <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:20px">
+        <div class="flip-stat">
+          <span class="flip-stat-label">Vehículo</span>
+          <span class="flip-stat-val" id="sim_vehiculo">—</span>
+        </div>
+        <div class="flip-stat">
+          <span class="flip-stat-label">Precio compra estimado</span>
+          <span class="flip-stat-val" id="sim_compra">—</span>
+        </div>
+        <div class="flip-stat">
+          <span class="flip-stat-label">Precio venta estimado</span>
+          <span class="flip-stat-val" id="sim_venta">—</span>
+        </div>
+        <div class="flip-stat">
+          <span class="flip-stat-label">Total costos</span>
+          <span class="flip-stat-val" style="color:var(--red)" id="sim_costos">—</span>
+        </div>
+        <div class="flip-stat" style="border-top:2px solid var(--border2);padding-top:10px;margin-top:4px">
+          <span class="flip-stat-label" style="font-weight:700">Ganancia Neta estimada</span>
+          <span class="flip-stat-val" id="sim_ganancia_neta" style="font-size:18px">—</span>
+        </div>
+      </div>
+
+      <div style="font-weight:600;margin-bottom:12px;font-size:13px">Distribución de participación</div>
+
+      <div style="display:grid;grid-template-columns:1fr 100px 110px;gap:8px;margin-bottom:8px;color:var(--gray3);font-size:11px;font-weight:600;padding:0 2px">
+        <span>Participante</span>
+        <span style="text-align:right">% Participación</span>
+        <span style="text-align:right">Ganancia est.</span>
+      </div>
+
+      <div id="simParticipantes"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border1)">
+        <span style="font-size:12px;color:var(--gray2)">Total asignado:</span>
+        <span id="sim_total_pct" style="font-weight:700;font-size:14px">0%</span>
+      </div>
+      <div id="sim_pct_warning" style="color:var(--red);font-size:11px;margin-top:6px;display:none">
+        ⚠️ El total debe sumar 100% para guardar
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeSim()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSim()" id="btnSaveSim">💾 Guardar participación</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Estado global ────────────────────────────────────────────────────────────
+let _allRows = [], _selId = null, _editId = null, _simId = null;
+let _currentCalif = '', _currentTab = 'vehiculo';
+
+const users = {{ users | tojson }};
+const userList = Object.keys(users);
+
+// ── Carga inicial ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadRows();
+  initCostosDefault();
+});
+
+async function loadRows() {
+  const calif  = document.getElementById('filterCalif')?.value  || '';
+  const estado = document.getElementById('filterEstado')?.value || '';
+  const r = await fetch(`/api/flipping?calificacion=${encodeURIComponent(calif)}&estado=${encodeURIComponent(estado)}`);
+  _allRows = await r.json();
+  renderTable(_allRows);
+  renderStats(_allRows);
+}
+
+function searchRows(q) {
+  const qL = q.toLowerCase();
+  renderTable(_allRows.filter(r =>
+    !q ||
+    (r.patente||'').toLowerCase().includes(qL) ||
+    (r.marca||'').toLowerCase().includes(qL) ||
+    (r.modelo||'').toLowerCase().includes(qL)
+  ));
+}
+
+function filterCalif(v) { loadRows(); }
+function filterEstadoF(v) { loadRows(); }
+
+// ── Render tabla ─────────────────────────────────────────────────────────────
+function renderTable(rows) {
+  document.getElementById('rowCount').textContent = `${rows.length} vehículo${rows.length!==1?'s':''}`;
+  const tbody = document.getElementById('tableBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:var(--gray3)">Sin registros. Agrega tu primer auto al flipping.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const gn = r.ganancia_neta || 0;
+    const gnClass = gn > 0 ? 'ganancia-positiva' : gn < 0 ? 'ganancia-negativa' : 'ganancia-neutral';
+    const califBadge = califBadgeHtml(r.calificacion);
+    const legalScore = legalBadgeHtml(r);
+    const sel = _selId === r.id ? 'selected' : '';
+    return `<tr class="${sel}" onclick="selectRow('${r.id}')" ondblclick="editSelected()">
+      <td><strong>${r.patente||'—'}</strong></td>
+      <td>${r.marca||'—'}</td>
+      <td>${r.modelo||'—'}</td>
+      <td>${r.anio||'—'}</td>
+      <td>${fmtNum(r.km_aprox)} km</td>
+      <td>${clp(r.precio_compra_estimado)}</td>
+      <td>${clp(r.precio_venta_estimado)}</td>
+      <td style="color:var(--red)">${clp(r.total_costos)}</td>
+      <td class="${gnClass}" style="font-weight:700">${clp(gn)}</td>
+      <td>${legalScore}</td>
+      <td>${califBadge}</td>
+      <td><span style="font-size:11px;color:var(--gray2)">${r.estado||'—'}</span></td>
+      <td style="color:var(--gray3)">${(r.created_at||'').slice(0,10)}</td>
+      <td style="color:var(--gray3);font-size:11px">${r.creado_por||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function califBadgeHtml(c) {
+  if (c === 'Negocio bueno')  return '<span class="badge-calif badge-bueno">Negocio Bueno</span>';
+  if (c === 'Negocio regular')return '<span class="badge-calif badge-regular">Negocio Regular</span>';
+  if (c === 'Descartado')     return '<span class="badge-calif badge-descartado">Descartado</span>';
+  return '<span class="badge-calif badge-pendiente">Sin calif.</span>';
+}
+
+function legalBadgeHtml(r) {
+  const checks = [r.permiso_circulacion, r.soap, r.revision_tecnica, r.sin_prendas,
+                  r.sin_embargo, r.sin_deuda_alimenticia, r.documentos_ok];
+  const ok  = checks.filter(Boolean).length;
+  const tot = checks.length;
+  if (ok === tot) return `<span style="color:var(--green);font-size:11px">✅ ${ok}/${tot}</span>`;
+  if (ok === 0)   return `<span style="color:var(--red);font-size:11px">❌ ${ok}/${tot}</span>`;
+  return `<span style="color:var(--yellow);font-size:11px">⚠️ ${ok}/${tot}</span>`;
+}
+
+// ── Stats strip ───────────────────────────────────────────────────────────────
+function renderStats(rows) {
+  const buenos    = rows.filter(r => r.calificacion === 'Negocio bueno').length;
+  const regulares = rows.filter(r => r.calificacion === 'Negocio regular').length;
+  const descarted = rows.filter(r => r.calificacion === 'Descartado').length;
+  const totalGan  = rows.reduce((s,r) => s + (r.ganancia_neta||0), 0);
+  const stat = (label, val, color='var(--gray1)') =>
+    `<div style="display:flex;flex-direction:column;gap:2px;min-width:90px">
+       <span style="font-size:9px;color:var(--gray3);text-transform:uppercase;letter-spacing:.06em">${label}</span>
+       <span style="font-weight:700;font-size:14px;color:${color}">${val}</span>
+     </div>`;
+  const sep = `<div style="width:1px;background:var(--border1);align-self:stretch"></div>`;
+  document.getElementById('statsStrip').innerHTML = [
+    stat('Total', rows.length),
+    sep,
+    stat('Negocios Buenos', buenos, 'var(--green)'),
+    sep,
+    stat('Regulares', regulares, 'var(--yellow)'),
+    sep,
+    stat('Descartados', descarted, 'var(--red)'),
+    sep,
+    stat('Ganancia Neta Est.', clp(totalGan), totalGan>=0?'var(--green)':'var(--red)'),
+  ].join('');
+}
+
+// ── Selección y panel de detalle ──────────────────────────────────────────────
+function selectRow(id) {
+  _selId = id;
+  document.querySelectorAll('#tableBody tr').forEach(tr => tr.classList.remove('selected'));
+  const idx = _allRows.findIndex(r => r.id === id);
+  if (idx >= 0) document.querySelectorAll('#tableBody tr')[idx]?.classList.add('selected');
+  const r = _allRows.find(x => x.id === id);
+  if (r) showDetail(r);
+}
+
+function showDetail(r) {
+  const gn = r.ganancia_neta || 0;
+  const gnClass = gn > 0 ? 'ganancia-positiva' : gn < 0 ? 'ganancia-negativa' : 'ganancia-neutral';
+
+  // Legal items
+  const legalItems = [
+    ['Permiso circulación', r.permiso_circulacion],
+    ['SOAP', r.soap],
+    ['Revisión técnica', r.revision_tecnica],
+    ['Sin prendas', r.sin_prendas],
+    ['Documentos en orden', r.documentos_ok],
+    ['Vendedor sin embargo', r.sin_embargo],
+    ['Sin deuda alimenticia', r.sin_deuda_alimenticia],
+  ];
+  const legalHtml = legalItems.map(([lbl, val]) =>
+    `<div class="detail-row">
+      <span class="detail-label" style="${val?'':'color:var(--gray3)'}">${val?'✅':'❌'} ${lbl}</span>
+      <span class="detail-value" style="color:${val?'var(--green)':'var(--red)'}">${val?'OK':'Pendiente'}</span>
+    </div>`
+  ).join('');
+
+  // Costos
+  const costosHtml = (r.costos||[]).length
+    ? (r.costos||[]).map(c =>
+        `<div class="detail-row"><span class="detail-label">${c.descripcion||'—'}</span>
+         <span class="detail-value" style="color:var(--red)">${clp(c.monto)}</span></div>`
+      ).join('')
+    : '<div style="padding:4px 14px;color:var(--gray3);font-size:11px">Sin costos registrados</div>';
+
+  // Participantes
+  const partHtml = (r.participantes||[]).length
+    ? (r.participantes||[]).map(p =>
+        `<div class="detail-row">
+          <span class="detail-label">${p.usuario||'—'} <span style="color:var(--gray3)">(${p.porcentaje||0}%)</span></span>
+          <span class="detail-value" style="color:${(p.ganancia_calculada||0)>=0?'var(--green)':'var(--red)'};font-weight:700">${clp(p.ganancia_calculada||0)}</span>
+        </div>`
+      ).join('')
+    : '<div style="padding:4px 14px;color:var(--gray3);font-size:11px">Sin participantes asignados — usa "Simular Ganancias"</div>';
+
+  const linkHtml = r.link_publicacion
+    ? `<a href="${r.link_publicacion}" target="_blank" rel="noopener" class="link-pub">🔗 Ver Vehículo</a>`
+    : '<span style="color:var(--gray3);font-size:12px">Sin link</span>';
+
+  const dr = (lbl, val, valStyle='') =>
+    `<div class="detail-row"><span class="detail-label">${lbl}</span><span class="detail-value" ${valStyle?`style="${valStyle}"`:''}>${val||'—'}</span></div>`;
+
+  document.getElementById('detailPanel').innerHTML = `
+    <div class="detail-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="detail-title">${r.marca||''} ${r.modelo||''} ${r.anio||''}</div>
+        <div class="detail-sub">Patente: <strong>${r.patente||'—'}</strong> · ${r.estado||''}</div>
+      </div>
+      <div style="flex-shrink:0">${califBadgeHtml(r.calificacion)}</div>
+    </div>
+
+    <div style="padding:8px 14px">${linkHtml}</div>
+    <div class="detail-divider"></div>
+
+    <div class="detail-section">Vehículo</div>
+    ${dr('Tipo', r.tipo_vehiculo)}
+    ${dr('Color', r.color)}
+    ${dr('Kilómetros', fmtNum(r.km_aprox)+' km')}
+    ${dr('Combustible', r.combustible)}
+    ${dr('Transmisión', r.transmision)}
+    ${dr('N° Dueños', r.cantidad_duenos)}
+    <div class="detail-divider"></div>
+
+    <div class="detail-section">Análisis Financiero</div>
+    ${dr('Precio compra est.', clp(r.precio_compra_estimado))}
+    ${dr('Precio venta est.', clp(r.precio_venta_estimado))}
+    ${dr('Ganancia bruta', clp(r.ganancia_bruta))}
+    ${dr('Total costos', clp(r.total_costos), 'color:var(--red)')}
+    ${dr('Ganancia Neta est.', clp(gn), `font-weight:800;font-size:13px;color:${gn>0?'var(--green)':gn<0?'var(--red)':'var(--gray2)'}`)}
+    <div class="detail-divider"></div>
+
+    <div class="detail-section">Costos detallados</div>
+    ${costosHtml}
+    <div class="detail-divider"></div>
+
+    <div class="detail-section">Situación Legal</div>
+    ${legalHtml}
+    ${r.notas_legal ? `<div style="padding:4px 14px 8px;font-size:11px;color:var(--gray2);font-style:italic">${r.notas_legal}</div>` : ''}
+    <div class="detail-divider"></div>
+
+    <div class="detail-section">Participación del negocio</div>
+    ${partHtml}
+
+    ${r.notas ? `<div class="detail-divider"></div>
+    <div class="detail-section">Notas</div>
+    <div style="padding:4px 14px 10px;font-size:11px;color:var(--gray1);line-height:1.6">${r.notas}</div>` : ''}
+
+    <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" onclick="openSim('${r.id}')">💰 Simular Ganancias</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="editSelected()">✏️ Editar</button>
+        <button class="btn btn-danger" style="flex:1" onclick="deleteSelected()">🗑️ Eliminar</button>
+      </div>
+    </div>`;
+}
+
+// ── Modal Agregar/Editar ──────────────────────────────────────────────────────
+function openModal(id = null) {
+  _editId = id;
+  _currentTab = 'vehiculo';
+  document.getElementById('modalTitle').textContent = id ? 'Editar Flipping' : 'Agregar Flipping';
+
+  // Reset tabs
+  document.querySelectorAll('.mtab').forEach((t,i) => {
+    t.classList.toggle('active', i === 0);
+  });
+  ['vehiculo','financiero','legal','calificacion'].forEach(t =>
+    document.getElementById('tab-'+t).style.display = t === 'vehiculo' ? '' : 'none');
+
+  if (id) {
+    const r = _allRows.find(x => x.id === id);
+    if (r) fillForm(r);
+  } else {
+    clearForm();
+    initCostosDefault();
+  }
+  document.getElementById('mainModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('mainModal').style.display = 'none';
+  _editId = null;
+}
+
+function switchTab(tab) {
+  _currentTab = tab;
+  ['vehiculo','financiero','legal','calificacion'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.mtab').forEach((el, i) => {
+    const tabs = ['vehiculo','financiero','legal','calificacion'];
+    el.classList.toggle('active', tabs[i] === tab);
+  });
+  if (tab === 'financiero') recalcGanancia();
+}
+
+function clearForm() {
+  ['f_patente','f_anio','f_modelo','f_color','f_km','f_link',
+   'f_precio_compra','f_precio_venta','f_notas_legal','f_notas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['f_marca','f_tipo_vehiculo','f_combustible','f_transmision','f_estado'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
+  ['f_permiso','f_soap','f_revision','f_sin_prendas','f_docs_ok',
+   'f_sin_embargo','f_sin_alimentos'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  setCalif('');
+  document.getElementById('f_estado').value = 'En evaluación';
+  document.getElementById('costosContainer').innerHTML = '';
+}
+
+function fillForm(r) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  const chk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+  set('f_patente',       r.patente);
+  set('f_anio',          r.anio);
+  set('f_marca',         r.marca);
+  set('f_modelo',        r.modelo);
+  set('f_tipo_vehiculo', r.tipo_vehiculo);
+  set('f_color',         r.color);
+  const setN = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ? parseInt(v).toLocaleString('es-CL') : ''; };
+  setN('f_km',            r.km_aprox);
+  set('f_combustible',   r.combustible);
+  set('f_transmision',   r.transmision);
+  set('f_duenos',        r.cantidad_duenos);
+  set('f_link',          r.link_publicacion);
+  setN('f_precio_compra', r.precio_compra_estimado);
+  setN('f_precio_venta',  r.precio_venta_estimado);
+  chk('f_permiso',       r.permiso_circulacion);
+  chk('f_soap',          r.soap);
+  chk('f_revision',      r.revision_tecnica);
+  chk('f_sin_prendas',   r.sin_prendas);
+  chk('f_docs_ok',       r.documentos_ok);
+  chk('f_sin_embargo',   r.sin_embargo);
+  chk('f_sin_alimentos', r.sin_deuda_alimenticia);
+  set('f_notas_legal',   r.notas_legal);
+  set('f_notas',         r.notas);
+  set('f_estado',        r.estado);
+  setCalif(r.calificacion || '');
+
+  // Costos
+  document.getElementById('costosContainer').innerHTML = '';
+  (r.costos || []).forEach(c => addCostoRow(c.descripcion, c.monto));
+  if (!(r.costos||[]).length) initCostosDefault();
+  recalcGanancia();
+}
+
+function getFormData() {
+  const g = id => document.getElementById(id);
+  const pInt = v => parseInt((v || '').toString().replace(/\D/g,'')) || 0;
+  const costos = [];
+  document.querySelectorAll('.costo-row').forEach(row => {
+    const desc  = row.querySelector('.costo-desc')?.value?.trim();
+    const monto = pInt(row.querySelector('.costo-monto')?.value);
+    if (desc || monto) costos.push({ descripcion: desc, monto: monto || 0 });
+  });
+  return {
+    patente:               g('f_patente')?.value?.toUpperCase()?.trim() || '',
+    anio:                  parseInt(g('f_anio')?.value || 0),
+    marca:                 g('f_marca')?.value || '',
+    modelo:                g('f_modelo')?.value || '',
+    tipo_vehiculo:         g('f_tipo_vehiculo')?.value || '',
+    color:                 g('f_color')?.value || '',
+    km_aprox:              pInt(g('f_km')?.value),
+    combustible:           g('f_combustible')?.value || '',
+    transmision:           g('f_transmision')?.value || '',
+    cantidad_duenos:       parseInt(g('f_duenos')?.value || 0),
+    link_publicacion:      g('f_link')?.value?.trim() || '',
+    precio_compra_estimado:pInt(g('f_precio_compra')?.value),
+    precio_venta_estimado: pInt(g('f_precio_venta')?.value),
+    costos:                costos,
+    permiso_circulacion:   g('f_permiso')?.checked || false,
+    soap:                  g('f_soap')?.checked || false,
+    revision_tecnica:      g('f_revision')?.checked || false,
+    sin_prendas:           g('f_sin_prendas')?.checked || false,
+    documentos_ok:         g('f_docs_ok')?.checked || false,
+    sin_embargo:           g('f_sin_embargo')?.checked || false,
+    sin_deuda_alimenticia: g('f_sin_alimentos')?.checked || false,
+    notas_legal:           g('f_notas_legal')?.value || '',
+    calificacion:          g('f_calificacion')?.value || '',
+    estado:                g('f_estado')?.value || 'En evaluación',
+    notas:                 g('f_notas')?.value || '',
+  };
+}
+
+async function saveRecord() {
+  const data = getFormData();
+  if (!data.patente && !data.marca) {
+    toast('Ingresa al menos la patente o la marca', 'error'); return;
+  }
+  const url    = _editId ? `/api/flipping/${_editId}` : '/api/flipping';
+  const method = _editId ? 'PUT' : 'POST';
+  const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const res = await r.json();
+  if (res.ok) {
+    toast(_editId ? 'Actualizado correctamente' : 'Vehículo agregado al flipping', 'success');
+    closeModal();
+    await loadRows();
+    if (res.id) selectRow(res.id);
+    else if (_editId) selectRow(_editId);
+  } else {
+    toast(res.error || 'Error al guardar', 'error');
+  }
+}
+
+// ── Costos dinámicos ──────────────────────────────────────────────────────────
+function initCostosDefault() {
+  const container = document.getElementById('costosContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  const defaults = [
+    { descripcion: 'Autofact Pro', monto: 5900 },
+    { descripcion: 'Transferencia vehículo', monto: 0 },
+    { descripcion: 'Bencina (visita)', monto: 0 },
+  ];
+  defaults.forEach(d => addCostoRow(d.descripcion, d.monto));
+}
+
+function addCostoRow(desc = '', monto = '') {
+  const container = document.getElementById('costosContainer');
+  const div = document.createElement('div');
+  div.className = 'costo-row';
+  div.innerHTML = `
+    <input type="text" class="costo-desc" placeholder="Descripción del costo" value="${desc}">
+    <input type="text" inputmode="numeric" class="costo-monto" placeholder="Monto $"
+           value="${monto ? parseInt(monto).toLocaleString('es-CL') : ''}"
+           oninput="fmtNumInput(this);recalcGanancia()">
+    <button type="button" onclick="this.parentElement.remove();recalcGanancia()"
+            style="background:var(--red)22;color:var(--red);border:1px solid var(--red)44;
+                   border-radius:6px;cursor:pointer;font-size:14px;line-height:1">✕</button>`;
+  container.appendChild(div);
+  recalcGanancia();
+}
+
+function recalcGanancia() {
+  const pInt = v => parseInt((v||'').toString().replace(/\D/g,'')) || 0;
+  const compra = pInt(document.getElementById('f_precio_compra')?.value);
+  const venta  = pInt(document.getElementById('f_precio_venta')?.value);
+  let costos = 0;
+  document.querySelectorAll('.costo-monto').forEach(el => costos += pInt(el.value));
+  const neta = venta - compra - costos;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('res_compra', clp(compra));
+  set('res_venta', clp(venta));
+  set('res_costos', clp(costos));
+  const el = document.getElementById('res_ganancia');
+  if (el) {
+    el.textContent = clp(neta);
+    el.className = `flip-stat-val ${neta > 0 ? 'ganancia-positiva' : neta < 0 ? 'ganancia-negativa' : 'ganancia-neutral'}`;
+    el.style.fontSize = '16px';
+  }
+}
+
+// ── Calificación ──────────────────────────────────────────────────────────────
+function setCalif(val) {
+  _currentCalif = val;
+  document.getElementById('f_calificacion').value = val;
+  const map = {
+    'Negocio bueno':   ['btn_bueno',   '#1A3A1A', 'var(--green)'],
+    'Negocio regular': ['btn_regular',  '#3A3000', 'var(--yellow)'],
+    'Descartado':      ['btn_descartado','#3A1010','var(--red)'],
+  };
+  ['btn_bueno','btn_regular','btn_descartado'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = 'var(--border2)'; }
+  });
+  if (map[val]) {
+    const [btnId, bg, color] = map[val];
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.style.background = bg; btn.style.color = color; btn.style.borderColor = color; }
+  }
+}
+
+// ── Selección / edición / borrado ─────────────────────────────────────────────
+function editSelected() {
+  if (!_selId) { toast('Selecciona un vehículo primero', 'warning'); return; }
+  openModal(_selId);
+}
+
+async function deleteSelected() {
+  if (!_selId) { toast('Selecciona un vehículo primero', 'warning'); return; }
+  const r = _allRows.find(x => x.id === _selId);
+  const desc = r ? `${r.marca||''} ${r.modelo||''} ${r.patente||''}`.trim() : _selId;
+  if (!confirm(`¿Eliminar "${desc}" del flipping?`)) return;
+  const res = await fetch(`/api/flipping/${_selId}`, { method:'DELETE' });
+  const data = await res.json();
+  if (data.ok) {
+    toast('Vehículo eliminado', 'success');
+    _selId = null;
+    document.getElementById('detailPanel').innerHTML = '<div class="detail-empty">Selecciona un vehículo<br>para ver los detalles</div>';
+    await loadRows();
+  } else {
+    toast('Error al eliminar', 'error');
+  }
+}
+
+// ── Modal Simular Ganancias ───────────────────────────────────────────────────
+function openSim(id) {
+  _simId = id;
+  const r = _allRows.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('sim_vehiculo').textContent    = `${r.marca||''} ${r.modelo||''} ${r.anio||''} — ${r.patente||''}`;
+  document.getElementById('sim_compra').textContent      = clp(r.precio_compra_estimado);
+  document.getElementById('sim_venta').textContent       = clp(r.precio_venta_estimado);
+  document.getElementById('sim_costos').textContent      = clp(r.total_costos);
+  const gn = r.ganancia_neta || 0;
+  const gnEl = document.getElementById('sim_ganancia_neta');
+  gnEl.textContent = clp(gn);
+  gnEl.className = `flip-stat-val ${gn>=0?'ganancia-positiva':'ganancia-negativa'}`;
+  gnEl.style.fontSize = '18px';
+
+  // Participantes existentes o default (todos con 0%)
+  const existentes = {};
+  (r.participantes || []).forEach(p => existentes[p.usuario] = p.porcentaje);
+
+  const container = document.getElementById('simParticipantes');
+  container.innerHTML = userList.map(u => {
+    const pct = existentes[u] || 0;
+    const gan = Math.round(gn * pct / 100);
+    return `<div class="part-row" data-user="${u}">
+      <div style="font-size:13px;display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${users[u].color}22;
+             color:${users[u].color};font-size:11px;font-weight:700;
+             display:flex;align-items:center;justify-content:center">${users[u].avatar}</div>
+        <span>${u}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input type="number" class="part-pct-input" value="${pct}" min="0" max="100" step="1"
+               oninput="updateSimRow(this,'${u}',${gn})">
+        <span style="color:var(--gray2)">%</span>
+      </div>
+      <div class="part-ganancia ${gan>=0?'ganancia-positiva':'ganancia-negativa'}" id="sim_gan_${u.replace(/ /g,'_')}">${clp(gan)}</div>
+    </div>`;
+  }).join('');
+
+  updateSimTotal();
+  document.getElementById('simModal').style.display = 'flex';
+}
+
+function closeSim() {
+  document.getElementById('simModal').style.display = 'none';
+  _simId = null;
+}
+
+function updateSimRow(input, usuario, gananciaTotal) {
+  const pct = parseFloat(input.value || 0);
+  const gan = Math.round(gananciaTotal * pct / 100);
+  const elId = 'sim_gan_' + usuario.replace(/ /g,'_');
+  const el = document.getElementById(elId);
+  if (el) {
+    el.textContent = clp(gan);
+    el.className = `part-ganancia ${gan>=0?'ganancia-positiva':'ganancia-negativa'}`;
+  }
+  updateSimTotal();
+}
+
+function updateSimTotal() {
+  let total = 0;
+  document.querySelectorAll('.part-pct-input').forEach(el => total += parseFloat(el.value || 0));
+  document.getElementById('sim_total_pct').textContent = total.toFixed(0) + '%';
+  const warn = document.getElementById('sim_pct_warning');
+  const btn  = document.getElementById('btnSaveSim');
+  const over100 = Math.round(total) > 100;
+  warn.style.display = over100 ? '' : 'none';
+  if (btn) btn.disabled = over100;
+}
+
+async function saveSim() {
+  const r = _allRows.find(x => x.id === _simId);
+  const gn = r ? (r.ganancia_neta || 0) : 0;
+
+  const participantes = [];
+  document.querySelectorAll('#simParticipantes .part-row').forEach(row => {
+    const usuario = row.dataset.user;
+    const pct = parseFloat(row.querySelector('.part-pct-input')?.value || 0);
+    if (pct > 0) participantes.push({ usuario, porcentaje: pct });
+  });
+
+  const res = await fetch(`/api/flipping/${_simId}/simular`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ participantes }),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    toast('Participación guardada correctamente', 'success');
+    closeSim();
+    await loadRows();
+    if (_selId) {
+      const updated = _allRows.find(x => x.id === _selId);
+      if (updated) showDetail(updated);
+    }
+  } else {
+    toast(data.error || 'Error al guardar', 'error');
+  }
+}
+
+// ── Utilidades ────────────────────────────────────────────────────────────────
+function clp(n) {
+  if (n === null || n === undefined || n === '') return '—';
+  return '$' + parseInt(n).toLocaleString('es-CL');
+}
+function fmtNum(n) {
+  if (!n) return '—';
+  return parseInt(n).toLocaleString('es-CL');
+}
+</script>
+{% endblock %}

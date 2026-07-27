@@ -1,0 +1,15 @@
+{% macro select_field(id, label, options, required=False) %}
+<div class="form-group">
+  <label>{{ label }}{% if required %} *{% endif %}</label>
+  <select id="{{ id }}">
+    {% for o in options %}<option>{{ o }}</option>{% endfor %}
+  </select>
+</div>
+{% endmacro %}
+
+{% macro input_field(id, label, placeholder='', type='text', required=False) %}
+<div class="form-group">
+  <label>{{ label }}{% if required %} *{% endif %}</label>
+  <input type="{{ type }}" id="{{ id }}" placeholder="{{ placeholder }}">
+</div>
+{% endmacro %}

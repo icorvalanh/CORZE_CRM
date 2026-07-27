@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block content %}
+{% from 'macros.html' import select_field, input_field %}
+
+<div class="page-header">
+  <h1 class="page-title">🚗 Compra / Venta</h1>
+  <span class="badge-count" id="rowCount">{{ rows|length }} vehículos</span>
+</div>
+
+<!-- Alertas -->
+<div id="alertStrip"></div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <button class="btn btn-primary" onclick="openModal()">➕ Agregar</button>
+    <button class="btn btn-secondary" onclick="editSelected()">✏️ Editar</button>
+    <button class="btn btn-danger"   onclick="deleteSelected()">🗑️ Eliminar</button>
+    <button class="btn btn-success"  onclick="quickSell()">✅ Vender</button>
+    <button class="btn btn-purple"   onclick="duplicateSelected()">⊕ Duplicar</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn btn-secondary" onclick="loadRows()">🔄 Actualizar</button>
+    <a href="/api/export/compraventa" class="btn btn-green">📤 Exportar CSV</a>
+  </div>
+  <div class="toolbar-right">
+    <input type="text" class="search-input" placeholder="🔍 Buscar patente, modelo, marca..." oninput="searchRows(this.value)">
+    <select class="filter-select" onchange="filterRows(this.value)">
+      <option value="">Todos</option>
+      <option>En Stock</option><option>Publicado</option>
+      <option>Reservado</option><option>Vendido</option>
+    </select>
+  </div>
+</div>
+
+<!-- Stats strip -->
+<div class="stats-strip" id="statsStrip"></div>
+
+<!-- Tabla + Panel -->
+<div class="table-layout">
+  <div class="table-wrap">
+    <table class="vta-table" id="mainTable">
+      <thead>
+        <tr>
+          <th>Patente</th><th>Marca</th><th>Año</th><th>Modelo</th>
+          <th>KM</th><th>Color</th><th>P. Compra</th><th>P. Colab.</th>
+          <th>V. Mercado</th><th>P. Venta</th><th>Ganancia</th>
+          <th>Estado</th><th>Días</th><th>Ingreso</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty">Selecciona un vehículo<br>para ver los detalles</div>
+  </div>
+</div>
+
+<!-- ── MODAL AGREGAR / EDITAR ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+ <div class="modal-box" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nuevo Vehículo</span>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+   <div class="modal-tabs">
+    <button class="mtab active" onclick="switchTab('datos',this)">📋 Datos</button>
+   </div>
+   <div class="form-grid" id="tabDatos">
+    <div class="form-section">IDENTIFICACIÓN</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Patente *</label><input type="text" id="f_patente" placeholder="BCDF12"></div>
+      <div class="form-group"><label>Chasis</label><input type="text" id="f_chasis" placeholder="Número de chasis"></div>
+      <div class="form-group"><label>Marca *</label>
+        <select id="f_marca">{% for m in config.MARCAS %}<option>{{m}}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Año *</label>
+        <select id="f_anio">{% for a in config.ANOS %}<option>{{a}}</option>{% endfor %}</select></div>
+    </div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="f_tipo">{% for t in config.TIPOS_VEHICULO %}<option>{{t}}</option>{% endfor %}</select></div>
+      <div class="form-group col-2"><label>Modelo *</label><input type="text" id="f_modelo" placeholder="Ej: Q5 Sportback 50 TFSI"></div>
+      <div class="form-group"><label>Color</label><input type="text" id="f_color" placeholder="Ej: Azul Navarra"></div>
+    </div>
+    <div class="form-section">CARACTERÍSTICAS TÉCNICAS</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Motor</label><input type="text" id="f_motor" placeholder="Código motor"></div>
+      <div class="form-group"><label>Transmisión</label>
+        <select id="f_transmision">{% for t in config.TRANSMISIONES %}<option>{{t}}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Combustible</label>
+        <select id="f_combustible">{% for c in config.COMBUSTIBLES %}<option>{{c}}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>KM</label><input type="number" id="f_km" placeholder="45000"></div>
+    </div>
+    <div class="form-row-4">
+      <div class="form-group"><label>N° Dueños</label>
+        <select id="f_duenos"><option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option></select></div>
+    </div>
+    <div class="form-section">PRECIOS (CLP $)</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Precio Compra *</label><input type="number" id="f_compra" placeholder="28000000"></div>
+      <div class="form-group"><label>P. Colaboradores</label><input type="number" id="f_colab" placeholder="31990000"></div>
+      <div class="form-group"><label>Valor Mercado</label><input type="number" id="f_mercado" placeholder="34000000"></div>
+      <div class="form-group"><label>P. Venta Final</label><input type="number" id="f_pventa" placeholder="Al venderse"></div>
+    </div>
+    <div class="form-section">GESTIÓN Y ESTADO</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Estado *</label>
+        <select id="f_estado"><option>En Stock</option><option>Publicado</option><option>Reservado</option><option>Vendido</option></select></div>
+      <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="f_fingreso"></div>
+      <div class="form-group"><label>Fecha Publicación</label><input type="date" id="f_fpub"></div>
+      <div class="form-group"><label>Fecha Venta</label><input type="date" id="f_fventa"></div>
+    </div>
+    <div class="form-group" style="grid-column:1/-1">
+      <label>Notas</label><textarea id="f_notas" rows="3" placeholder="Observaciones..."></textarea>
+    </div>
+   </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
+    <button class="btn btn-primary" onclick="saveVehicle()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+<!-- Modal Venta Rápida -->
+<div class="modal-overlay" id="modalSell" onclick="closeSell(event)">
+ <div class="modal-box modal-sm" onclick="event.stopPropagation()">
+  <div class="modal-header" style="border-color:#2ECC71">
+    <span style="color:#2ECC71">✅ Marcar como Vendido</span>
+    <button class="modal-close" onclick="closeSell()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div id="sellRef" class="sell-ref"></div>
+    <div class="form-group"><label>Precio de Venta Final *</label>
+      <input type="number" id="s_precio" placeholder="Ej: 32000000" oninput="calcGanancia()"></div>
+    <div class="form-group"><label>Fecha de Venta</label>
+      <input type="date" id="s_fecha"></div>
+    <div id="sellGanancia" class="sell-ganancia"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeSell()">Cancelar</button>
+    <button class="btn btn-success" onclick="confirmSell()">✅ Confirmar Venta</button>
+  </div>
+ </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const MARCAS      = {{ config.MARCAS | tojson }};
+const ANOS        = {{ config.ANOS | tojson }};
+const TIPOS       = {{ config.TIPOS_VEHICULO | tojson }};
+const TRANSMIS    = {{ config.TRANSMISIONES | tojson }};
+const COMBUSTS    = {{ config.COMBUSTIBLES | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/compraventa.js') }}"></script>
+{% endblock %}

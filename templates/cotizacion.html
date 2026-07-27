@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotización — {{ car.marca }} {{ car.modelo }} {{ car.anio }}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1a2e; font-size: 13px; }
+.page { max-width: 780px; margin: 0 auto; padding: 30px 32px; }
+
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #00AEEF; padding-bottom: 18px; margin-bottom: 22px; }
+.logo-wrap img { height: 54px; object-fit: contain; }
+.empresa-info { text-align: right; }
+.empresa-info h2 { font-size: 18px; font-weight: 800; color: #00AEEF; }
+.empresa-info p { font-size: 11px; color: #555; margin-top: 2px; }
+
+.cot-title { background: linear-gradient(135deg, #00AEEF, #0090C9); color: #fff; padding: 12px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.cot-title h1 { font-size: 18px; font-weight: 800; }
+.cot-folio { font-size: 11px; opacity: .8; }
+
+.vehicle-card { background: #f0f8ff; border: 1.5px solid #00AEEF; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
+.vehicle-card h3 { font-size: 20px; font-weight: 800; color: #00AEEF; margin-bottom: 8px; }
+.specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.spec-item { background: #fff; border: 1px solid #d0e8f5; border-radius: 8px; padding: 8px 12px; }
+.spec-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: .04em; }
+.spec-val { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-top: 2px; }
+
+.precio-section { background: #1a2e3b; color: #fff; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.precio-label { font-size: 12px; color: #8ab; text-transform: uppercase; letter-spacing: .06em; }
+.precio-val { font-size: 32px; font-weight: 900; color: #00AEEF; }
+.pie-info { font-size: 11px; color: #8ab; margin-top: 4px; }
+
+.validez { background: #fff8e1; border: 1px solid #f1c40f; border-radius: 8px; padding: 10px 16px; font-size: 11px; color: #7a6000; margin-bottom: 20px; }
+.validez strong { color: #a07800; }
+
+.condiciones { font-size: 11px; color: #555; line-height: 1.7; border-top: 1px solid #e0e0e0; padding-top: 16px; }
+.condiciones h4 { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+
+.footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 16px; border-top: 2px solid #00AEEF; }
+.firma-area { text-align: center; }
+.firma-line { border-top: 1px solid #333; width: 200px; margin: 30px auto 6px; }
+.footer-brand { font-size: 10px; color: #888; text-align: right; }
+.footer-brand strong { color: #00AEEF; }
+
+.badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.badge { display: inline-block; background: #e8f4fd; color: #00AEEF; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1px solid #00AEEF33; }
+
+@media print {
+  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .no-print { display: none !important; }
+  .page { padding: 10px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-wrap">
+      {% if logo_b64 %}
+      <img src="{{ logo_b64 }}" alt="VTA Automotora">
+      {% else %}
+      <div style="font-size:22px;font-weight:900;color:#00AEEF">VTA Automotora</div>
+      {% endif %}
+    </div>
+    <div class="empresa-info">
+      <h2>VTA Automotora</h2>
+      <p>+56 9 5608 6490 · automotoravta.cl</p>
+      <p>Santiago, Chile</p>
+    </div>
+  </div>
+
+  <!-- Título cotización -->
+  <div class="cot-title">
+    <h1>Cotización de Venta</h1>
+    <div>
+      <div class="cot-folio">{{ folio }}</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px">{{ fecha_emision }}</div>
+    </div>
+  </div>
+
+  <!-- Vehículo -->
+  <div class="vehicle-card">
+    <h3>{{ car.marca }} {{ car.modelo }}</h3>
+    <div style="font-size:13px;color:#555">Año {{ car.anio }} · {{ car.color }}</div>
+    <div class="badge-row">
+      {% if car.transmision %}<span class="badge">⚙️ {{ car.transmision }}</span>{% endif %}
+      {% if car.combustible %}<span class="badge">⛽ {{ car.combustible }}</span>{% endif %}
+      {% if car.traccion %}<span class="badge">🔧 {{ car.traccion }}</span>{% endif %}
+      {% if car.motor %}<span class="badge">🔩 {{ car.motor }}</span>{% endif %}
+    </div>
+    <div class="specs-grid">
+      <div class="spec-item">
+        <div class="spec-label">Patente</div>
+        <div class="spec-val">{{ car.patente or '—' }}</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Kilometraje</div>
+        <div class="spec-val">{{ '{:,}'.format(car.km_aprox|int).replace(',','.') if car.km_aprox else '—' }} km</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">N° Dueños</div>
+        <div class="spec-val">{{ car.cantidad_duenos or '—' }}</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Tipo</div>
+        <div class="spec-val">{{ car.tipo_vehiculo or '—' }}</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Estado</div>
+        <div class="spec-val">{{ car.estado or '—' }}</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Asesor</div>
+        <div class="spec-val">{{ agente or '—' }}</div>
+      </div>
+    </div>
+    {% if car.descripcion_publica %}
+    <p style="margin-top:12px;font-size:12px;color:#444;line-height:1.6">{{ car.descripcion_publica }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Precio -->
+  <div class="precio-section">
+    <div>
+      <div class="precio-label">Precio de venta</div>
+      <div class="precio-val">$ {{ '{:,}'.format(precio).replace(',','.') }}</div>
+      {% if precio > 0 %}
+      <div class="pie-info">Pie 20%: <strong>$ {{ '{:,}'.format((precio * 0.2)|int).replace(',','.') }}</strong></div>
+      {% endif %}
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:#8ab;margin-bottom:4px">Válido hasta</div>
+      <div style="font-size:18px;font-weight:700;color:#fff">{{ validez_fecha }}</div>
+      <div style="font-size:10px;color:#8ab">({{ validez_dias }} días)</div>
+    </div>
+  </div>
+
+  <!-- Aviso validez -->
+  <div class="validez">
+    ⏰ <strong>Esta cotización es válida por {{ validez_dias }} días hábiles</strong> hasta el {{ validez_fecha }}.
+    Sujeto a disponibilidad del vehículo. Los precios pueden variar según disponibilidad de financiamiento.
+  </div>
+
+  <!-- Condiciones -->
+  <div class="condiciones">
+    <h4>Condiciones de Venta</h4>
+    <p>
+      · Precio indicado en pesos chilenos (CLP), incluye IVA cuando aplica.<br>
+      · La compraventa queda perfeccionada con la firma del contrato y el pago del pie acordado.<br>
+      · VTA Automotora se reserva el derecho de revisar la cotización ante variaciones de precio de mercado.<br>
+      · Aplica revisión y certificación del vehículo previo a la entrega.<br>
+      · Acepta parte de pago (vehículo usado) sujeto a peritaje previo.<br>
+      · Financiamiento disponible según banco y situación crediticia del comprador.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="firma-area">
+      <div class="firma-line"></div>
+      <div style="font-size:11px;color:#555">Asesor de Ventas: <strong>{{ agente }}</strong></div>
+      <div style="font-size:10px;color:#888">VTA Automotora</div>
+    </div>
+    <div class="footer-brand">
+      <div><strong>VTA Automotora</strong></div>
+      <div>automotoravta.cl · +56 9 5608 6490</div>
+      <div>Santiago, Chile</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Botón imprimir -->
+<div class="no-print" style="position:fixed;bottom:24px;right:24px;display:flex;gap:10px">
+  <button onclick="window.print()"
+    style="background:#00AEEF;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px #00AEEF44">
+    🖨️ Imprimir / Guardar PDF
+  </button>
+  <button onclick="window.close()"
+    style="background:#333;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;cursor:pointer">
+    ✕ Cerrar
+  </button>
+</div>
+</body>
+</html>

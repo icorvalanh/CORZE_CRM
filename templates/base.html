@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTA — {{ page|default('Admin') }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='assets/logo.png') }}" type="image/png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#00AEEF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VTA Admin">
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <div class="sidebar-logo">
+      <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="VTA" class="logo-img">
+    </div>
+
+    <div class="sidebar-divider"></div>
+    <p class="sidebar-section-label">MENÚ PRINCIPAL</p>
+
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('dashboard') }}"
+         class="nav-item {% if page=='dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span> Indicadores
+      </a>
+      <a href="{{ url_for('inventario') }}"
+         class="nav-item {% if page=='inventario' %}active{% endif %}">
+        <span class="nav-icon">🚗</span> Inventario
+      </a>
+      <a href="{{ url_for('crm') }}"
+         class="nav-item {% if page=='crm' %}active{% endif %}">
+        <span class="nav-icon">💬</span> CRM
+      </a>
+      <a href="{{ url_for('finanzas') }}"
+         class="nav-item {% if page=='finanzas' %}active{% endif %}">
+        <span class="nav-icon">💰</span> Finanzas
+      </a>
+      <a href="{{ url_for('tareas') }}"
+         class="nav-item {% if page=='tareas' %}active{% endif %}"
+         style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="nav-icon">✅</span> Tareas
+        </span>
+        <span id="sidebarTaskBadge" style="display:none;background:#E74C3C;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px"></span>
+      </a>
+      <a href="{{ url_for('calendario') }}"
+         class="nav-item {% if page=='calendario' %}active{% endif %}">
+        <span class="nav-icon">📅</span> Calendario
+      </a>
+      <a href="{{ url_for('buscador') }}"
+         class="nav-item {% if page=='buscador' %}active{% endif %}">
+        <span class="nav-icon">🔍</span> Buscador
+      </a>
+
+      <div class="sidebar-divider" style="margin:8px 4px"></div>
+      <p class="sidebar-section-label" style="padding-top:4px">NEGOCIOS</p>
+      <a href="{{ url_for('flipping') }}"
+         class="nav-item {% if page=='flipping' %}active{% endif %}"
+         style="{% if page=='flipping' %}background:#1A3A1A;color:#27AE60;{% endif %}">
+        <span class="nav-icon">🔄</span> Flipping
+      </a>
+      <a href="{{ url_for('car_hunter') }}"
+         class="nav-item {% if page=='car_hunter' %}active{% endif %}"
+         style="{% if page=='car_hunter' %}background:#1A3A1A;color:#27AE60;{% endif %}">
+        <span class="nav-icon">🎯</span> Car Hunter
+      </a>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+
+    {% if usuario_role == 'admin' %}
+    <a href="{{ url_for('config_page') }}"
+       class="nav-item {% if page=='config' %}active{% endif %}"
+       style="margin:4px 12px;border-radius:8px">
+      <span class="nav-icon">⚙️</span> Configuración
+    </a>
+    {% endif %}
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" style="background: {{ usuario_color }}22; color: {{ usuario_color }};">
+        {{ usuario_avatar }}
+      </div>
+      <div class="user-info">
+        <span class="user-name">{{ usuario }}</span>
+        <span class="user-sub">Sesión activa</span>
+      </div>
+    </div>
+
+    <a href="{{ url_for('logout') }}" class="sidebar-logout">
+      ↩ Cerrar sesión
+    </a>
+
+  </aside>
+
+  <!-- ── Main content ──────────────────────────────────────────────── -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}?v=221"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+<script>
+(async function loadTaskBadge() {
+  try {
+    const res = await fetch('/api/tareas/badge');
+    const data = await res.json();
+    const badge = document.getElementById('sidebarTaskBadge');
+    if (badge && data.urgentes > 0) {
+      badge.textContent = data.urgentes;
+      badge.style.display = 'inline';
+    }
+  } catch(e) {}
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

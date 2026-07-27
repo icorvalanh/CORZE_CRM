@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">🤝 Consignaciones</h1>
+  <span class="badge-count" id="rowCount">{{ rows|length }} consignaciones</span>
+</div>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <button class="btn btn-primary"   onclick="openModal()">➕ Agregar</button>
+    <button class="btn btn-secondary" onclick="editSelected()">✏️ Editar</button>
+    <button class="btn btn-danger"    onclick="deleteSelected()">🗑️ Eliminar</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn btn-secondary" onclick="loadRows()">🔄 Actualizar</button>
+  </div>
+  <div class="toolbar-right">
+    <input type="text" class="search-input" placeholder="🔍 Buscar propietario, modelo..." oninput="searchRows(this.value)">
+    <select class="filter-select" onchange="filterRows(this.value)">
+      <option value="">Todos</option>
+      <option>En Proceso</option><option>Publicado</option>
+      <option>Reservado</option><option>Vendido</option><option>Devuelto</option>
+    </select>
+  </div>
+</div>
+
+<div class="stats-strip" id="statsStrip"></div>
+
+<div class="table-layout">
+  <div class="table-wrap">
+    <table class="vta-table" id="mainTable">
+      <thead>
+        <tr>
+          <th>Propietario</th><th>Contacto</th><th>Patente</th>
+          <th>Marca</th><th>Modelo</th><th>Año</th><th>KM</th>
+          <th>P. Pedido</th><th>P. Mínimo</th><th>Comis.%</th>
+          <th>Comis.$</th><th>P. Final</th><th>Estado</th><th>Ingreso</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty">Selecciona una consignación<br>para ver los detalles</div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+ <div class="modal-box" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nueva Consignación</span>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+   <div class="form-grid">
+    <div class="form-section">DATOS DEL PROPIETARIO</div>
+    <div class="form-row-4">
+      <div class="form-group col-2"><label>Nombre Propietario *</label><input type="text" id="f_nombre" placeholder="Nombre completo"></div>
+      <div class="form-group col-2"><label>Contacto / Teléfono</label><input type="text" id="f_contacto" placeholder="+56 9 XXXX XXXX"></div>
+    </div>
+    <div class="form-section">VEHÍCULO</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Patente</label><input type="text" id="f_patente" placeholder="Ej: BCDF34"></div>
+      <div class="form-group"><label>Marca *</label>
+        <select id="f_marca">{% for m in config.MARCAS %}<option>{{m}}</option>{% endfor %}</select></div>
+      <div class="form-group col-2"><label>Modelo *</label><input type="text" id="f_modelo" placeholder="Ej: Corolla 2.0"></div>
+    </div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Año *</label>
+        <select id="f_anio">{% for a in config.ANOS %}<option>{{a}}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>KM</label><input type="number" id="f_km" placeholder="85000"></div>
+      <div class="form-group"><label>Color</label><input type="text" id="f_color" placeholder="Blanco"></div>
+      <div class="form-group"><label>Transmisión</label>
+        <select id="f_transmision">{% for t in config.TRANSMISIONES %}<option>{{t}}</option>{% endfor %}</select></div>
+    </div>
+    <div class="form-section">PRECIOS Y COMISIÓN (CLP $)</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Precio Pedido *</label><input type="number" id="f_pedido" placeholder="14000000"></div>
+      <div class="form-group"><label>Precio Mínimo</label><input type="number" id="f_minimo" placeholder="13000000"></div>
+      <div class="form-group"><label>Comisión %</label><input type="number" id="f_cpct" value="5.0" step="0.5"></div>
+      <div class="form-group"><label>P. Venta Final</label><input type="number" id="f_pventa" placeholder="Al venderse"></div>
+    </div>
+    <div class="form-section">GESTIÓN</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Estado *</label>
+        <select id="f_estado"><option>En Proceso</option><option>Publicado</option><option>Reservado</option><option>Vendido</option><option>Devuelto</option></select></div>
+      <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="f_fingreso"></div>
+      <div class="form-group"><label>Fecha Publicación</label><input type="date" id="f_fpub"></div>
+      <div class="form-group"><label>Fecha Venta</label><input type="date" id="f_fventa"></div>
+    </div>
+    <div class="form-group" style="grid-column:1/-1">
+      <label>Notas</label><textarea id="f_notas" rows="3"></textarea>
+    </div>
+   </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
+    <button class="btn btn-primary" onclick="saveConsig()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/consignaciones.js') }}"></script>
+{% endblock %}

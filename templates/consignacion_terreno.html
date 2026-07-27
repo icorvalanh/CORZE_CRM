@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>VTA — Consignación en Terreno</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="icon" href="/static/assets/logo.png">
+<style>
+:root { --step-active:#00AEEF; --step-done:#2ECC71; --step-pend:#263545 }
+* { box-sizing:border-box }
+
+/* ── Layout tablet ─────────────────────────────────────────────────── */
+.ct-wrap { max-width:900px;margin:0 auto;padding:16px }
+.ct-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px }
+.ct-logo { height:40px;object-fit:contain }
+.ct-title { font-size:18px;font-weight:800;color:var(--white) }
+.ct-agent { font-size:11px;color:var(--gray2) }
+
+/* ── Steps bar ─────────────────────────────────────────────────────── */
+.steps { display:flex;gap:0;margin-bottom:24px;border-radius:14px;overflow:hidden;background:var(--card) }
+.step { flex:1;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;border-right:1px solid var(--border1);position:relative }
+.step:last-child { border-right:none }
+.step-num { width:26px;height:26px;border-radius:50%;background:var(--step-pend);color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:4px }
+.step.active .step-num  { background:var(--step-active);box-shadow:0 0 12px rgba(0,174,239,.4) }
+.step.done   .step-num  { background:var(--step-done) }
+.step-label { font-size:10px;color:var(--gray2);font-weight:500;display:block;line-height:1.2 }
+.step.active .step-label { color:var(--blue) }
+.step.done   .step-label { color:var(--green) }
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+.ct-card { background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:20px;margin-bottom:14px }
+.ct-section { font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;padding-bottom:6px;border-bottom:0.5px solid var(--border1) }
+.ct-grid { display:grid;gap:12px }
+.ct-grid-2 { grid-template-columns:1fr 1fr }
+.ct-grid-3 { grid-template-columns:1fr 1fr 1fr }
+.ct-grid-4 { grid-template-columns:1fr 1fr 1fr 1fr }
+
+/* ── Form elements ─────────────────────────────────────────────────── */
+.ct-label { font-size:11px;color:var(--gray2);margin-bottom:4px;display:block }
+.ct-input, .ct-select, .ct-textarea {
+  width:100%;background:var(--card2);border:1px solid var(--border2);
+  color:var(--white);border-radius:10px;padding:10px 14px;
+  font-size:14px;font-family:inherit;-webkit-appearance:none
+}
+.ct-input:focus, .ct-select:focus { outline:none;border-color:var(--blue) }
+.ct-textarea { resize:none;font-size:13px }
+
+/* ── Radio/Status buttons ──────────────────────────────────────────── */
+.status-btns { display:flex;gap:6px;flex-wrap:wrap }
+.status-btn { padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--card2);color:var(--gray1);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s }
+.status-btn.vigente   { border-color:var(--green);background:rgba(46,204,113,.15);color:var(--green) }
+.status-btn.vencido   { border-color:var(--red);background:rgba(231,76,60,.15);color:var(--red) }
+.status-btn.sininfo   { border-color:var(--yellow);background:rgba(241,196,15,.1);color:var(--yellow) }
+.status-btn.active    { border-color:var(--blue);background:rgba(0,174,239,.15);color:var(--blue) }
+
+/* ── Checkboxes equipamiento ───────────────────────────────────────── */
+.equip-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px }
+.equip-item { display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;cursor:pointer;transition:all .15s }
+.equip-item.checked { border-color:var(--blue);background:rgba(0,174,239,.1) }
+.equip-item input { width:16px;height:16px;cursor:pointer;accent-color:var(--blue) }
+.equip-item label { font-size:12px;cursor:pointer;user-select:none }
+
+/* ── Precio preview ────────────────────────────────────────────────── */
+.precio-preview { background:var(--card2);border-radius:10px;padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px }
+.pp-item { text-align:center }
+.pp-label { font-size:9px;color:var(--gray3);text-transform:uppercase;letter-spacing:.06em }
+.pp-val   { font-size:16px;font-weight:700;color:var(--blue);margin-top:2px }
+
+/* ── Firma ─────────────────────────────────────────────────────────── */
+#firmaCanvas { background:#1A2230;border:2px dashed var(--border2);border-radius:12px;width:100%;touch-action:none;cursor:crosshair }
+.firma-btns { display:flex;gap:8px;margin-top:8px }
+
+/* ── Fotos ─────────────────────────────────────────────────────────── */
+.foto-preview-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:8px }
+.foto-preview-item { aspect-ratio:4/3;border-radius:8px;overflow:hidden;position:relative;background:var(--card2) }
+.foto-preview-item img { width:100%;height:100%;object-fit:cover }
+.foto-remove { position:absolute;top:3px;right:3px;background:rgba(231,76,60,.8);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer }
+
+/* ── Nav botones ───────────────────────────────────────────────────── */
+.ct-nav { display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border1) }
+.btn-ct { padding:12px 28px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s }
+.btn-ct-back   { background:var(--card2);color:var(--gray1) }
+.btn-ct-next   { background:var(--blue);color:#fff }
+.btn-ct-gen    { background:var(--green);color:#000;font-size:15px }
+.btn-ct-next:hover { background:var(--blue2) }
+.btn-ct-gen:hover  { filter:brightness(1.1) }
+
+/* ── RUT status ────────────────────────────────────────────────────── */
+.rut-result { font-size:11px;margin-top:4px;min-height:16px }
+
+/* Responsive tablet */
+@media(max-width:600px) {
+  .ct-grid-3,.ct-grid-4 { grid-template-columns:1fr 1fr }
+  .ct-grid-2 { grid-template-columns:1fr }
+}
+</style>
+</head>
+<body style="background:var(--bg);color:var(--white);min-height:100vh;padding-bottom:40px">
+
+<div class="ct-wrap">
+  <!-- Header -->
+  <div class="ct-header">
+    <img src="/static/assets/logo.png" class="ct-logo" alt="VTA">
+    <div style="text-align:center">
+      <div class="ct-title">📋 Consignación en Terreno</div>
+    </div>
+    <div class="ct-agent">{{ usuario }}</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="step-btn-1" onclick="goStep(1)">
+      <div class="step-num">1</div>
+      <span class="step-label">Datos<br>Vehículo</span>
+    </div>
+    <div class="step" id="step-btn-2" onclick="goStep(2)">
+      <div class="step-num">2</div>
+      <span class="step-label">Precios<br>y Legal</span>
+    </div>
+    <div class="step" id="step-btn-3" onclick="goStep(3)">
+      <div class="step-num">3</div>
+      <span class="step-label">Equipamiento<br>Técnico</span>
+    </div>
+    <div class="step" id="step-btn-4" onclick="goStep(4)">
+      <div class="step-num">4</div>
+      <span class="step-label">Fotos<br>y Firma</span>
+    </div>
+  </div>
+
+  <!-- ══ PASO 1: Datos del vehículo y propietario ══ -->
+  <div id="paso1">
+    <div class="ct-card">
+      <div class="ct-section">👤 Datos del propietario</div>
+      <div class="ct-grid ct-grid-2">
+        <div>
+          <label class="ct-label">RUT Propietario</label>
+          <input class="ct-input" id="rut_prop" placeholder="12.345.678-9"
+                 oninput="formatRUTInput(this)" onblur="validarRUTTerreno(this)">
+          <div class="rut-result" id="rut_result"></div>
+        </div>
+        <div>
+          <label class="ct-label">Nombre completo *</label>
+          <input class="ct-input" id="nombre_prop" placeholder="Nombre completo">
+        </div>
+        <div>
+          <label class="ct-label">Teléfono *</label>
+          <input class="ct-input" id="tel_prop" type="tel" placeholder="+56 9 XXXX XXXX">
+        </div>
+        <div>
+          <label class="ct-label">Email</label>
+          <input class="ct-input" id="email_prop" type="email" placeholder="correo@email.com">
+        </div>
+      </div>
+    </div>
+
+    <div class="ct-card">
+      <div class="ct-section">🚗 Datos del vehículo</div>
+      <div class="ct-grid ct-grid-2">
+        <div>
+          <label class="ct-label">Patente *</label>
+          <input class="ct-input" id="patente" placeholder="ABCD12" style="text-transform:uppercase"
+                 oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div>
+          <label class="ct-label">VIN / Chasis</label>
+          <input class="ct-input" id="chasis" placeholder="VIN o número de chasis">
+        </div>
+        <div>
+          <label class="ct-label">Marca *</label>
+          <select class="ct-select" id="marca">
+            <option value="">— Seleccionar —</option>
+            {% for m in marcas %}<option>{{ m }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="ct-label">Modelo *</label>
+          <input class="ct-input" id="modelo" placeholder="Ej: Corolla, X3, Civic">
+        </div>
+        <div>
+          <label class="ct-label">Año *</label>
+          <input class="ct-input" id="anio" type="number" min="1950" max="2027" placeholder="2020">
+        </div>
+        <div>
+          <label class="ct-label">Color</label>
+          <input class="ct-input" id="color" placeholder="Blanco, Negro, Gris...">
+        </div>
+        <div>
+          <label class="ct-label">Motor</label>
+          <input class="ct-input" id="motor" placeholder="1.6 cc, 2.0 Turbo...">
+        </div>
+        <div>
+          <label class="ct-label">N° Dueños anteriores</label>
+          <input class="ct-input" id="n_duenos" type="number" min="1" max="20" value="1">
+        </div>
+        <div>
+          <label class="ct-label">Transmisión</label>
+          <select class="ct-select" id="transmision">
+            {% for t in transmisiones %}<option>{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="ct-label">Tracción</label>
+          <select class="ct-select" id="traccion">
+            {% for t in tracciones %}<option>{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="ct-label">Combustible</label>
+          <select class="ct-select" id="combustible">
+            {% for c in combustibles %}<option>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="ct-label">KM aproximados</label>
+          <input class="ct-input" id="km" type="number" placeholder="85000">
+        </div>
+      </div>
+    </div>
+
+    <div class="ct-nav">
+      <a href="/admin/inventario" class="btn-ct btn-ct-back">← Volver</a>
+      <button class="btn-ct btn-ct-next" onclick="goStep(2)">Siguiente: Precios y Legal →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 2: Precios y aspectos legales ══ -->
+  <div id="paso2" style="display:none">
+    <div class="ct-card">
+      <div class="ct-section">🏠 Modalidad de consignación</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+        <button id="btn_presencial" class="status-btn vigente active"
+                onclick="setModalidad('presencial')"
+                style="padding:14px;border-radius:12px;font-size:13px;font-weight:700;border-width:2px">
+          🤝 Presencial<br>
+          <small style="font-size:10px;font-weight:400">Vehículo queda en VTA</small>
+        </button>
+        <button id="btn_virtual" class="status-btn"
+                onclick="setModalidad('virtual')"
+                style="padding:14px;border-radius:12px;font-size:13px;font-weight:700;border-width:2px">
+          📱 Virtual<br>
+          <small style="font-size:10px;font-weight:400">Vehículo queda con el dueño</small>
+        </button>
+      </div>
+      <input type="hidden" id="modalidad_val" value="presencial">
+      <div id="modalidad_desc" style="font-size:11px;color:var(--green);margin-top:8px">
+        🤝 Presencial: el vehículo quedará en custodia de VTA Automotora durante la consignación.
+      </div>
+    </div>
+
+    <div class="ct-card">
+      <div class="ct-section">💰 Precios</div>
+      <div class="ct-grid ct-grid-3">
+        <div>
+          <label class="ct-label">Precio pedido por el cliente ($)</label>
+          <input class="ct-input" id="precio_pedido" type="number" placeholder="15000000" oninput="calcPrecios()">
+        </div>
+        <div>
+          <label class="ct-label">Precio publicación sugerido ($)</label>
+          <input class="ct-input" id="precio_pub" type="number" placeholder="16500000" oninput="calcPrecios()">
+        </div>
+        <div>
+          <label class="ct-label">Precio mínimo aceptable ($)</label>
+          <input class="ct-input" id="precio_min" type="number" placeholder="14000000" oninput="calcPrecios()">
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <label class="ct-label">% Comisión VTA</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+          <input type="range" id="comision_pct" min="1" max="20" step="0.5" value="5"
+                 style="flex:1;accent-color:var(--blue)" oninput="calcPrecios()">
+          <span id="comision_pct_val" style="font-size:18px;font-weight:800;color:var(--blue);min-width:50px">5%</span>
+        </div>
+      </div>
+      <div class="precio-preview" style="margin-top:14px" id="precioPreview">
+        <div class="pp-item"><div class="pp-label">Precio pedido</div><div class="pp-val" id="pp_pedido">—</div></div>
+        <div class="pp-item"><div class="pp-label">Precio publicación</div><div class="pp-val" id="pp_pub">—</div></div>
+        <div class="pp-item"><div class="pp-label">Comisión VTA</div><div class="pp-val" id="pp_comision" style="color:var(--green)">—</div></div>
+        <div class="pp-item"><div class="pp-label">Pago al propietario</div><div class="pp-val" id="pp_pago" style="color:var(--yellow)">—</div></div>
+      </div>
+    </div>
+
+    <div class="ct-card">
+      <div class="ct-section">📋 Aspectos legales</div>
+      <div class="ct-grid" style="gap:16px">
+        <div>
+          <label class="ct-label">Permiso de circulación</label>
+          <div class="status-btns" id="permiso_btn">
+            <button class="status-btn vigente" onclick="setStatus('permiso','Vigente',this)">✅ Vigente</button>
+            <button class="status-btn vencido" onclick="setStatus('permiso','Vencido',this)">❌ Vencido</button>
+            <button class="status-btn sininfo" onclick="setStatus('permiso','Sin permiso',this)">⚠️ Sin permiso</button>
+          </div>
+          <input type="hidden" id="permiso_val" value="">
+        </div>
+        <div>
+          <label class="ct-label">SOAP</label>
+          <div class="status-btns">
+            <button class="status-btn vigente" onclick="setStatus('soap','Vigente',this)">✅ Vigente</button>
+            <button class="status-btn vencido" onclick="setStatus('soap','Vencido',this)">❌ Vencido</button>
+            <button class="status-btn sininfo" onclick="setStatus('soap','Sin SOAP',this)">⚠️ Sin SOAP</button>
+          </div>
+          <input type="hidden" id="soap_val" value="">
+        </div>
+        <div>
+          <label class="ct-label">Revisión técnica</label>
+          <div class="status-btns">
+            <button class="status-btn vigente" onclick="setStatus('rtec','Vigente',this)">✅ Vigente</button>
+            <button class="status-btn vencido" onclick="setStatus('rtec','Vencida',this)">❌ Vencida</button>
+            <button class="status-btn sininfo" onclick="setStatus('rtec','Sin revisión',this)">⚠️ Sin revisión</button>
+          </div>
+          <input type="hidden" id="rtec_val" value="">
+        </div>
+        <div>
+          <label class="ct-label">Prendas</label>
+          <div class="status-btns">
+            <button class="status-btn vigente" onclick="setStatus('prendas','Sin prendas',this)">✅ Sin prendas</button>
+            <button class="status-btn vencido" onclick="setStatus('prendas','Prenda bancaria',this)">⚠️ Bancaria</button>
+            <button class="status-btn sininfo" onclick="setStatus('prendas','Prenda no bancaria',this)">⚠️ No bancaria</button>
+          </div>
+          <input type="hidden" id="prendas_val" value="">
+        </div>
+        <div>
+          <label class="ct-label" style="font-weight:700;color:var(--yellow)">⚡ Cláusula de Exclusividad</label>
+          <div class="status-btns" style="margin-top:6px">
+            <button class="status-btn" id="btn_excl_si"
+                    onclick="setExclusividad(true)"
+                    style="border-color:#F39C12;background:rgba(243,156,18,.1);color:#F39C12">
+              ⚡ Con exclusividad
+            </button>
+            <button class="status-btn active" id="btn_excl_no"
+                    onclick="setExclusividad(false)">
+              ✓ Sin exclusividad
+            </button>
+          </div>
+          <input type="hidden" id="exclusividad_val" value="false">
+          <div id="excl_desc" style="font-size:10px;color:var(--gray3);margin-top:6px;line-height:1.5">
+            Sin exclusividad: el propietario puede vender por otros medios.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ct-nav">
+      <button class="btn-ct btn-ct-back" onclick="goStep(1)">← Anterior</button>
+      <button class="btn-ct btn-ct-next" onclick="goStep(3)">Siguiente: Equipamiento →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 3: Equipamiento y técnico ══ -->
+  <div id="paso3" style="display:none">
+    <div class="ct-card">
+      <div class="ct-section">❄️ Confort y climatización</div>
+      <div class="equip-grid" id="equip_confort">
+        {% for item in ['Aire acondicionado','Climatizador bizona','Sunroof','Techo panorámico','Calefacción asientos','Ventilación asientos','Tapizado cuero','Asientos eléctricos','Asientos memoria'] %}
+        <div class="equip-item" onclick="toggleEquip(this,'confort','{{ item }}')">
+          <input type="checkbox" onclick="event.stopPropagation()">
+          <label>{{ item }}</label>
+        </div>{% endfor %}
+      </div>
+    </div>
+    <div class="ct-card">
+      <div class="ct-section">🔒 Seguridad</div>
+      <div class="equip-grid">
+        {% for item in ['ABS','ESP / Control estabilidad','Airbag conductor','Airbag copiloto','Airbags laterales','Control crucero','Control crucero adaptativo','Cámara reversa','Cámara 360°','Sensores de estacionamiento','Alerta cambio de carril','Frenado autónomo'] %}
+        <div class="equip-item" onclick="toggleEquip(this,'seguridad','{{ item }}')">
+          <input type="checkbox" onclick="event.stopPropagation()">
+          <label>{{ item }}</label>
+        </div>{% endfor %}
+      </div>
+    </div>
+    <div class="ct-card">
+      <div class="ct-section">📱 Multimedia y conectividad</div>
+      <div class="equip-grid">
+        {% for item in ['Bluetooth','Apple CarPlay','Android Auto','Pantalla táctil','GPS integrado','Sonido premium','Subwoofer','Carga inalámbrica','USB','Wi-Fi integrado'] %}
+        <div class="equip-item" onclick="toggleEquip(this,'multimedia','{{ item }}')">
+          <input type="checkbox" onclick="event.stopPropagation()">
+          <label>{{ item }}</label>
+        </div>{% endfor %}
+      </div>
+    </div>
+    <div class="ct-card">
+      <div class="ct-section">💡 Iluminación y exterior</div>
+      <div class="equip-grid">
+        {% for item in ['Luces LED','Luces xenón','Faros antiniebla','Llantas de aleación','Llantas 17\"','Llantas 18\"+','Techo corredizo','Barras de techo','Enganche remolque','Espejos eléctricos','Espejos memoria','Parabrisas calefaccionado'] %}
+        <div class="equip-item" onclick="toggleEquip(this,'exterior','{{ item }}')">
+          <input type="checkbox" onclick="event.stopPropagation()">
+          <label>{{ item }}</label>
+        </div>{% endfor %}
+      </div>
+    </div>
+    <div class="ct-card">
+      <div class="ct-section">🔧 Estado técnico</div>
+      <div class="ct-grid ct-grid-2">
+        {% for campo in [('tec_motor','Motor','Excelente, sin fugas'),('tec_frenos','Frenos','Estado de discos y pastillas'),('tec_suspension','Suspensión','Amortiguadores, rótulas'),('tec_neumaticos','Neumáticos','Estado de banda y desgaste'),('tec_carroceria','Carrocería','Golpes, ralladuras, masilla'),('tec_interior','Interior','Estado de tapiz, tablero')] %}
+        <div>
+          <label class="ct-label">{{ campo[1] }}</label>
+          <select class="ct-select" id="{{ campo[0] }}">
+            <option value="">— Sin revisar —</option>
+            <option>Excelente</option><option>Bueno</option>
+            <option>Regular</option><option>Necesita atención</option><option>Crítico</option>
+          </select>
+        </div>{% endfor %}
+      </div>
+      <div style="margin-top:12px">
+        <label class="ct-label">Observaciones técnicas</label>
+        <textarea class="ct-textarea ct-input" id="obs_tecnica" rows="3" placeholder="Detallar condiciones relevantes del vehículo..."></textarea>
+      </div>
+    </div>
+
+    <div class="ct-nav">
+      <button class="btn-ct btn-ct-back" onclick="goStep(2)">← Anterior</button>
+      <button class="btn-ct btn-ct-next" onclick="goStep(4)">Siguiente: Fotos y Firma →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 4: Documentos, Fotos y Firma ══ -->
+  <div id="paso4" style="display:none">
+
+    <!-- Documentos del propietario -->
+    <div class="ct-card">
+      <div class="ct-section">🪪 Documentos del propietario (foto o escaneo)</div>
+      <div class="ct-grid ct-grid-2" style="gap:10px">
+        <label style="display:block;background:var(--card2);border:2px dashed var(--border2);border-radius:12px;padding:16px;text-align:center;cursor:pointer" onclick="document.getElementById('docCedula').click()">
+          <input type="file" id="docCedula" accept="image/*" capture="environment" style="display:none" onchange="handleDocumento(this,'docCedulaPreview','Cédula de Identidad')">
+          <div style="font-size:24px;margin-bottom:4px">🪪</div>
+          <div style="font-size:12px;font-weight:600">Cédula de Identidad</div>
+          <div id="docCedulaPreview" style="margin-top:8px"></div>
+        </label>
+        <label style="display:block;background:var(--card2);border:2px dashed var(--border2);border-radius:12px;padding:16px;text-align:center;cursor:pointer" onclick="document.getElementById('docPermiso').click()">
+          <input type="file" id="docPermiso" accept="image/*" capture="environment" style="display:none" onchange="handleDocumento(this,'docPermisoPreview','Permiso Circulación')">
+          <div style="font-size:24px;margin-bottom:4px">📄</div>
+          <div style="font-size:12px;font-weight:600">Permiso de Circulación</div>
+          <div id="docPermisoPreview" style="margin-top:8px"></div>
+        </label>
+        <label style="display:block;background:var(--card2);border:2px dashed var(--border2);border-radius:12px;padding:16px;text-align:center;cursor:pointer" onclick="document.getElementById('docRevTec').click()">
+          <input type="file" id="docRevTec" accept="image/*" capture="environment" style="display:none" onchange="handleDocumento(this,'docRevTecPreview','Revisión Técnica')">
+          <div style="font-size:24px;margin-bottom:4px">🔧</div>
+          <div style="font-size:12px;font-weight:600">Revisión Técnica</div>
+          <div id="docRevTecPreview" style="margin-top:8px"></div>
+        </label>
+        <label style="display:block;background:var(--card2);border:2px dashed var(--border2);border-radius:12px;padding:16px;text-align:center;cursor:pointer" onclick="document.getElementById('docOtro').click()">
+          <input type="file" id="docOtro" accept="image/*" capture="environment" style="display:none" onchange="handleDocumento(this,'docOtroPreview','Otro documento')">
+          <div style="font-size:24px;margin-bottom:4px">📎</div>
+          <div style="font-size:12px;font-weight:600">Otro documento</div>
+          <div id="docOtroPreview" style="margin-top:8px"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Fotos del vehículo -->
+    <div class="ct-card">
+      <div class="ct-section">📸 Fotografías del vehículo</div>
+      <label style="display:block;background:var(--card2);border:2px dashed var(--border2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;margin-bottom:10px" onclick="document.getElementById('camInput').click()">
+        <input type="file" id="camInput" accept="image/*" capture="environment" multiple style="display:none" onchange="handleFotosTerreno(this)">
+        <div style="font-size:28px;margin-bottom:6px">📷</div>
+        <div style="font-size:13px;font-weight:600">Tomar foto o elegir de galería</div>
+        <div style="font-size:10px;color:var(--gray3);margin-top:3px">Frontal · Lateral · Interior · Motor · Detalles</div>
+      </label>
+      <div id="fotosTerreno" class="foto-preview-grid"></div>
+    </div>
+
+    <div class="ct-card">
+      <div class="ct-section">📝 Notas internas</div>
+      <textarea class="ct-textarea ct-input" id="notas_internas" rows="3"
+                placeholder="Observaciones privadas (no se muestran al cliente)..."></textarea>
+    </div>
+
+    <!-- Firma -->
+    <div class="ct-card" id="firmaCard">
+      <div class="ct-section">✍️ Firma del propietario</div>
+      <p style="font-size:12px;color:var(--gray2);margin-bottom:10px">El propietario firma aquí autorizando la consignación de su vehículo a VTA Automotora:</p>
+      <canvas id="firmaCanvas" height="180" style="background:#1A2230;border:2px dashed var(--border2);border-radius:12px;width:100%;touch-action:none;cursor:crosshair;display:block"></canvas>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <button class="btn-ct btn-ct-back" style="font-size:11px;padding:7px 14px" onclick="limpiarFirma()">🗑️ Limpiar</button>
+        <span id="firmaStatus" style="font-size:11px;color:var(--green)"></span>
+      </div>
+    </div>
+
+    <div class="ct-nav">
+      <button class="btn-ct btn-ct-back" onclick="goStep(3)">← Anterior</button>
+      <button class="btn-ct btn-ct-gen" onclick="generarContrato()" id="btnGenerar">
+        📄 Generar Contrato y Guardar
+      </button>
+    </div>
+  </div>
+
+</div><!-- /ct-wrap -->
+
+<!-- Modal de carga -->
+<div id="loadingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-size:40px">⏳</div>
+  <div style="font-size:16px;font-weight:600;color:var(--white)">Guardando consignación...</div>
+</div>
+
+<script>
+// ── Steps ─────────────────────────────────────────────────────────────────────
+let currentStep = 1;
+let firmaIniciada = false;
+
+function goStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById(`paso${i}`).style.display = i === n ? '' : 'none';
+    const btn = document.getElementById(`step-btn-${i}`);
+    btn.classList.remove('active','done');
+    if (i === n) btn.classList.add('active');
+    else if (i < n) btn.classList.add('done');
+  }
+  currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Inicializar firma cuando se llega al paso 4
+  if (n === 4 && !firmaIniciada) {
+    setTimeout(initFirma, 100);
+    firmaIniciada = true;
+  }
+}
+
+// ── RUT auto-format ───────────────────────────────────────────────────────────
+function formatRUTInput(el) {
+  let clean = el.value.replace(/[^0-9kK]/g,'').toUpperCase();
+  if (clean.length > 1) {
+    const num = clean.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+    el.value  = num + '-' + clean.slice(-1);
+  } else { el.value = clean; }
+}
+
+async function validarRUTTerreno(el) {
+  const rut = el.value.trim();
+  const res = document.getElementById('rut_result');
+  if (!rut) return;
+  res.style.color = 'var(--gray2)';
+  res.textContent = '🔍 Validando...';
+  try {
+    const r = await fetch(`/api/validar-rut?rut=${encodeURIComponent(rut)}`);
+    const d = await r.json();
+    if (d.valid) {
+      el.value = d.rut_formateado;
+      el.style.borderColor = 'var(--green)';
+      res.style.color = 'var(--green)';
+      res.textContent = d.nombre ? `✓ ${d.nombre}` : '✓ RUT válido';
+      if (d.nombre && !document.getElementById('nombre_prop').value.trim())
+        document.getElementById('nombre_prop').value = d.nombre;
+    } else {
+      el.style.borderColor = 'var(--red)';
+      res.style.color = 'var(--red)';
+      res.textContent = `✕ RUT inválido — dígito esperado: ${d.dv_esperado||'?'}`;
+    }
+  } catch(e) { res.textContent = ''; }
+}
+
+// ── Precios ───────────────────────────────────────────────────────────────────
+function clpFmt(n) { return '$' + parseInt(n||0).toLocaleString('es-CL'); }
+
+function calcPrecios() {
+  const pedido = parseInt(document.getElementById('precio_pedido').value)||0;
+  const pub    = parseInt(document.getElementById('precio_pub').value)||0;
+  const pct    = parseFloat(document.getElementById('comision_pct').value)||5;
+  document.getElementById('comision_pct_val').textContent = pct + '%';
+  const comision = Math.round(pub * pct / 100);
+  const pago     = pub - comision;
+  document.getElementById('pp_pedido').textContent   = clpFmt(pedido);
+  document.getElementById('pp_pub').textContent      = clpFmt(pub);
+  document.getElementById('pp_comision').textContent = clpFmt(comision);
+  document.getElementById('pp_pago').textContent     = clpFmt(pago);
+}
+
+// ── Modalidad presencial/virtual ──────────────────────────────────────────────
+function setModalidad(valor) {
+  document.getElementById('modalidad_val').value = valor;
+  const pres = document.getElementById('btn_presencial');
+  const virt = document.getElementById('btn_virtual');
+  const desc = document.getElementById('modalidad_desc');
+  if (valor === 'presencial') {
+    pres.classList.add('active','vigente'); virt.classList.remove('active','vigente');
+    desc.style.color = 'var(--green)';
+    desc.textContent = '🤝 Presencial: el vehículo quedará en custodia de VTA Automotora durante la consignación.';
+  } else {
+    virt.classList.add('active','vigente'); pres.classList.remove('active','vigente');
+    desc.style.color = 'var(--blue)';
+    desc.textContent = '📱 Virtual: el vehículo permanece con el propietario. VTA gestiona la publicación y venta a distancia.';
+  }
+}
+
+// ── Exclusividad ──────────────────────────────────────────────────────────────
+function setExclusividad(valor) {
+  document.getElementById('exclusividad_val').value = valor;
+  const si = document.getElementById('btn_excl_si');
+  const no = document.getElementById('btn_excl_no');
+  const desc = document.getElementById('excl_desc');
+  si.classList.toggle('active', valor);
+  no.classList.toggle('active', !valor);
+  if (valor) {
+    si.style.cssText = 'border-color:#F39C12;background:rgba(243,156,18,.25);color:#F39C12';
+    no.style.cssText = '';
+    desc.style.color = 'var(--yellow)';
+    desc.textContent = '⚡ Con exclusividad: el propietario NO puede vender con otra automotora durante la vigencia del contrato.';
+  } else {
+    si.style.cssText = 'border-color:#F39C12;background:rgba(243,156,18,.1);color:#F39C12';
+    no.style.cssText = '';
+    desc.style.color = 'var(--gray3)';
+    desc.textContent = 'Sin exclusividad: el propietario puede vender por otros medios.';
+  }
+}
+
+// ── Status buttons ────────────────────────────────────────────────────────────
+function setStatus(campo, valor, el) {
+  // Quitar active de siblings
+  el.parentElement.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`${campo}_val`).value = valor;
+}
+
+// ── Equipamiento ──────────────────────────────────────────────────────────────
+const equipamiento = {};
+function toggleEquip(el, cat, item) {
+  const cb = el.querySelector('input');
+  cb.checked = !cb.checked;
+  el.classList.toggle('checked', cb.checked);
+  if (!equipamiento[cat]) equipamiento[cat] = [];
+  if (cb.checked) { if (!equipamiento[cat].includes(item)) equipamiento[cat].push(item); }
+  else { equipamiento[cat] = equipamiento[cat].filter(i => i !== item); }
+}
+
+// ── Fotos terreno ─────────────────────────────────────────────────────────────
+const fotosTerreno = [];
+
+function handleFotosTerreno(input) {
+  const files = [...input.files];
+  const grid  = document.getElementById('fotosTerreno');
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      // Comprimir
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 1000;
+        let w = img.width, h = img.height;
+        if (w > maxW) { h = Math.round(h*maxW/w); w = maxW; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        const b64 = canvas.toDataURL('image/jpeg', 0.82);
+        fotosTerreno.push(b64);
+        // Preview
+        const div = document.createElement('div');
+        div.className = 'foto-preview-item';
+        const idx = fotosTerreno.length - 1;
+        div.innerHTML = `<img src="${b64}"><button class="foto-remove" onclick="removeFotoTerreno(${idx},this.parentElement)">✕</button>`;
+        grid.appendChild(div);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeFotoTerreno(idx, el) {
+  fotosTerreno[idx] = null;
+  el.remove();
+}
+
+// ── Firma canvas — inicializa cuando el canvas es visible ────────────────────
+let firmaCtx, firmaDrawing = false, firmaEmpty = true;
+
+function initFirma() {
+  const canvas = document.getElementById('firmaCanvas');
+  if (!canvas) return;
+  // Ajustar tamaño al ancho real del elemento
+  const rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width || canvas.offsetWidth || 600;
+  canvas.height = 180;
+  firmaCtx = canvas.getContext('2d');
+  firmaCtx.strokeStyle = '#00AEEF';
+  firmaCtx.lineWidth   = 2.5;
+  firmaCtx.lineCap     = 'round';
+  firmaCtx.lineJoin    = 'round';
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {
+      x: (t.clientX - r.left) * (canvas.width  / r.width),
+      y: (t.clientY - r.top)  * (canvas.height / r.height)
+    };
+  };
+
+  canvas.addEventListener('mousedown',  (e) => { firmaDrawing=true; firmaEmpty=false; const p=getPos(e); firmaCtx.beginPath(); firmaCtx.moveTo(p.x,p.y); });
+  canvas.addEventListener('mousemove',  (e) => { if(!firmaDrawing) return; const p=getPos(e); firmaCtx.lineTo(p.x,p.y); firmaCtx.stroke(); });
+  canvas.addEventListener('mouseup',    ()  => { firmaDrawing=false; document.getElementById('firmaStatus').textContent='✓ Firma capturada'; });
+  canvas.addEventListener('mouseleave', ()  => { firmaDrawing=false; });
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); firmaDrawing=true; firmaEmpty=false; const p=getPos(e); firmaCtx.beginPath(); firmaCtx.moveTo(p.x,p.y); document.getElementById('firmaStatus').textContent=''; }, {passive:false});
+  canvas.addEventListener('touchmove',  (e) => { e.preventDefault(); if(!firmaDrawing) return; const p=getPos(e); firmaCtx.lineTo(p.x,p.y); firmaCtx.stroke(); }, {passive:false});
+  canvas.addEventListener('touchend',   (e) => { e.preventDefault(); firmaDrawing=false; document.getElementById('firmaStatus').textContent='✓ Firma capturada'; }, {passive:false});
+}
+
+function limpiarFirma() {
+  if (!firmaCtx) return;
+  const canvas = document.getElementById('firmaCanvas');
+  firmaCtx.clearRect(0,0,canvas.width,canvas.height);
+  firmaEmpty = true;
+  document.getElementById('firmaStatus').textContent = '';
+}
+
+// ── Documentos ────────────────────────────────────────────────────────────────
+const documentos = {};
+
+function handleDocumento(input, previewId, nombre) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h*maxW/w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const b64 = canvas.toDataURL('image/jpeg', 0.85);
+      documentos[nombre] = b64;
+      const preview = document.getElementById(previewId);
+      preview.innerHTML = `<img src="${b64}" style="width:100%;border-radius:8px;margin-top:4px">
+        <div style="font-size:10px;color:var(--green);margin-top:4px">✓ ${nombre} capturado</div>`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// ── Generar contrato ──────────────────────────────────────────────────────────
+async function generarContrato() {
+  // Validaciones básicas
+  const required = [
+    ['nombre_prop','Nombre del propietario'],
+    ['tel_prop',   'Teléfono del propietario'],
+    ['patente',    'Patente del vehículo'],
+    ['marca',      'Marca del vehículo'],
+    ['modelo',     'Modelo del vehículo'],
+    ['anio',       'Año del vehículo'],
+  ];
+  for (const [id, label] of required) {
+    if (!document.getElementById(id)?.value.trim()) {
+      alert(`⚠️ Campo requerido: ${label}`);
+      return;
+    }
+  }
+
+  const payload = {
+    rut_propietario:    document.getElementById('rut_prop').value,
+    nombre_propietario: document.getElementById('nombre_prop').value,
+    telefono_propietario: document.getElementById('tel_prop').value,
+    email_propietario:  document.getElementById('email_prop').value,
+    patente:            document.getElementById('patente').value,
+    chasis:             document.getElementById('chasis').value,
+    marca:              document.getElementById('marca').value,
+    modelo:             document.getElementById('modelo').value,
+    anio:               document.getElementById('anio').value,
+    color:              document.getElementById('color').value,
+    motor:              document.getElementById('motor').value,
+    transmision:        document.getElementById('transmision').value,
+    traccion:           document.getElementById('traccion').value,
+    combustible:        document.getElementById('combustible').value,
+    km_aprox:           document.getElementById('km').value,
+    cantidad_duenos:    document.getElementById('n_duenos').value,
+    precio_pedido:      document.getElementById('precio_pedido').value,
+    precio_publicacion: document.getElementById('precio_pub').value,
+    precio_minimo:      document.getElementById('precio_min').value,
+    comision_pct:       document.getElementById('comision_pct').value,
+    permiso_circulacion:document.getElementById('permiso_val').value,
+    soap:               document.getElementById('soap_val').value,
+    revision_tecnica:   document.getElementById('rtec_val').value,
+    prendas:            document.getElementById('prendas_val').value,
+    exclusividad:       document.getElementById('exclusividad_val').value === 'true',
+    modalidad:          document.getElementById('modalidad_val').value,
+    email_propietario:  document.getElementById('email_prop').value,
+    equipamiento:       equipamiento,
+    inspeccion_tecnica: {
+      motor:      document.getElementById('tec_motor').value,
+      frenos:     document.getElementById('tec_frenos').value,
+      suspension: document.getElementById('tec_suspension').value,
+      neumaticos: document.getElementById('tec_neumaticos').value,
+      carroceria: document.getElementById('tec_carroceria').value,
+      interior:   document.getElementById('tec_interior').value,
+    },
+    notas:          document.getElementById('obs_tecnica').value,
+    notas_internas: document.getElementById('notas_internas').value,
+    firma:          firmaEmpty ? '' : document.getElementById('firmaCanvas').toDataURL('image/png'),
+    fotos:          fotosTerreno.filter(Boolean),
+    documentos:     documentos,
+  };
+
+  document.getElementById('loadingModal').style.display = 'flex';
+  document.getElementById('btnGenerar').disabled = true;
+
+  try {
+    const resp = await fetch('/api/consignacion/guardar', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+
+    document.getElementById('loadingModal').style.display = 'none';
+
+    if (data.ok) {
+      // Abrir contrato en nueva pestaña para imprimir/guardar PDF
+      const params = new URLSearchParams({ id: data.id, ...Object.fromEntries(
+        Object.entries(payload).filter(([k]) => !['firma','fotos','equipamiento','inspeccion_tecnica'].includes(k))
+      )});
+      window.open(`/admin/consignacion/contrato?id=${data.id}`, '_blank');
+      setTimeout(() => { window.location.href = '/admin/inventario'; }, 1200);
+    } else {
+      alert('Error guardando: ' + (data.error||'desconocido'));
+      document.getElementById('btnGenerar').disabled = false;
+    }
+  } catch(e) {
+    document.getElementById('loadingModal').style.display = 'none';
+    alert('Error de conexión: ' + e.message);
+    document.getElementById('btnGenerar').disabled = false;
+  }
+}
+</script>
+</body>
+</html>

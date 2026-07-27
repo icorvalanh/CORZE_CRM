@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">✅ Tareas</h1>
+    <div style="display:flex;gap:6px">
+      <select id="filtAsignado" class="filter-select" style="font-size:11px;padding:5px 10px" onchange="aplicarFiltros()">
+        <option value="">Todos</option>
+        <option value="Ignacio">Ignacio</option>
+        <option value="Nicolas">Nicolás</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal()">➕ Nueva tarea</button>
+</div>
+
+<!-- Alerta urgentes -->
+<div id="alertaUrgentes" style="display:none" class="alert-strip alert-critical" style="margin-bottom:10px">
+  <span id="alertaUrgentesText"></span>
+</div>
+
+<!-- Tabs + búsqueda -->
+<div class="toolbar" style="margin-top:4px">
+  <div class="toolbar-left">
+    <button class="tipo-btn active" id="tab_todas"      onclick="filtrarEstado('', this)">Todas</button>
+    <button class="tipo-btn"        id="tab_pendientes" onclick="filtrarEstado('pendiente', this)">
+      <span class="dot" style="background:#F1C40F"></span> Pendientes
+    </button>
+    <button class="tipo-btn"        id="tab_completadas" onclick="filtrarEstado('completada', this)">
+      <span class="dot" style="background:#27ae60"></span> Completadas
+    </button>
+  </div>
+  <div class="toolbar-right">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar tarea, vehículo..."
+           oninput="buscar(this.value)">
+  </div>
+</div>
+
+<!-- Tabla -->
+<div class="table-wrap" style="margin-top:8px">
+  <table class="vta-table">
+    <thead>
+      <tr>
+        <th style="width:32px"></th>
+        <th>Tarea</th>
+        <th>Vehículo</th>
+        <th>Asignado</th>
+        <th>Vence</th>
+        <th>Recordatorio</th>
+        <th>Prioridad</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaBody"></tbody>
+  </table>
+</div>
+
+<!-- ══════════════ MODAL TAREA ══════════════ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+ <div class="modal-box" style="max-width:580px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nueva tarea</span>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+
+    <!-- Identificación -->
+    <div class="form-section">TAREA</div>
+    <div class="form-row-4">
+      <div class="form-group col-2">
+        <label>Título *</label>
+        <input id="t_titulo" placeholder="Ej: Cambio de aceite pendiente">
+      </div>
+      <div class="form-group">
+        <label>Prioridad</label>
+        <select id="t_prioridad">
+          <option value="alta">🔴 Alta</option>
+          <option value="media" selected>🟡 Media</option>
+          <option value="baja">🟢 Baja</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Asignado a</label>
+        <select id="t_asignado">
+          <option value="Todos">👥 Todos</option>
+          <option value="Ignacio">Ignacio</option>
+          <option value="Nicolas">Nicolás</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="t_descripcion" rows="2" placeholder="Detalle de la tarea..."></textarea>
+    </div>
+
+    <!-- Fechas y recordatorio -->
+    <div class="form-section">FECHA Y RECORDATORIO</div>
+    <div class="form-row-4">
+      <div class="form-group">
+        <label>Fecha límite *</label>
+        <input id="t_fecha_limite" type="date">
+      </div>
+      <div class="form-group col-2">
+        <label>Recordatorio</label>
+        <select id="t_recordatorio">
+          <option value="0">Sin recordatorio</option>
+          <option value="1" selected>1 día antes</option>
+          <option value="2">2 días antes</option>
+          <option value="3">3 días antes</option>
+          <option value="7">1 semana antes</option>
+          <option value="14">2 semanas antes</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Vehículo -->
+    <div class="form-section">VEHÍCULO VINCULADO</div>
+    <div class="form-group">
+      <label>Buscar vehículo (opcional)</label>
+      <input id="t_vehiculo_search" placeholder="Buscar patente o modelo..."
+             oninput="buscarVehiculoTarea(this.value)" autocomplete="off">
+      <div id="tVehiculoSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;z-index:100;position:relative"></div>
+      <div id="tVehiculoSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
+        <span id="tVehiculoDesc"></span>
+        <button onclick="limpiarVehiculoTarea()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
+      </div>
+      <input type="hidden" id="t_vehiculo_id">
+      <input type="hidden" id="t_vehiculo_desc_hidden">
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarTarea()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+<style>
+/* Prioridad badges */
+.prio-alta   {background:#3B0D0A;color:#E74C3C;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
+.prio-media  {background:#2D2500;color:#F1C40F;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
+.prio-baja   {background:#0D3B22;color:#2ECC71;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
+/* Estado badges */
+.est-pend    {background:#2D2500;color:#F1C40F;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
+.est-comp    {background:#0D3B22;color:#2ECC71;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
+/* Fecha vencida */
+.fecha-venc  {color:#E74C3C;font-weight:700}
+.fecha-hoy   {color:#F1C40F;font-weight:700}
+.fecha-prox  {color:#F39C12;font-weight:600}
+/* Row tachado cuando completado */
+tr.tarea-completada td { opacity:.5; }
+tr.tarea-completada .tarea-titulo { text-decoration:line-through; }
+/* Checkbox custom */
+.task-check {
+  width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);
+  cursor:pointer;appearance:none;background:var(--card2);
+  transition:all .15s;flex-shrink:0;
+}
+.task-check:checked { background:var(--green);border-color:var(--green); }
+.task-check:checked::after { content:'✓';color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;height:100%; }
+</style>
+
+<script src="{{ url_for('static', filename='js/tareas.js') }}"></script>
+{% endblock %}

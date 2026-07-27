@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280" width="400" height="280">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#131920"/>
+      <stop offset="100%" style="stop-color:#0E1318"/>
+    </linearGradient>
+    <linearGradient id="tarp" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A5F"/>
+      <stop offset="50%" style="stop-color:#1a3050"/>
+      <stop offset="100%" style="stop-color:#162840"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a4a70;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#0d1e30;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="400" height="280" fill="url(#bg)"/>
+
+  <!-- Suelo sutil -->
+  <ellipse cx="200" cy="220" rx="145" ry="10" fill="#0a0f14" opacity="0.6"/>
+
+  <!-- Auto encarpado — silueta del cuerpo -->
+  <!-- Cuerpo principal -->
+  <path d="M68 185 Q70 155 100 148 Q130 141 160 138 Q200 130 240 138 Q270 141 300 148 Q330 155 332 185 Z"
+        fill="url(#tarp)" stroke="#2a4a6a" stroke-width="1"/>
+
+  <!-- Techo / volumen superior -->
+  <path d="M110 148 Q120 118 150 112 Q180 106 200 105 Q220 106 250 112 Q280 118 290 148 Z"
+        fill="url(#tarp)" stroke="#2a4a6a" stroke-width="1"/>
+
+  <!-- Faldones laterales izq -->
+  <path d="M68 185 Q68 195 78 198 L100 200 L100 185 Z" fill="#152535" stroke="#1e3550" stroke-width="0.5"/>
+  <!-- Faldones laterales der -->
+  <path d="M332 185 Q332 195 322 198 L300 200 L300 185 Z" fill="#152535" stroke="#1e3550" stroke-width="0.5"/>
+
+  <!-- Ruedas (suaves bajo la carpa) -->
+  <ellipse cx="120" cy="200" rx="30" ry="12" fill="#0c1520" stroke="#1e2f40" stroke-width="1"/>
+  <ellipse cx="280" cy="200" rx="30" ry="12" fill="#0c1520" stroke="#1e2f40" stroke-width="1"/>
+
+  <!-- Pliegues de la carpa (líneas sutiles) -->
+  <line x1="140" y1="148" x2="130" y2="185" stroke="#2a5080" stroke-width="0.8" opacity="0.5"/>
+  <line x1="175" y1="138" x2="168" y2="185" stroke="#2a5080" stroke-width="0.8" opacity="0.5"/>
+  <line x1="200" y1="135" x2="200" y2="185" stroke="#2a5080" stroke-width="0.8" opacity="0.5"/>
+  <line x1="225" y1="138" x2="232" y2="185" stroke="#2a5080" stroke-width="0.8" opacity="0.5"/>
+  <line x1="260" y1="148" x2="270" y2="185" stroke="#2a5080" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Borde inferior carpa -->
+  <path d="M68 185 Q200 195 332 185" fill="none" stroke="#2a5a8a" stroke-width="1.5"/>
+
+  <!-- Ícono cámara -->
+  <rect x="172" y="58" rx="5" ry="5" width="56" height="42" fill="none" stroke="#00AEEF" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="200" cy="79" r="11" fill="none" stroke="#00AEEF" stroke-width="1.5" opacity="0.5"/>
+  <rect x="188" y="62" rx="2" ry="2" width="10" height="5" fill="#00AEEF" opacity="0.4"/>
+
+  <!-- Texto principal -->
+  <text x="200" y="230" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif"
+        font-size="14" font-weight="700" fill="#00AEEF" letter-spacing="1">
+    ESTAMOS PREPARANDO
+  </text>
+  <text x="200" y="248" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif"
+        font-size="14" font-weight="700" fill="#00AEEF" letter-spacing="1">
+    LAS FOTOS
+  </text>
+  <text x="200" y="264" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif"
+        font-size="10" fill="#4A5568" letter-spacing="0.5">
+    Las imágenes estarán disponibles pronto
+  </text>
+</svg>

@@ -1,0 +1,700 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">🚗 Inventario</h1>
+    <!-- Toggle INTERNO / CONSIGNACIÓN -->
+    <div class="tipo-toggle">
+      <button class="tipo-btn active" id="btnTodos" onclick="filterTipo('')">Todos</button>
+      <button class="tipo-btn" id="btnInterno" onclick="filterTipo('INTERNO')">
+        <span class="dot" style="background:#00AEEF"></span> Internos
+      </button>
+      <button class="tipo-btn" id="btnConsig" onclick="filterTipo('CONSIGNACIÓN')">
+        <span class="dot" style="background:#F1C40F"></span> Consignaciones
+      </button>
+    </div>
+  </div>
+  <span class="badge-count" id="rowCount">Cargando...</span>
+</div>
+
+<!-- Alertas stock -->
+<div id="alertStrip"></div>
+<!-- Alertas documentos -->
+<div id="alertDocs"></div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <button class="btn btn-primary"   onclick="openModal()" title="Ctrl+N">➕ Agregar</button>
+    <a href="/admin/consignacion/terreno" class="btn" style="background:#F39C12;color:#000;font-weight:700" title="Inspección en terreno con tablet">📋 Consignación Terreno</a>
+    <button class="btn btn-secondary" onclick="editSelected()" title="Ctrl+E">✏️ Editar</button>
+    <button class="btn btn-danger"    onclick="deleteSelected()" title="Supr">🗑️ Eliminar</button>
+    <button class="btn btn-success"   onclick="quickSell()" title="Ctrl+V">✅ Vender</button>
+    <button class="btn btn-purple"    onclick="duplicateSelected()">⊕ Duplicar</button>
+    <button class="btn btn-notify"    onclick="notificarPropietario()" title="Notificar al propietario de una consignación">📲 Notificar Propietario</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn btn-secondary" onclick="loadRows()" title="Ctrl+R">🔄 Actualizar</button>
+    <a href="/api/export/inventario" class="btn btn-green">📤 Exportar CSV</a>
+  </div>
+  <div class="toolbar-right">
+    <input type="text" id="searchInput" class="search-input"
+           placeholder="🔍 Buscar patente, modelo, marca, propietario..."
+           oninput="searchRows(this.value)">
+    <select class="filter-select" onchange="filterEstado(this.value)">
+      <option value="">Todos los estados</option>
+      {% for e in config.ESTADOS %}
+      <option>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+<!-- Stats strip -->
+<div class="stats-strip" id="statsStrip"></div>
+
+<!-- Tabla + Panel detalle -->
+<div class="table-layout">
+  <div class="table-wrap">
+    <table class="vta-table" id="mainTable">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Patente</th><th>Marca</th><th>Año</th><th>Modelo</th>
+          <th>KM</th><th>Color</th>
+          <th>P. Compra / Pedido</th>
+          <th>P. Colab. / Mínimo</th>
+          <th>P. Venta</th><th>Ganancia / Comisión</th>
+          <th>Estado</th><th>Días</th><th>Ingreso</th>
+          <th>Usuario</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty">Selecciona un vehículo<br>para ver los detalles</div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL PRINCIPAL ══════════════ -->
+<div class="modal-overlay" id="modal">
+ <div class="modal-box" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nuevo Vehículo</span>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+
+   <!-- Tabs del modal -->
+   <div style="display:flex;gap:4px;margin-bottom:14px;border-bottom:0.5px solid var(--border1);padding-bottom:10px;flex-wrap:wrap">
+     <button class="mtab active" id="tab-datos"        onclick="switchTab('datos',this)">📋 Datos</button>
+     <button class="mtab"        id="tab-fotos"        onclick="switchTab('fotos',this)">📸 Fotos</button>
+     <button class="mtab"        id="tab-pub"          onclick="switchTab('pub',this)">🌐 Publicación</button>
+     <button class="mtab"        id="tab-rentabilidad" onclick="switchTab('rentabilidad',this);cargarPNL()">💹 Rentabilidad</button>
+     <button class="mtab"        id="tab-historial"    onclick="switchTab('historial',this);cargarHistorial()">📜 Historial</button>
+     <button class="mtab"        id="tab-notas"        onclick="switchTab('notas',this)">🔒 Notas internas</button>
+     <button class="mtab"        id="tab-voz"          onclick="switchTab('voz',this);cargarNotasVoz()">🎙️ Voz IA</button>
+   </div>
+
+   <!-- ── TAB DATOS ──────────────────────────────────────────────────────── -->
+   <div id="tabDatos">
+
+   <!-- Selector tipo registro -->
+   <div class="tipo-registro-selector" id="tipoRegistroSelector">
+    <label class="tipo-opcion" id="lblInterno">
+      <input type="radio" name="tipo_registro" value="INTERNO" checked onchange="onTipoChange()">
+      <span class="tipo-opcion-box">
+        <span style="color:#00AEEF;font-size:16px">🏢</span>
+        <strong>INTERNO</strong>
+        <small>Vehículo comprado para compra/venta</small>
+      </span>
+    </label>
+    <label class="tipo-opcion" id="lblConsig">
+      <input type="radio" name="tipo_registro" value="CONSIGNACIÓN" onchange="onTipoChange()">
+      <span class="tipo-opcion-box">
+        <span style="color:#F1C40F;font-size:16px">🤝</span>
+        <strong>CONSIGNACIÓN</strong>
+        <small>Vehículo de tercero en consignación</small>
+      </span>
+    </label>
+   </div>
+
+   <!-- Sección solo consignación -->
+   <div id="seccionConsig" style="display:none">
+    <div class="form-section" style="background:#3A2E0033;color:#F1C40F">DATOS DEL PROPIETARIO</div>
+    <div class="form-row-4">
+      <div class="form-group col-2"><label>Nombre Propietario *</label>
+        <input type="text" id="f_nombre_prop" placeholder="Nombre completo del propietario"></div>
+      <div class="form-group col-2"><label>Contacto / Teléfono</label>
+        <input type="text" id="f_contacto_prop" placeholder="+56 9 XXXX XXXX"></div>
+    </div>
+    <div class="form-row-4">
+      <div class="form-group col-2">
+        <label>RUT Propietario</label>
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <div style="flex:1">
+            <input type="text" id="f_rut_prop" placeholder="12.345.678-9"
+                   oninput="onRUTInput(this)"
+                   onblur="onRUTBlur(this); buscarNombreRUT(this.value)">
+          </div>
+          <button type="button" class="btn btn-secondary"
+                  style="padding:7px 12px;font-size:11px;white-space:nowrap;margin-top:0"
+                  onclick="buscarNombreRUT(document.getElementById('f_rut_prop').value)">
+            🔍 Buscar
+          </button>
+        </div>
+        <div id="rut_result" style="font-size:10px;margin-top:4px;color:var(--gray2)"></div>
+      </div>
+      <div class="form-group"><label>Email Propietario</label>
+        <input type="email" id="f_email_prop" placeholder="correo@email.com"></div>
+    </div>
+   </div>
+
+   <div class="form-section">IDENTIFICACIÓN DEL VEHÍCULO</div>
+   <div class="form-row-4">
+     <div class="form-group"><label>Patente</label>
+       <div style="display:flex;gap:6px;align-items:center">
+         <input type="text" id="f_patente" placeholder="BCDF12"
+                oninput="this.value=this.value.toUpperCase()"
+                style="flex:1">
+         <button type="button" id="btn-buscar-patente"
+                 onclick="buscarPatente()"
+                 class="btn btn-secondary"
+                 style="white-space:nowrap;padding:6px 10px;font-size:12px"
+                 title="Buscar datos del vehículo por patente">
+           🔍 Buscar
+         </button>
+       </div>
+     </div>
+     <div class="form-group"><label>Chasis</label>
+       <input type="text" id="f_chasis" placeholder="Número de chasis"></div>
+     <div class="form-group"><label>Marca *</label>
+       <select id="f_marca" onchange="updateModelos()">
+         {% for m in config.MARCAS %}<option>{{ m }}</option>{% endfor %}
+       </select></div>
+     <div class="form-group"><label>Año *</label>
+       <select id="f_anio">
+         {% for a in config.ANOS %}<option>{{ a }}</option>{% endfor %}
+       </select></div>
+   </div>
+   <div class="form-row-4">
+     <div class="form-group"><label>Tipo Vehículo *</label>
+       <select id="f_tipo">
+         {% for t in config.TIPOS_VEHICULO %}<option>{{ t }}</option>{% endfor %}
+       </select></div>
+     <div class="form-group col-2">
+       <label>Modelo *</label>
+       <input type="text" id="f_modelo" placeholder="Ej: Corolla 2.0 XEI" list="modelosList">
+       <datalist id="modelosList"></datalist>
+     </div>
+     <div class="form-group"><label>Color</label>
+       <input type="text" id="f_color" placeholder="Ej: Azul Navarra"></div>
+   </div>
+
+   <div class="form-section">CARACTERÍSTICAS TÉCNICAS</div>
+   <div class="form-row-4">
+     <div class="form-group"><label>Motor</label>
+       <input type="text" id="f_motor" placeholder="Código motor"></div>
+     <div class="form-group"><label>Transmisión</label>
+       <select id="f_transmision">
+         {% for t in config.TRANSMISIONES %}<option>{{ t }}</option>{% endfor %}
+       </select></div>
+     <div class="form-group"><label>Tracción</label>
+       <select id="f_traccion">
+         {% for t in config.TRACCIONES %}<option>{{ t }}</option>{% endfor %}
+       </select></div>
+     <div class="form-group"><label>Combustible</label>
+       <select id="f_combustible">
+         {% for c in config.COMBUSTIBLES %}<option>{{ c }}</option>{% endfor %}
+       </select></div>
+   </div>
+   <div class="form-row-4">
+     <div class="form-group"><label>KM Aprox.</label>
+       <input type="text" inputmode="numeric" id="f_km" placeholder="45.000" oninput="fmtNumInput(this)"></div>
+     <div class="form-group"><label>N° Dueños Anteriores</label>
+       <select id="f_duenos">
+         <option>1</option><option>2</option><option>3</option>
+         <option>4</option><option>5+</option>
+       </select></div>
+   </div>
+
+   <!-- Precios INTERNO -->
+   <div id="preciosInterno">
+    <div class="form-section">PRECIOS (CLP $)</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Precio Compra *</label>
+        <input type="text" inputmode="numeric" id="f_compra" placeholder="28.000.000" oninput="fmtNumInput(this);recalcModal()"></div>
+      <div class="form-group"><label>P. Colaboradores</label>
+        <input type="text" inputmode="numeric" id="f_colab" placeholder="31.990.000" oninput="fmtNumInput(this);recalcModal()"></div>
+      <div class="form-group"><label>Valor de Mercado</label>
+        <input type="text" inputmode="numeric" id="f_mercado" placeholder="34.000.000" oninput="fmtNumInput(this);recalcModal()"></div>
+      <div class="form-group"><label>P. Venta Final</label>
+        <input type="text" inputmode="numeric" id="f_pventa" placeholder="Al venderse" oninput="fmtNumInput(this)"></div>
+    </div>
+   </div>
+
+   <!-- Precios CONSIGNACIÓN -->
+   <div id="preciosConsig" style="display:none">
+    <div class="form-section" style="background:#3A2E0033;color:#F1C40F">PRECIOS Y COMISIÓN (CLP $)</div>
+    <div class="form-row-4">
+      <div class="form-group"><label>Precio Pedido Propietario *</label>
+        <input type="text" inputmode="numeric" id="f_pedido" placeholder="14.000.000" oninput="fmtNumInput(this);recalcModal()"></div>
+      <div class="form-group"><label>Precio Mínimo Aceptable</label>
+        <input type="text" inputmode="numeric" id="f_minimo" placeholder="13.000.000" oninput="fmtNumInput(this)"></div>
+      <div class="form-group"><label>Comisión %</label>
+        <input type="number" id="f_cpct" value="5.0" step="0.5"></div>
+      <div class="form-group"><label>P. Venta Final</label>
+        <input type="text" inputmode="numeric" id="f_pventa_c" placeholder="Al venderse" oninput="fmtNumInput(this)"></div>
+    </div>
+   </div>
+
+   <div class="form-section">GESTIÓN Y ESTADO</div>
+   <div class="form-row-4">
+     <div class="form-group"><label>Estado *</label>
+       <select id="f_estado">
+         {% for e in config.ESTADOS %}<option>{{ e }}</option>{% endfor %}
+       </select></div>
+     <div class="form-group"><label>Fecha Ingreso</label>
+       <input type="date" id="f_fingreso"></div>
+     <div class="form-group"><label>Fecha Publicación</label>
+       <input type="date" id="f_fpub"></div>
+     <div class="form-group"><label>Fecha Venta</label>
+       <input type="date" id="f_fventa"></div>
+   </div>
+   <div class="form-group" style="margin-top:8px">
+     <label>Notas rápidas</label>
+     <textarea id="f_notas" rows="2" placeholder="Observaciones rápidas..."></textarea>
+   </div>
+
+   <!-- Documentos del vehículo -->
+   <div class="form-section" style="margin-top:12px">DOCUMENTOS (vencimiento)</div>
+   <div class="form-row-4">
+     <div class="form-group">
+       <label>Permiso Circulación vence</label>
+       <input type="date" id="f_permiso_circ_vence">
+     </div>
+     <div class="form-group">
+       <label>SOAP vence</label>
+       <input type="date" id="f_soap_vence">
+     </div>
+     <div class="form-group">
+       <label>Revisión Técnica vence</label>
+       <input type="date" id="f_revision_tec_vence">
+     </div>
+   </div>
+   </div><!-- /tabDatos -->
+
+   <!-- ── TAB FOTOS ──────────────────────────────────────────────────────── -->
+   <div id="tabFotos" style="display:none">
+     <label id="dropZone" style="display:block;background:var(--card2);border:2px dashed var(--border2);border-radius:12px;padding:20px;text-align:center;cursor:pointer" ondragover="event.preventDefault()" ondrop="handleDrop(event)" onclick="document.getElementById('fotoInput').click()">
+       <input type="file" id="fotoInput" accept="image/*" multiple style="display:none" onchange="handleFotoInput(this)">
+       <div style="font-size:28px;margin-bottom:6px">📸</div>
+       <div style="font-size:12px;font-weight:600;color:var(--white)">Arrastra fotos o haz clic</div>
+       <div style="font-size:10px;color:var(--gray3);margin-top:3px">JPG, PNG, WEBP · comprime automático</div>
+     </label>
+     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+       <button class="btn btn-secondary" style="font-size:10px;padding:4px 12px" onclick="downloadFotosZIP()">⬇️ Descargar ZIP</button>
+       <button class="btn btn-secondary" style="font-size:10px;padding:4px 12px" onclick="aplicarMarcaAgua()">💧 Marca de agua (todas)</button>
+     </div>
+     <div id="fotosGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px"></div>
+     <div id="fotosMsg"  style="font-size:11px;color:var(--gray3);text-align:center;padding:16px">Sin fotos — sube las primeras arriba</div>
+     <div id="fotosDragHint" style="display:none;font-size:10px;color:var(--gray3);text-align:center;margin-top:4px">↕ Arrastra para reordenar · 🎯 Posición · ⭐ Portada</div>
+   </div>
+
+   <!-- ── TAB PUBLICACIÓN ────────────────────────────────────────────────── -->
+   <div id="tabPub" style="display:none">
+     <div class="form-row-4" style="margin-bottom:12px">
+       <div class="form-group col-2">
+         <label>Precio mostrado al público (CLP $)</label>
+         <input type="text" inputmode="numeric" id="f_precio_vitrina" placeholder="Ej: 24.990.000" oninput="fmtNumInput(this)">
+         <small style="font-size:10px;color:var(--gray3);margin-top:2px;display:block">Si vacío, usa precio colaboradores/pedido automáticamente</small>
+       </div>
+     </div>
+     <div class="form-group">
+       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+         <label style="margin:0">Descripción pública (visible en vitrina)</label>
+         <div style="display:flex;gap:6px">
+           <button class="btn btn-secondary" style="font-size:10px;padding:3px 10px" onclick="generarDescripcionIA('profesional')">✨ IA Profesional</button>
+           <button class="btn btn-secondary" style="font-size:10px;padding:3px 10px" onclick="generarDescripcionIA('emotivo')">❤️ IA Emotivo</button>
+         </div>
+       </div>
+       <div id="iaDescStatus" style="font-size:10px;color:var(--gray2);margin-bottom:4px;min-height:14px"></div>
+       <textarea id="f_desc_publica" rows="9" placeholder="Descripción de venta para el cliente..."></textarea>
+     </div>
+
+     <!-- Cotizador PDF -->
+     <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border1)">
+       <div style="font-size:11px;font-weight:600;color:var(--gray2);margin-bottom:8px">📄 Cotización para cliente</div>
+       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+         <div class="form-group" style="margin:0;flex:1;min-width:120px">
+           <label style="font-size:10px">Precio a cotizar ($)</label>
+           <input type="text" inputmode="numeric" id="cot_precio" placeholder="Usar precio vitrina" oninput="fmtNumInput(this)">
+         </div>
+         <div class="form-group" style="margin:0">
+           <label style="font-size:10px">Validez (días)</label>
+           <input type="number" id="cot_validez" value="7" min="1" max="30" style="width:80px">
+         </div>
+         <button class="btn btn-secondary" style="font-size:11px;padding:7px 14px" onclick="abrirCotizacion()">
+           📄 Generar Cotización
+         </button>
+       </div>
+     </div>
+
+     <!-- Precio de mercado + IA -->
+     <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border1)">
+       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+         <div style="font-size:11px;font-weight:600;color:var(--gray2)">📊 Precio de mercado</div>
+         <div style="display:flex;gap:6px">
+           <button class="btn btn-secondary" style="font-size:10px;padding:3px 10px" onclick="buscarPrecioMercado()">
+             🔍 Chileautos
+           </button>
+           <button class="btn btn-secondary" style="font-size:10px;padding:3px 10px;color:var(--blue)" onclick="pedirPrecioIA()">
+             🤖 Precio IA
+           </button>
+         </div>
+       </div>
+       <div id="precioMercadoPanel" style="display:none"></div>
+       <div id="precioIAPanel" style="display:none;margin-top:8px"></div>
+     </div>
+
+     <!-- Solo para consignaciones: regenerar contrato y enviar email -->
+     <div id="consigAcciones" style="display:none;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border1)">
+       <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:10px">📋 Acciones de consignación</div>
+       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+         <div class="form-group">
+           <label>Nuevo precio publicación ($)</label>
+           <input type="text" inputmode="numeric" id="regen_precio" placeholder="Mismo precio actual" oninput="fmtNumInput(this)">
+         </div>
+         <div class="form-group">
+           <label>Nueva comisión (%)</label>
+           <input type="number" id="regen_comision" placeholder="5" min="1" max="30" step="0.5">
+         </div>
+       </div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap">
+         <button class="btn" style="background:#F39C12;color:#000;font-size:11px;padding:7px 14px;font-weight:700" onclick="regenerarContrato()">
+           📄 Regenerar Contrato
+         </button>
+         <button class="btn btn-secondary" style="font-size:11px;padding:7px 14px" onclick="enviarEmailContrato()">
+           📧 Enviar contrato al cliente
+         </button>
+       </div>
+       <div id="emailStatus" style="font-size:10px;margin-top:6px;min-height:14px"></div>
+     </div>
+   </div>
+
+   <!-- ── TAB RENTABILIDAD ──────────────────────────────────────────────── -->
+   <div id="tabRentabilidad" style="display:none">
+     <div id="pnlLoading" style="text-align:center;padding:32px;color:var(--gray3);font-size:13px">Cargando datos...</div>
+     <div id="pnlContent" style="display:none">
+       <!-- Resumen visual -->
+       <div id="pnlResumen" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px"></div>
+       <!-- Gauge ganancia -->
+       <div id="pnlGauge" style="background:var(--card2);border-radius:10px;padding:14px 16px;margin-bottom:14px"></div>
+       <!-- Transacciones vinculadas -->
+       <div style="font-size:11px;font-weight:700;color:var(--gray2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Transacciones vinculadas</div>
+       <div id="pnlTransacciones" style="font-size:11px;color:var(--gray3)">Sin transacciones vinculadas.</div>
+       <div style="margin-top:10px;font-size:10px;color:var(--gray3)">
+         Para vincular una transacción de Finanzas a este vehículo, usa el campo "Vehículo vinculado" al crear/editar la transacción.
+       </div>
+     </div>
+   </div>
+
+   <!-- ── TAB HISTORIAL ──────────────────────────────────────────────────── -->
+   <div id="tabHistorial" style="display:none">
+     <div id="historialLoading" style="text-align:center;padding:32px;color:var(--gray3);font-size:13px">Cargando historial...</div>
+     <div id="historialContent" style="display:none">
+       <div id="historialList"></div>
+     </div>
+   </div>
+
+   <!-- ── TAB NOTAS INTERNAS ─────────────────────────────────────────────── -->
+   <div id="tabNotas" style="display:none">
+
+     <!-- Banner confidencial -->
+     <div style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#2d0a08,#3d1210);border:1px solid #7b2020;border-radius:10px;padding:10px 14px;margin-bottom:14px">
+       <span style="font-size:20px">🔒</span>
+       <div>
+         <div style="font-size:11px;font-weight:700;color:#ff6b6b;letter-spacing:.03em">CONFIDENCIAL — SOLO EQUIPO INTERNO</div>
+         <div style="font-size:10px;color:#c0504050;margin-top:1px">Nunca visible al cliente · No aparece en contratos ni cotizaciones</div>
+       </div>
+     </div>
+
+     <!-- Chips de inserción rápida -->
+     <div style="margin-bottom:10px">
+       <div style="font-size:9px;color:var(--gray3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Insertar categoría</div>
+       <div style="display:flex;flex-wrap:wrap;gap:5px">
+         <button class="nota-chip" onclick="insertNotaChip('💰 PRECIO MÍNIMO: ')">💰 Precio mínimo</button>
+         <button class="nota-chip" onclick="insertNotaChip('⚠️ DEFECTO: ')">⚠️ Defecto</button>
+         <button class="nota-chip" onclick="insertNotaChip('🤝 NEGOCIACIÓN: ')">🤝 Negociación</button>
+         <button class="nota-chip" onclick="insertNotaChip('👤 PROPIETARIO: ')">👤 Propietario</button>
+         <button class="nota-chip" onclick="insertNotaChip('🔧 MECÁNICA: ')">🔧 Mecánica</button>
+         <button class="nota-chip" onclick="insertNotaChip('📋 HISTORIAL: ')">📋 Historial</button>
+         <button class="nota-chip" onclick="insertNotaChip('📌 PENDIENTE: ')">📌 Pendiente</button>
+       </div>
+     </div>
+
+     <!-- Textarea con wrapper -->
+     <div style="position:relative">
+       <textarea id="f_notas_internas" rows="11"
+         placeholder="💰 PRECIO MÍNIMO: $XX.XXX.XXX&#10;⚠️ DEFECTO: Rayón en guardabarros trasero derecho&#10;🤝 NEGOCIACIÓN: Propietario acepta bajar hasta $X..."
+         oninput="updateNotasCount(this)"
+         style="width:100%;resize:vertical;font-family:monospace;font-size:12px;line-height:1.7;
+                background:var(--card2);border:1px solid var(--border2);border-radius:10px;
+                padding:12px 14px;color:var(--text1);
+                border-top:3px solid #7b2020"></textarea>
+       <div id="notasCharCount" style="position:absolute;bottom:10px;right:12px;font-size:9px;color:var(--gray3);pointer-events:none">0 caracteres</div>
+     </div>
+
+   </div>
+
+   <!-- ── TAB VOZ IA ────────────────────────────────────────────────────────── -->
+   <div id="tabVoz" style="display:none">
+
+     <!-- Botón grabar -->
+     <div style="text-align:center;margin-bottom:18px">
+       <button id="vozBtn" onclick="toggleRecording()"
+         style="width:100px;height:100px;border-radius:50%;border:none;cursor:pointer;
+                background:var(--card2);border:3px solid var(--border2);font-size:32px;
+                display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+                transition:all .2s" id="vozBtn">
+         <span id="vozIcon">🎙️</span>
+         <span id="vozBtnLabel" style="font-size:9px;font-weight:700;color:var(--gray3)">GRABAR</span>
+       </button>
+       <div id="vozTimer" style="font-size:24px;font-weight:700;color:var(--blue);margin-top:10px;display:none">00:00</div>
+       <div id="vozStatus" style="font-size:11px;color:var(--gray3);margin-top:6px">
+         Presiona para grabar una nota de voz sobre este vehículo
+       </div>
+     </div>
+
+     <!-- Texto en vivo mientras graba -->
+     <div id="vozLiveText" style="display:none;font-size:12px;color:var(--gray2);
+          background:var(--card2);border-radius:10px;padding:10px 14px;margin-bottom:12px;
+          line-height:1.6;min-height:36px;border-left:3px solid #e74c3c">
+     </div>
+
+     <!-- Estado de procesamiento -->
+     <div id="vozProcesando" style="display:none;text-align:center;padding:12px;
+          background:var(--card2);border-radius:10px;margin-bottom:14px;font-size:12px;color:var(--blue)">
+       🤖 Claude analizando y resumiendo...
+     </div>
+
+     <!-- Lista notas guardadas -->
+     <div id="vozNotesList" style="display:flex;flex-direction:column;gap:10px">
+       <div style="color:var(--gray3);font-size:12px;text-align:center;padding:16px">
+         Sin notas de voz para este vehículo
+       </div>
+     </div>
+
+   </div>
+
+  </div><!-- modal-body -->
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
+    <button class="btn btn-primary" onclick="saveVehicle()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+<!-- ══ Modal Venta Rápida ══ -->
+<div class="modal-overlay" id="modalSell">
+ <div class="modal-box modal-sm" onclick="event.stopPropagation()">
+  <div class="modal-header" style="border-color:#2ECC71">
+    <span style="color:#2ECC71">✅ Registrar Venta</span>
+    <button class="modal-close" onclick="closeSell()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div id="sellRef" class="sell-ref"></div>
+    <div class="form-group">
+      <label>Precio de Venta Final *</label>
+      <input type="text" inputmode="numeric" id="s_precio" placeholder="Ej: 32.000.000" oninput="fmtNumInput(this);calcGanancia()">
+    </div>
+    <div class="form-group">
+      <label>Fecha de Venta</label>
+      <input type="date" id="s_fecha">
+    </div>
+    <div id="sellGanancia" class="sell-ganancia"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeSell()">Cancelar</button>
+    <button class="btn btn-success" onclick="confirmSell()">✅ Confirmar Venta</button>
+  </div>
+ </div>
+</div>
+
+<!-- ══ Modal Notificar Propietario ══ -->
+<div class="modal-overlay" id="modalNotify">
+ <div class="modal-box modal-sm" onclick="event.stopPropagation()" style="max-width:560px">
+  <div class="modal-header" style="border-color:#9B59B6">
+    <span style="color:#9B59B6">📲 Notificar Propietario — Oferta de Cliente</span>
+    <button class="modal-close" onclick="closeNotify()">✕</button>
+  </div>
+  <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+
+    <!-- Info del vehículo -->
+    <div id="notifyVehicleInfo" style="background:var(--card2);border-radius:10px;padding:12px;font-size:11px;color:var(--gray2)"></div>
+
+    <!-- Monto de oferta -->
+    <div class="form-group">
+      <label style="color:var(--gray1);font-size:11px">💵 Monto de la Oferta del Cliente (CLP $) *</label>
+      <input type="number" id="n_monto" placeholder="Ej: 12500000"
+             oninput="fmtNumInput(this);previewMensaje()" style="font-size:14px;font-weight:600" inputmode="numeric" type="text"
+    </div>
+
+    <!-- Nombre vendedor opcional -->
+    <div class="form-group">
+      <label style="color:var(--gray1);font-size:11px">👤 Ejecutivo que envía (opcional)</label>
+      <input type="text" id="n_vendedor" placeholder="Ej: Ignacio de VTA"
+             oninput="previewMensaje()">
+    </div>
+
+    <!-- Preview del mensaje -->
+    <div>
+      <div style="font-size:10px;color:var(--gray3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Vista previa del mensaje</div>
+      <div id="msgPreview" style="
+        background:#0B3B2D;border:1px solid #25D366;border-radius:12px;
+        padding:14px;font-size:12px;line-height:1.7;color:#E8F5E9;
+        white-space:pre-wrap;max-height:220px;overflow-y:auto;
+        font-family:-apple-system,sans-serif">
+        Ingresa el monto de la oferta para previsualizar el mensaje...
+      </div>
+    </div>
+
+    <!-- Número destino -->
+    <div class="form-group">
+      <label style="color:var(--gray1);font-size:11px">📱 Número de WhatsApp del Propietario</label>
+      <input type="text" id="n_telefono" placeholder="+56912345678"
+             style="font-family:monospace">
+      <small style="color:var(--gray3);font-size:10px">Formato: +569XXXXXXXX · Se toma del registro automáticamente</small>
+    </div>
+
+  </div>
+  <div class="modal-footer" style="gap:8px">
+    <button class="btn btn-secondary" onclick="closeNotify()">✕ Cancelar</button>
+    <button class="btn" style="background:#0D3B22;color:#25D366;font-weight:700"
+            onclick="copiarMensaje()">📋 Copiar mensaje</button>
+    <button class="btn" style="background:#128C7E;color:#fff;font-weight:700"
+            onclick="enviarNotificacion()">📲 Enviar por WhatsApp</button>
+  </div>
+ </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.nota-chip {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: var(--gray2);
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+}
+.nota-chip:hover {
+  background: #7b202033;
+  border-color: #7b2020;
+  color: #ff8080;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MODELOS_SUGERIDOS = {{ config.MODELOS_SUGERIDOS | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/inventario.js') }}?v=4"></script>
+<script>
+function insertNotaChip(text) {
+  const ta = document.getElementById('f_notas_internas');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const val   = ta.value;
+  const prefix = (start > 0 && val[start - 1] !== '\n') ? '\n' : '';
+  ta.value = val.slice(0, start) + prefix + text + val.slice(end);
+  const pos = start + prefix.length + text.length;
+  ta.setSelectionRange(pos, pos);
+  ta.focus();
+  updateNotasCount(ta);
+}
+function updateNotasCount(ta) {
+  const el = document.getElementById('notasCharCount');
+  if (el) el.textContent = ta.value.length + ' caracteres';
+}
+
+// ── Búsqueda de patente (start → poll) ──────────────────────────────────────
+function _setSelect(id, val) {
+  if (!val) return false;
+  const sel = document.getElementById(id);
+  if (!sel) return false;
+  const v = val.toUpperCase();
+  for (const opt of sel.options) {
+    const o = opt.value.toUpperCase();
+    if (o === v || o.includes(v) || v.includes(o)) { sel.value = opt.value; return true; }
+  }
+  return false;
+}
+function _setInput(id, val) {
+  if (!val) return;
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function _aplicarDatosPatente(d) {
+  if (_setSelect('f_marca', d.marca)) updateModelos();
+  _setInput('f_modelo',    d.modelo);
+  _setSelect('f_anio',     d.anio);
+  _setInput('f_color',     d.color);
+  _setInput('f_chasis',    d.chasis);
+  _setInput('f_motor',     d.motor);
+  _setSelect('f_tipo',     d.tipo);
+  _setSelect('f_combustible', d.combustible);
+  _setSelect('f_transmision', d.transmision);
+  _setSelect('f_traccion', d.traccion);
+  const resumen = ['marca','modelo','anio','color'].filter(k => d[k]).map(k => d[k]);
+  toast('✓ ' + (resumen.length ? resumen.join(' · ') : 'Datos cargados'));
+}
+
+async function buscarPatente() {
+  const patente = document.getElementById('f_patente').value.trim().toUpperCase();
+  if (!patente) { toast('Ingresa una patente primero', 'error'); return; }
+
+  const btn = document.getElementById('btn-buscar-patente');
+  btn.disabled = true;
+  btn.textContent = '⏳ Iniciando…';
+
+  try {
+    // 1. Iniciar job en background (responde inmediatamente)
+    const start = await api('/api/buscar-patente', 'POST', { patente });
+    if (!start.ok) { toast(start.error || 'Error al iniciar búsqueda', 'error'); return; }
+
+    const jobId = start.job_id;
+    let elapsed = 0;
+
+    // 2. Polling cada 3 segundos hasta resultado o timeout (90s)
+    while (elapsed < 90) {
+      await new Promise(r => setTimeout(r, 3000));
+      elapsed += 3;
+      btn.textContent = `⏳ Buscando… ${elapsed}s`;
+
+      const poll = await api(`/api/buscar-patente/${jobId}`);
+      if (!poll.ok) { toast(poll.error || 'Error en la búsqueda', 'error'); return; }
+      if (poll.status === 'done') { _aplicarDatosPatente(poll.datos); return; }
+      // status === 'pending' → seguir esperando
+    }
+    toast('Tiempo agotado. Intenta de nuevo.', 'error');
+
+  } catch (e) {
+    console.error('buscarPatente:', e);
+    toast('Error de conexión: ' + (e.message || ''), 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '🔍 Buscar';
+  }
+}
+</script>
+{% endblock %}

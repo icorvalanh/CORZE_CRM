@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">⚙️ Configuración</h1>
+</div>
+
+<!-- Tabs -->
+<div class="toolbar" style="margin-bottom:14px">
+  <div class="toolbar-left" style="gap:6px">
+    <button class="tipo-btn active" id="tab_metas"    onclick="switchTab('metas',this)">🎯 Metas de ventas</button>
+    <button class="tipo-btn"        id="tab_costos"   onclick="switchTab('costos',this)">📋 Costos fijos</button>
+    <button class="tipo-btn"        id="tab_wa"       onclick="switchTab('wa',this)">💬 Templates WhatsApp</button>
+    <button class="tipo-btn"        id="tab_ia"       onclick="switchTab('ia',this)">🤖 Inteligencia Artificial</button>
+  </div>
+</div>
+
+<!-- ══ TAB: METAS ══════════════════════════════════════════════════════════ -->
+<div id="panelMetas">
+
+  <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+
+    <!-- Form -->
+    <div class="chart-card" style="padding:20px">
+      <div class="chart-title" style="margin-bottom:16px">Definir meta mensual</div>
+
+      <div class="form-group">
+        <label>Mes</label>
+        <input type="month" id="meta_mes" style="width:100%">
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Meta de unidades vendidas</label>
+        <input type="number" id="meta_unidades" placeholder="Ej: 10" min="0" style="width:100%">
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Meta de ingresos ($)</label>
+        <input type="text" id="meta_ingresos_input" placeholder="$0" oninput="fmtMetaIngresos(this)" style="width:100%">
+        <input type="hidden" id="meta_ingresos_val">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="guardarMeta()">
+        💾 Guardar meta
+      </button>
+    </div>
+
+    <!-- Progreso mes actual -->
+    <div class="chart-card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="chart-title" style="margin:0">Progreso mes actual</div>
+        <span id="metaMesLabel" style="font-size:11px;color:var(--gray3)"></span>
+      </div>
+
+      <div id="metaProgressPanel">
+        <div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">
+          Cargando...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══ TAB: COSTOS FIJOS ════════════════════════════════════════════════════ -->
+<div id="panelCostos" style="display:none">
+
+  <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+
+    <!-- Form agregar -->
+    <div class="chart-card" style="padding:20px">
+      <div class="chart-title" style="margin-bottom:16px">Agregar costo fijo</div>
+      <div class="form-group">
+        <label>Nombre</label>
+        <input id="cf_nombre" placeholder="Ej: Arriendo local">
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Categoría</label>
+        <select id="cf_cat">
+          <option>Arriendo / Oficina</option>
+          <option>Servicios básicos</option>
+          <option>Sueldo / Personal</option>
+          <option>Publicidad</option>
+          <option>Software / Herramientas</option>
+          <option>Contabilidad / Legal</option>
+          <option>Combustible</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Monto mensual ($)</label>
+        <input type="text" id="cf_monto" placeholder="$0" oninput="fmtCf(this)">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="agregarCosto()">
+        ➕ Agregar
+      </button>
+    </div>
+
+    <!-- Lista -->
+    <div class="chart-card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="chart-title" style="margin:0">Costos fijos mensuales</div>
+        <div style="font-size:12px;color:var(--gray2)">
+          Total: <strong id="cfTotal" style="color:var(--blue)">$0</strong>
+        </div>
+      </div>
+      <div id="cfLista" style="display:flex;flex-direction:column;gap:8px">
+        <div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">Cargando...</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══ TAB: WHATSAPP TEMPLATES ══════════════════════════════════════════════ -->
+<div id="panelWA" style="display:none">
+
+  <div style="display:grid;grid-template-columns:420px 1fr;gap:16px;align-items:start">
+
+    <!-- Form -->
+    <div class="chart-card" style="padding:20px">
+      <div class="chart-title" style="margin-bottom:4px">Crear template</div>
+      <div style="font-size:10px;color:var(--gray3);margin-bottom:14px">
+        Variables disponibles: <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{nombre}}</code>
+        <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{marca}}</code>
+        <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{modelo}}</code>
+        <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{anio}}</code>
+        <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{precio}}</code>
+        <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{fecha}}</code>
+        <code style="background:var(--card2);padding:2px 5px;border-radius:4px">{{hora}}</code>
+      </div>
+      <div class="form-group">
+        <label>Nombre del template</label>
+        <input id="wa_nombre" placeholder="Ej: Seguimiento inicial">
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Categoría</label>
+        <select id="wa_cat">
+          <option>Seguimiento</option>
+          <option>Confirmación de visita</option>
+          <option>Cotización</option>
+          <option>Post-venta</option>
+          <option>Oferta especial</option>
+          <option>Recordatorio</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Mensaje</label>
+        <textarea id="wa_mensaje" rows="7" placeholder="Hola {{nombre}}, te contacto de VTA Automotora..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="agregarTemplate()">
+        💾 Guardar template
+      </button>
+
+      <!-- Templates predeterminados -->
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border1)">
+        <div style="font-size:10px;color:var(--gray2);margin-bottom:8px;font-weight:600">CARGAR PLANTILLA BASE</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-secondary" style="font-size:10px;text-align:left;padding:6px 10px" onclick="cargarBase(0)">↓ Seguimiento inicial</button>
+          <button class="btn btn-secondary" style="font-size:10px;text-align:left;padding:6px 10px" onclick="cargarBase(1)">↓ Confirmación visita</button>
+          <button class="btn btn-secondary" style="font-size:10px;text-align:left;padding:6px 10px" onclick="cargarBase(2)">↓ Post-visita</button>
+          <button class="btn btn-secondary" style="font-size:10px;text-align:left;padding:6px 10px" onclick="cargarBase(3)">↓ Felicitación post-venta</button>
+          <button class="btn btn-secondary" style="font-size:10px;text-align:left;padding:6px 10px" onclick="cargarBase(4)">↓ Oferta especial</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de templates -->
+    <div class="chart-card" style="padding:20px">
+      <div class="chart-title" style="margin-bottom:14px">Templates guardados</div>
+      <div id="waLista" style="display:flex;flex-direction:column;gap:10px">
+        <div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">Cargando...</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══ TAB: IA ════════════════════════════════════════════════════════════════ -->
+<div id="panelIa" style="display:none">
+  <div style="max-width:560px">
+    <div class="chart-card" style="padding:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div class="chart-title" style="margin:0">🤖 Claude AI — Configuración</div>
+        <span style="font-size:9px;background:#5436DA22;color:#9b8afb;border:1px solid #5436DA44;border-radius:6px;padding:2px 8px;font-weight:700">Anthropic</span>
+      </div>
+      <div style="font-size:11px;color:var(--gray3);margin-bottom:20px">
+        Usada para: descripción de vehículos, precio recomendado y resumen de notas de voz.<br>
+        Obtén tu API key en <strong style="color:var(--text1)">console.anthropic.com</strong> → API Keys → Create Key.<br>
+        <span style="color:var(--gray3)">Primer uso incluye $5 USD de crédito gratis. Haiku cuesta ~$0.80/1M tokens.</span>
+      </div>
+
+      <div id="iaKeyStatus" style="margin-bottom:14px;font-size:11px;color:var(--gray3)">Cargando...</div>
+
+      <div class="form-group">
+        <label>API Key de Anthropic</label>
+        <div style="display:flex;gap:8px">
+          <input type="password" id="claudeKeyInput" placeholder="sk-ant-..." style="flex:1;font-family:monospace">
+          <button class="btn btn-secondary" onclick="toggleKeyVisibility()" style="padding:0 12px">👁️</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary" onclick="guardarClaudeKey()">💾 Guardar API key</button>
+        <button class="btn btn-secondary" onclick="testClaude()">🔌 Probar conexión</button>
+      </div>
+      <div id="iaTestResult" style="margin-top:10px;font-size:11px;display:none"></div>
+    </div>
+
+    <div class="chart-card" style="padding:20px;margin-top:14px">
+      <div class="chart-title" style="margin-bottom:12px">Funcionalidades IA disponibles</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px;background:var(--card2);border-radius:8px">
+          <span style="font-size:20px">✍️</span>
+          <div>
+            <div style="font-size:12px;font-weight:600">Descripción de vehículos</div>
+            <div style="font-size:10px;color:var(--gray3)">Genera textos de venta profesionales o emotivos. En la tab Publicación del inventario.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px;background:var(--card2);border-radius:8px">
+          <span style="font-size:20px">💰</span>
+          <div>
+            <div style="font-size:12px;font-weight:600">Precio recomendado</div>
+            <div style="font-size:10px;color:var(--gray3)">Análisis de precio basado en características del vehículo y mercado chileno. En la tab Publicación.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px;background:var(--card2);border-radius:8px">
+          <span style="font-size:20px">🎙️</span>
+          <div>
+            <div style="font-size:12px;font-weight:600">Notas de voz inteligentes</div>
+            <div style="font-size:10px;color:var(--gray3)">El browser transcribe tu voz en tiempo real, Claude genera el resumen y detecta tareas. En la tab Voz IA.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.progress-bar-wrap { background:var(--card2);border-radius:8px;height:12px;overflow:hidden;margin:6px 0 }
+.progress-bar-fill { height:100%;border-radius:8px;transition:width .4s ease }
+.meta-stat { display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px }
+.meta-label { font-size:10px;color:var(--gray3);text-transform:uppercase;letter-spacing:.04em }
+.meta-val { font-size:20px;font-weight:800 }
+.meta-pct { font-size:11px;font-weight:700 }
+.cf-item { display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border-radius:10px;border:1px solid var(--border2) }
+.wa-card { padding:14px 16px;background:var(--card2);border-radius:10px;border:1px solid var(--border2) }
+.wa-badge { display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--card3);color:var(--blue);border:1px solid var(--border3) }
+</style>
+
+<script src="{{ url_for('static', filename='js/config.js') }}?v=2"></script>
+{% endblock %}

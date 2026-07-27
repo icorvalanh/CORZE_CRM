@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1 class="page-title">💰 Finanzas</h1>
+    <div style="display:flex;gap:6px">
+      <select id="filtMes" class="filter-select" style="font-size:11px;padding:5px 10px" onchange="cambiarMes(this.value)">
+        <option value="">Todo el tiempo</option>
+      </select>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" onclick="abrirReporte()" title="Reporte mensual PDF">📊 Reporte PDF</button>
+    <button class="btn btn-primary" onclick="openModal()">➕ Nueva transacción</button>
+  </div>
+</div>
+
+<!-- Resumen -->
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:6px" id="resumenStrip"></div>
+
+<!-- Costos fijos del mes -->
+<div id="costosFijosBar" style="display:none;margin-bottom:8px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap" id="costosFijosItems"></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="font-size:10px;color:var(--gray3)">
+        Balance operacional:
+        <strong id="balanceOp" style="font-size:13px;font-weight:800"></strong>
+      </div>
+      <a href="/admin/config#costos" style="font-size:9px;color:var(--blue)">Editar costos fijos →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs + Tabla -->
+<div class="toolbar" style="margin-top:12px">
+  <div class="toolbar-left">
+    <button class="tipo-btn active" id="tab_todos"         onclick="filtrarTipo('', this)">Todas</button>
+    <button class="tipo-btn"        id="tab_ingreso"       onclick="filtrarTipo('ingreso', this)">
+      <span class="dot" style="background:#27ae60"></span> Ingresos
+    </button>
+    <button class="tipo-btn"        id="tab_costo"         onclick="filtrarTipo('costo', this)">
+      <span class="dot" style="background:#e74c3c"></span> Costos
+    </button>
+    <button class="tipo-btn"        id="tab_transferencia" onclick="filtrarTipo('transferencia', this)">
+      <span class="dot" style="background:#3498db"></span> Transferencias
+    </button>
+  </div>
+  <div class="toolbar-right">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar descripción, ID, vehículo..."
+           oninput="buscar(this.value)">
+  </div>
+</div>
+
+<div class="table-wrap" style="margin-top:8px">
+  <table class="vta-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Fecha</th>
+        <th>Tipo</th>
+        <th>Categoría</th>
+        <th>Descripción</th>
+        <th>Monto</th>
+        <th>Usuario</th>
+        <th>Vehículo</th>
+        <th>Comp.</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaBody"></tbody>
+  </table>
+</div>
+
+<!-- ══════════════ MODAL ══════════════ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+ <div class="modal-box" style="max-width:600px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span id="modalTitle">Nueva transacción</span>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+
+    <!-- Tipo de transacción -->
+    <div class="form-section">TIPO DE TRANSACCIÓN</div>
+    <div style="display:flex;gap:10px;margin:10px 0 6px">
+      <label class="tipo-radio" id="tr_ingreso" style="flex:1;justify-content:center">
+        <input type="radio" name="f_tipo" value="ingreso" onchange="onTipoChange()" checked>
+        <span style="color:#27ae60;font-size:13px">💰 Ingreso</span>
+      </label>
+      <label class="tipo-radio" id="tr_costo" style="flex:1;justify-content:center">
+        <input type="radio" name="f_tipo" value="costo" onchange="onTipoChange()">
+        <span style="color:#e74c3c;font-size:13px">💸 Costo</span>
+      </label>
+      <label class="tipo-radio" id="tr_transferencia" style="flex:1;justify-content:center">
+        <input type="radio" name="f_tipo" value="transferencia" onchange="onTipoChange()">
+        <span style="color:#3498db;font-size:13px">🏦 Transferencia</span>
+      </label>
+    </div>
+
+    <!-- Detalles -->
+    <div class="form-section">DETALLES</div>
+    <div class="form-row-4">
+      <div class="form-group col-2">
+        <label>Descripción *</label>
+        <input id="f_descripcion" placeholder="Ej: Venta Toyota Corolla 2020">
+      </div>
+      <div class="form-group">
+        <label>Monto CLP *</label>
+        <input id="f_monto" type="text" placeholder="$0" oninput="fmtMonto(this)">
+      </div>
+      <div class="form-group">
+        <label>Categoría *</label>
+        <select id="f_categoria"></select>
+      </div>
+    </div>
+    <div class="form-row-4">
+      <div class="form-group">
+        <label>Fecha *</label>
+        <input id="f_fecha" type="date">
+      </div>
+      <div class="form-group">
+        <label>Registrado por</label>
+        <input id="f_usuario_display" disabled>
+      </div>
+    </div>
+
+    <!-- Vehículo -->
+    <div class="form-section">VEHÍCULO VINCULADO</div>
+    <div class="form-group">
+      <label>Buscar vehículo (opcional)</label>
+      <input id="f_vehiculo_search" placeholder="Buscar patente o modelo..."
+             oninput="buscarVehiculo(this.value)" autocomplete="off">
+      <div id="vehiculoSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;z-index:100;position:relative"></div>
+      <div id="vehiculoSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
+        <span id="vehiculoDesc"></span>
+        <button onclick="limpiarVehiculo()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
+      </div>
+      <input type="hidden" id="f_vehiculo_id">
+      <input type="hidden" id="f_vehiculo_desc">
+    </div>
+
+    <!-- Datos de transferencia (solo visible cuando tipo=transferencia) -->
+    <div class="form-section" id="secTransfer" style="display:none">DATOS DE TRANSFERENCIA</div>
+    <div id="transFields" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px">
+        <div>
+          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">🔴 Quien paga</div>
+          <div class="form-group" style="margin-bottom:6px">
+            <label>Nombre</label>
+            <input id="t_paga_nombre" placeholder="Nombre completo">
+          </div>
+          <div class="form-group" style="margin-bottom:6px">
+            <label>RUT</label>
+            <input id="t_paga_rut" placeholder="12.345.678-9">
+          </div>
+          <div class="form-group" style="margin-bottom:6px">
+            <label>Banco</label>
+            <input id="t_paga_banco" placeholder="Ej: Banco Chile, BCI...">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>N° Cuenta</label>
+            <input id="t_paga_cuenta" placeholder="Número de cuenta">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#27ae60;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">🟢 Quien recibe</div>
+          <div class="form-group" style="margin-bottom:6px">
+            <label>Nombre</label>
+            <input id="t_recibe_nombre" placeholder="Nombre completo">
+          </div>
+          <div class="form-group" style="margin-bottom:6px">
+            <label>RUT</label>
+            <input id="t_recibe_rut" placeholder="12.345.678-9">
+          </div>
+          <div class="form-group" style="margin-bottom:6px">
+            <label>Banco</label>
+            <input id="t_recibe_banco" placeholder="Ej: Banco Chile, BCI...">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>N° Cuenta</label>
+            <input id="t_recibe_cuenta" placeholder="Número de cuenta">
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:4px">
+        <label>N° Operación bancaria</label>
+        <input id="t_num_op" placeholder="Número de operación / referencia">
+      </div>
+    </div>
+
+    <!-- Notas y comprobante -->
+    <div class="form-section">NOTAS Y COMPROBANTE</div>
+    <div class="form-group">
+      <label>Notas internas</label>
+      <textarea id="f_notas" rows="2" placeholder="Contexto adicional, número de cuenta, etc."></textarea>
+    </div>
+    <div class="form-group" style="margin-top:6px">
+      <label>Comprobante (imagen o PDF)</label>
+      <label id="compZone" style="display:block;margin-top:4px;background:var(--card2);border:2px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s"
+             ondragover="event.preventDefault()" ondrop="dropComprobante(event)"
+             onclick="document.getElementById('compInput').click()">
+        <input type="file" id="compInput" accept="image/*,.pdf" style="display:none" onchange="uploadComprobante(this)">
+        <div id="compPreview" style="font-size:24px;margin-bottom:4px">📎</div>
+        <div style="font-size:11px;color:var(--gray3)">Arrastra o haz clic · JPG, PNG, PDF</div>
+      </label>
+    </div>
+    <input type="hidden" id="f_comprobante">
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarTransaccion()">💾 Guardar</button>
+  </div>
+ </div>
+</div>
+
+<!-- ── Modal comprobante full ── -->
+<div id="modalComp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;align-items:center;justify-content:center" onclick="document.getElementById('modalComp').style.display='none'">
+  <img id="modalCompImg" src="" style="max-width:92vw;max-height:92vh;border-radius:12px;object-fit:contain">
+</div>
+
+<style>
+.tipo-radio{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--card2);border:2px solid var(--border2);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.tipo-radio:has(input:checked){border-color:var(--blue);background:var(--card3);box-shadow:0 0 0 1px var(--blue)}
+.tipo-radio input{display:none}
+.tipo-radio:hover{border-color:var(--border3)}
+.fin-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px}
+.fin-ingreso{background:#0d3b22;color:#27ae60}
+.fin-costo{background:#3b0d0a;color:#e74c3c}
+.fin-transferencia{background:#0d1f3b;color:#3498db}
+.fin-monto-pos{color:#27ae60;font-weight:700}
+.fin-monto-neg{color:#e74c3c;font-weight:700}
+.fin-monto-neutral{color:#3498db;font-weight:700}
+</style>
+
+<script src="{{ url_for('static', filename='js/finanzas.js') }}?v=6"></script>
+{% endblock %}
