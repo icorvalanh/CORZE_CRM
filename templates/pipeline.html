@@ -61,6 +61,10 @@
   <div style="display:flex;gap:8px">
     <button class="btn btn-secondary" id="btnCheckEmail" onclick="revisarBandeja()" title="Revisar contacto@corze.cl ahora">📬 Revisar bandeja</button>
     <button class="btn btn-secondary" onclick="abrirModalEmail()">📧 Importar email</button>
+    <label class="btn btn-secondary" style="cursor:pointer" title="Subir archivo .eml de formulario web">
+      📎 Subir EML
+      <input type="file" id="emlFileInput" accept=".eml" style="display:none" onchange="importarEML(this)">
+    </label>
     <button class="btn btn-primary" onclick="abrirModalNuevoLead()">➕ Nuevo Lead</button>
   </div>
 </div>
@@ -537,6 +541,35 @@ async function importarEmail() {
     }
   } finally {
     btn.disabled = false; btn.textContent = '📥 Crear Lead';
+  }
+}
+
+// ── Importar EML ─────────────────────────────────────────────────────────────
+async function importarEML(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  showToast('⏳ Leyendo archivo EML...', 'info');
+  const fd = new FormData();
+  fd.append('archivo', file);
+
+  try {
+    const r = await fetch('/api/leads/importar-eml', { method:'POST', body: fd });
+    const d = await r.json();
+
+    if (!d.ok) {
+      showToast('❌ ' + (d.error || 'Error procesando EML'), 'error');
+      return;
+    }
+    if (d.duplicado) {
+      showToast('⚠️ ' + d.msg + ' (lead ya existía)', 'warning');
+    } else {
+      showToast(`✅ Lead creado: ${d.nombre} ${d.email ? '· '+d.email : ''}`, 'success');
+      setTimeout(() => location.reload(), 1200);
+    }
+  } catch(e) {
+    showToast('❌ Error subiendo EML', 'error');
   }
 }
 

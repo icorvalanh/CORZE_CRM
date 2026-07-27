@@ -3173,6 +3173,130 @@ def api_leads_importar_email():
     return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
 
 
+@app.route('/api/leads/importar-eml', methods=['POST'])
+@login_required
+def api_leads_importar_eml():
+    """Parsea un archivo .eml de formulario web y crea un lead."""
+    import email as _eml_std
+    from email.header import decode_header as _dh
+
+    if 'archivo' not in request.files:
+        return jsonify({'ok': False, 'error': 'No se recibió archivo'})
+    f = request.files['archivo']
+    if not f.filename.lower().endswith('.eml'):
+        return jsonify({'ok': False, 'error': 'El archivo debe ser .eml'})
+
+    raw = f.read()
+    msg = _eml_std.message_from_bytes(raw)
+
+    # Decodificar asunto
+    asunto_raw = msg.get('Subject', '')
+    try:
+        asunto = ' '.join(
+            (p.decode(enc or 'utf-8') if isinstance(p, bytes) else p)
+            for p, enc in _dh(asunto_raw)
+        )
+    except Exception:
+        asunto = asunto_raw
+
+    # Obtener body texto plano
+    body = ''
+    for part in msg.walk():
+        if part.get_content_type() == 'text/plain':
+            payload = part.get_payload(decode=True)
+            if payload:
+                charset = part.get_content_charset() or 'utf-8'
+                body = payload.decode(charset, errors='replace')
+                break
+
+    if not body:
+        return jsonify({'ok': False, 'error': 'No se encontró texto en el archivo EML'})
+
+    # Parsear pares pregunta/respuesta (bloques separados por líneas vacías)
+    nombre = apellido = email_lead = telefono = ciudad = region = ''
+    consumo_estimado = tipo_proyecto = ''
+
+    blocks = [b.strip() for b in body.split('\n\n') if b.strip()]
+    for block in blocks:
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        if len(lines) < 2:
+            continue
+        q = lines[0].lower()
+        a = lines[1].strip()
+        if not a:
+            continue
+
+        if 'nombre' in q:
+            parts = a.split()
+            nombre    = parts[0] if parts else a
+            apellido  = ' '.join(parts[1:]) if len(parts) > 1 else ''
+        elif 'email' in q or 'correo' in q:
+            email_lead = a
+        elif 'tel' in q or 'whatsapp' in q or 'phone' in q:
+            telefono   = a.replace(' ', '')
+        elif 'ciudad' in q or 'indica' in q:
+            ciudad     = a
+        elif 'regi' in q:
+            region     = a
+        elif 'pagas' in q or 'electricidad' in q or 'cuenta' in q:
+            consumo_estimado = a
+        elif 'donde' in q or 'dónde' in q or 'evaluar' in q or 'soluci' in q:
+            tipo_proyecto = ('Residencial'
+                             if any(w in a.lower() for w in ('casa', 'residencial', 'hogar'))
+                             else 'Comercial')
+
+    # Fallback: buscar email por regex si no se encontró en pares
+    if not email_lead:
+        import re
+        m = re.search(r'[\w\.\-]+@[\w\.\-]+\.\w+', body)
+        if m:
+            email_lead = m.group(0)
+
+    if not nombre:
+        nombre = 'Lead Web'
+
+    # Detectar duplicado por email
+    if email_lead:
+        existing = db.get_lead_by_email(email_lead)
+        if existing:
+            db.add_historial_lead(
+                existing['id'], 'EML importado (duplicado)',
+                session.get('usuario', ''),
+                f'Se subió un EML pero el email {email_lead} ya existe como lead.'
+            )
+            return jsonify({
+                'ok': True, 'duplicado': True,
+                'msg': f'El email ya existe: {existing.get("nombre","")} {existing.get("apellido","")}'.strip(),
+                'lead_id': existing['id'],
+            })
+
+    notas_parts = []
+    if tipo_proyecto:     notas_parts.append(f'Tipo proyecto: {tipo_proyecto}')
+    if consumo_estimado:  notas_parts.append(f'Consumo estimado: {consumo_estimado}')
+    if ciudad:            notas_parts.append(f'Ciudad: {ciudad}')
+    if region:            notas_parts.append(f'Región: {region}')
+    if asunto:            notas_parts.append(f'Asunto EML: {asunto}')
+
+    lead_data = {
+        'nombre':           nombre,
+        'apellido':         apellido,
+        'email':            email_lead,
+        'telefono':         telefono,
+        'ciudad':           ciudad,
+        'region':           region,
+        'tipo_proyecto':    tipo_proyecto,
+        'consumo_estimado': consumo_estimado,
+        'empresa':          '',
+        'origen':           'formulario_web',
+        'notas':            '\n'.join(notas_parts),
+        'etapa':            'Nuevo Lead',
+        'creado_por':       session.get('usuario', ''),
+    }
+    ok, err = db.add_lead(lead_data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err,
+                    'nombre': nombre, 'email': email_lead})
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  TRABAJADORES
 # ══════════════════════════════════════════════════════════════════════════════
