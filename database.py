@@ -1119,7 +1119,7 @@ class FirebaseDB:
             docs = list(col.stream())
             # Contar los del año actual
             year_prefix = f'CORZE-{year}-'
-            max_num = 0
+            max_num = 199  # arranca en 200 para no parecer empresa nueva
             for d in docs:
                 folio = (d.to_dict() or {}).get('folio', '')
                 if folio.startswith(year_prefix):

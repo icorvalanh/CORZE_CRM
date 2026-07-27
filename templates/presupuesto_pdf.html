@@ -5,7 +5,7 @@
 <title>Propuesta {{ p.folio }}</title>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',Arial,sans-serif; background:#fff; color:#1a1a1a; font-size:11px; line-height:1.45; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#fff; color:#1a1a1a; font-size:11px; line-height:1.45; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 .page { max-width:880px; margin:0 auto; padding:28px 36px; }
 
 /* ── HEADER ── */
@@ -90,11 +90,28 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 .sig-line { width:180px; border-top:1px solid #999; margin:48px 0 4px; }
 
 @media print {
+  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  body { margin:0; }
   .no-print { display:none !important; }
-  .page { padding:12px 20px; }
-  table.roi { font-size:8px; }
+  .page { max-width:100%; padding:10px 16px; margin:0; }
+  .header { page-break-inside:avoid; }
+  .meta-bar { page-break-inside:avoid; }
+  .re-grid { page-break-inside:avoid; }
+  .kpi-grid { page-break-inside:avoid; }
+  .eco-wrap { page-break-inside:avoid; }
+  .footer { page-break-inside:avoid; }
+  table.roi { font-size:8px; page-break-inside:avoid; }
   table.roi th, table.roi td { padding:2px 5px; }
+  table.eq { page-break-inside:avoid; }
+  svg { page-break-inside:avoid; }
+  .sec-bar { page-break-after:avoid; }
+  .mensaje { page-break-inside:avoid; }
+  .cond-box { page-break-inside:avoid; }
+  /* Forzar colores de fondo en backgrounds de secciones */
+  .meta-bar, .re-box, table.eq thead, table.roi thead,
+  .eco-row.total, .sec-bar { -webkit-print-color-adjust:exact !important; }
 }
+@page { size:A4; margin:12mm 10mm; }
 </style>
 </head>
 <body>
