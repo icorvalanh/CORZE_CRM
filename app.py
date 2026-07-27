@@ -2799,7 +2799,10 @@ def presupuesto_pdf(doc_id):
     logo_b64 = get_logo_b64()
     sd = p.get('solar_data') or {}
     solar_kpis = _calcular_solar_kpis(sd, p.get('total', 0)) if sd.get('potencia_kwp') else {}
-    resp = make_response(render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64, solar_kpis=solar_kpis))
+    equipos = _categorizar_items(p.get('items') or [])
+    resp = make_response(render_template('presupuesto_pdf.html',
+                                         p=p, logo_b64=logo_b64,
+                                         solar_kpis=solar_kpis, equipos=equipos))
     if request.args.get('download'):
         nombre = (p.get('nombre_cliente','') or 'cliente').replace(' ', '_')
         folio  = p.get('folio', doc_id[:8])
@@ -2828,7 +2831,9 @@ def api_presupuestos_enviar_email(doc_id):
     logo_b64 = get_logo_b64()
     sd_email = p.get('solar_data') or {}
     solar_kpis_email = _calcular_solar_kpis(sd_email, p.get('total', 0)) if sd_email.get('potencia_kwp') else {}
-    html_body = render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64, solar_kpis=solar_kpis_email)
+    equipos_email = _categorizar_items(p.get('items') or [])
+    html_body = render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64,
+                                 solar_kpis=solar_kpis_email, equipos=equipos_email)
 
     try:
         msg = MIMEMultipart('alternative')
@@ -2888,6 +2893,33 @@ _COMUNAS_REGION = {
     'LA SERENA':'Coquimbo','COQUIMBO':'Coquimbo','RANCAGUA':"O'Higgins",
     'TALCA':'Maule','CURICÓ':'Maule','VALDIVIA':'Los Ríos','ARICA':'Arica y Parinacota',
 }
+
+def _categorizar_items(items: list) -> dict:
+    """Separa ítems en paneles, inversores, baterías y otros."""
+    import re as _re
+    paneles, inversores, baterias, otros = [], [], [], []
+    for it in items:
+        n = (it.get('nombre') or '').lower()
+        if any(k in n for k in ['panel','bifacial','monocristalino','policristalino',
+                                  'jinko','longi','canadiansolar','trina','yingli']) \
+                or _re.search(r'\b\d{3,4}\s*w\b', n):
+            # Extraer potencia unitaria para mostrar en propuesta
+            m = _re.search(r'(\d{3,4})\s*[Ww]', it.get('nombre',''))
+            it = dict(it)
+            it['_spec'] = f"{m.group(1)} W c/u" if m else ''
+            paneles.append(it)
+        elif any(k in n for k in ['inversor','inverter','solis','growatt','huawei',
+                                   'fronius','solaredge','deye','goodwe','[inv']):
+            kw_m = _re.search(r'(\d+(?:[.,]\d+)?)\s*k[Ww]', it.get('nombre',''))
+            it = dict(it)
+            it['_spec'] = f"{kw_m.group(1)} kW" if kw_m else ''
+            inversores.append(it)
+        elif any(k in n for k in ['bater','battery','pylontech','byd','dyness','[bat']):
+            baterias.append(it)
+        else:
+            otros.append(it)
+    return {'paneles': paneles, 'inversores': inversores, 'baterias': baterias, 'otros': otros}
+
 
 def _calcular_solar_kpis(sd: dict, total_proyecto: float = 0) -> dict:
     """Recalcula KPIs solares a partir del solar_data guardado en un presupuesto."""

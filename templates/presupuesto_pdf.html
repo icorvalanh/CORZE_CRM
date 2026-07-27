@@ -6,134 +6,139 @@
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:'Segoe UI',Arial,sans-serif; background:#fff; color:#1a1a1a; font-size:11px; line-height:1.45; }
-.page { max-width:900px; margin:0 auto; padding:28px 36px; }
+.page { max-width:880px; margin:0 auto; padding:28px 36px; }
 
 /* ── HEADER ── */
-.header { display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:4px solid #1C3A6B; margin-bottom:18px; }
-.header-right { text-align:right; }
-.header-title { font-size:16px; font-weight:900; color:#1C3A6B; text-transform:uppercase; letter-spacing:.06em; }
-.header-sub { font-size:9px; color:#666; margin-top:3px; }
-.folio-badge { display:inline-block; background:#F5A623; color:#fff; border-radius:6px; padding:6px 14px; margin-top:8px; font-size:13px; font-weight:800; }
-.folio-badge small { display:block; font-size:8px; font-weight:400; opacity:.85; }
+.header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:14px; border-bottom:4px solid #1C3A6B; margin-bottom:0; }
+.hd-title { font-size:17px; font-weight:900; color:#1C3A6B; text-transform:uppercase; letter-spacing:.05em; line-height:1.2; }
+.hd-sub   { font-size:9.5px; color:#666; margin-top:4px; }
+.folio-wrap { text-align:right; margin-top:4px; }
+.folio-badge { display:inline-block; background:#F5A623; color:#fff; border-radius:5px; padding:5px 14px; font-size:14px; font-weight:800; }
+.folio-label { font-size:8px; font-weight:400; opacity:.85; display:block; }
 
-/* ── META ROW ── */
-.meta-row { display:flex; gap:24px; background:#f5f7fa; border-radius:6px; padding:8px 12px; margin-bottom:14px; font-size:10px; }
-.meta-item span { color:#888; margin-right:4px; }
-.meta-item strong { color:#1C3A6B; }
+/* ── META BAR ── */
+.meta-bar { display:flex; gap:0; background:#1C3A6B; color:#fff; border-radius:0 0 6px 6px; margin-bottom:16px; }
+.meta-cell { flex:1; padding:8px 12px; border-right:1px solid rgba(255,255,255,.15); }
+.meta-cell:last-child { border-right:none; }
+.meta-cell .mc-label { font-size:8px; opacity:.7; text-transform:uppercase; letter-spacing:.06em; }
+.meta-cell .mc-val   { font-size:12px; font-weight:700; margin-top:2px; }
 
 /* ── SECTION BARS ── */
-.sec-bar { background:#1C3A6B; color:#fff; font-size:10px; font-weight:700; padding:5px 10px; text-transform:uppercase; letter-spacing:.08em; margin:14px 0 8px; border-radius:3px; }
-.sec-bar.gold { background:#F5A623; }
+.sec-bar { background:#1C3A6B; color:#fff; font-size:9.5px; font-weight:700; padding:5px 10px; text-transform:uppercase; letter-spacing:.08em; margin:16px 0 8px; border-radius:3px; }
 
-/* ── PROPUESTA PARA grid ── */
-.client-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px 24px; margin-bottom:4px; }
-.fl { display:flex; align-items:baseline; gap:8px; padding:4px 0; border-bottom:1px dotted #ddd; }
-.fl .lbl { color:#888; font-size:10px; min-width:90px; flex-shrink:0; }
-.fl .val { font-weight:600; color:#1a1a1a; }
+/* ── PROPUESTA PARA ── */
+.pp-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; }
+.pp-row  { display:flex; align-items:baseline; gap:8px; padding:4px 0; border-bottom:1px dotted #ddd; }
+.pp-lbl  { color:#888; font-size:10px; min-width:100px; flex-shrink:0; }
+.pp-val  { font-weight:600; }
 
 /* ── MENSAJE ── */
-.mensaje-box { background:#fffbf0; border-left:3px solid #F5A623; padding:8px 12px; font-size:10px; color:#333; margin:4px 0 6px; border-radius:0 4px 4px 0; white-space:pre-line; }
+.mensaje { background:#fffbf0; border-left:3px solid #F5A623; padding:9px 13px; font-size:10.5px; color:#333; margin:6px 0; border-radius:0 5px 5px 0; line-height:1.55; }
 
 /* ── RESUMEN EJECUTIVO ── */
-.resumen-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:8px 0 4px; }
-.re-box { background:#1C3A6B; color:#fff; border-radius:8px; padding:12px 8px; text-align:center; }
-.re-box .rv { font-size:15px; font-weight:900; color:#F5A623; line-height:1; margin-bottom:5px; }
-.re-box .rl { font-size:8px; opacity:.75; text-transform:uppercase; letter-spacing:.04em; }
+.re-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:8px 0 4px; }
+.re-box  { background:#1C3A6B; color:#fff; border-radius:8px; padding:12px 6px; text-align:center; }
+.re-val  { font-size:14px; font-weight:900; color:#F5A623; line-height:1.1; }
+.re-sub  { font-size:7.5px; opacity:.75; text-transform:uppercase; letter-spacing:.04em; margin-top:5px; }
 
-/* ── ITEMS TABLE ── */
-table.items { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:4px; }
-table.items thead { background:#F5A623; color:#fff; }
-table.items th { padding:6px 8px; text-align:left; font-weight:700; }
-table.items th:nth-child(3), table.items td:nth-child(3) { text-align:center; }
-table.items th:nth-child(4), table.items td:nth-child(4),
-table.items th:nth-child(5), table.items td:nth-child(5) { text-align:right; }
-table.items td { padding:5px 8px; border-bottom:1px solid #eee; }
-table.items tbody tr:nth-child(even) { background:#f9f9f9; }
+/* ── EQUIPOS TABLE ── */
+table.eq { width:100%; border-collapse:collapse; font-size:10.5px; }
+table.eq thead { background:#F5A623; color:#fff; }
+table.eq th { padding:6px 10px; text-align:left; font-weight:700; font-size:10px; }
+table.eq th:nth-child(3),table.eq td:nth-child(3) { text-align:center; width:56px; }
+table.eq td { padding:6px 10px; border-bottom:1px solid #eee; }
+table.eq tbody tr:nth-child(even) { background:#f8f9fa; }
 
 /* ── PROPUESTA ECONÓMICA ── */
-.eco-wrap { display:flex; justify-content:flex-end; margin:12px 0 4px; }
-.eco-table { width:300px; font-size:11px; }
-.eco-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #eee; }
-.eco-row.desc { color:#c0392b; }
-.eco-row.total { font-size:14px; font-weight:800; color:#1C3A6B; border-top:2px solid #1C3A6B; border-bottom:none; padding-top:8px; margin-top:4px; }
-.eco-row.card  { font-size:11px; color:#888; border-bottom:none; }
+.eco-note { font-size:9px; color:#666; margin-bottom:8px; font-style:italic; }
+.eco-wrap { display:flex; justify-content:flex-end; }
+.eco-box  { width:320px; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; }
+.eco-row  { display:flex; justify-content:space-between; padding:7px 12px; border-bottom:1px solid #eee; font-size:11px; }
+.eco-row:last-child { border-bottom:none; }
+.eco-row.disc { color:#c0392b; }
+.eco-row.total { font-size:14px; font-weight:800; color:#fff; background:#1C3A6B; }
+.eco-row.card  { color:#555; font-size:10.5px; background:#f8f9fa; }
+.eco-cond { font-size:9px; color:#888; margin-top:6px; text-align:right; }
 
 /* ── CONSUMO VS GENERACIÓN ── */
-.mes-table { width:100%; border-collapse:collapse; font-size:9px; }
-.mes-table th { background:#f0f0f0; padding:4px 6px; text-align:center; font-weight:700; color:#555; border-bottom:2px solid #ddd; }
-.mes-table td { padding:4px 6px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
-.mes-table td:first-child { font-weight:700; text-align:center; width:36px; }
-.mes-table td:nth-child(2), .mes-table td:nth-child(3) { text-align:right; width:70px; }
-.bar-cell { width:auto; }
-.bar-wrap { display:flex; flex-direction:column; gap:2px; }
-.bar { height:7px; border-radius:2px; min-width:1px; }
-.bar-cons { background:#F5A623; }
-.bar-gen  { background:#2ECC71; }
-.leyenda { display:flex; gap:16px; font-size:8px; margin:4px 0 8px; }
-.leyenda span { display:flex; align-items:center; gap:4px; }
-.leyenda span::before { content:''; display:inline-block; width:10px; height:7px; border-radius:2px; }
-.leyenda .lc::before { background:#F5A623; }
-.leyenda .lg::before { background:#2ECC71; }
+table.mes { width:100%; border-collapse:collapse; font-size:10px; }
+table.mes thead { background:#f0f2f5; }
+table.mes th { padding:5px 8px; text-align:center; font-weight:700; color:#555; border-bottom:2px solid #ddd; font-size:9px; text-transform:uppercase; }
+table.mes th:nth-child(2),table.mes th:nth-child(3) { text-align:right; }
+table.mes td { padding:4px 8px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+table.mes td:first-child  { font-weight:700; text-align:center; width:38px; color:#1C3A6B; }
+table.mes td:nth-child(2),table.mes td:nth-child(3) { text-align:right; width:75px; }
+.bar-cell { padding-left:10px !important; }
+.bar-wrap  { display:flex; flex-direction:column; gap:2px; }
+.bar  { height:7px; border-radius:2px; min-width:1px; }
+.b-c  { background:#F5A623; }
+.b-g  { background:#2ECC71; }
+.ley  { display:flex; gap:16px; font-size:8.5px; color:#555; margin:5px 0 10px; }
+.ley span { display:flex; align-items:center; gap:5px; }
+.ley .lc::before,.ley .lg::before { content:''; display:inline-block; width:12px; height:7px; border-radius:2px; }
+.ley .lc::before { background:#F5A623; }
+.ley .lg::before { background:#2ECC71; }
 
 /* ── ROI 25 AÑOS ── */
-table.roi { width:100%; border-collapse:collapse; font-size:9px; margin:6px 0; }
+table.roi { width:100%; border-collapse:collapse; font-size:9px; }
 table.roi thead { background:#1C3A6B; color:#fff; }
-table.roi th { padding:4px 6px; text-align:right; font-weight:700; }
-table.roi th:first-child { text-align:center; width:30px; }
-table.roi td { padding:3px 6px; border-bottom:1px solid #eee; text-align:right; }
+table.roi th { padding:4px 7px; text-align:right; font-weight:700; font-size:9px; }
+table.roi th:first-child { text-align:center; width:28px; }
+table.roi td { padding:3px 7px; border-bottom:1px solid #eee; text-align:right; }
 table.roi td:first-child { text-align:center; font-weight:700; color:#1C3A6B; }
-table.roi tbody tr:nth-child(even) { background:#f9f9f9; }
-table.roi tbody tr.payback-row { background:#fffbf0; font-weight:700; color:#F5A623; }
-table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
+table.roi tbody tr:nth-child(even) { background:#f8f9fa; }
+table.roi tbody tr.pb { background:#fffbf0; font-weight:700; }
+table.roi tbody tr.pb td:first-child { color:#F5A623; }
+table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 
 /* ── INDICADORES CLAVE ── */
 .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:8px 0; }
-.kpi-box { border:2px solid #1C3A6B; border-radius:8px; padding:12px 8px; text-align:center; }
-.kpi-box .kv { font-size:18px; font-weight:900; color:#1C3A6B; }
-.kpi-box .ks { font-size:9px; color:#888; display:block; }
-.kpi-box .kl { font-size:9px; color:#555; margin-top:6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+.kpi-box  { border:2px solid #1C3A6B; border-radius:8px; padding:14px 8px; text-align:center; }
+.kpi-v    { font-size:19px; font-weight:900; color:#1C3A6B; line-height:1; }
+.kpi-u    { font-size:9px; color:#888; display:block; }
+.kpi-l    { font-size:9px; color:#555; margin-top:7px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
 
 /* ── CONDICIONES ── */
-.cond-box { background:#f5f7fa; border-radius:6px; padding:10px 14px; font-size:9.5px; color:#444; line-height:1.6; }
-.cond-box ul { padding-left:14px; }
-.cond-box li { margin:2px 0; }
+.cond-box { background:#f5f7fa; border-radius:6px; padding:10px 14px; font-size:9.5px; color:#444; line-height:1.7; white-space:pre-line; }
 
 /* ── FOOTER ── */
-.footer { margin-top:20px; padding-top:12px; border-top:2px solid #1C3A6B; display:flex; justify-content:space-between; align-items:flex-end; font-size:9px; color:#666; }
-.sig-line { width:180px; border-top:1px solid #999; margin:44px 0 4px; }
+.footer { margin-top:24px; padding-top:12px; border-top:2px solid #1C3A6B; display:flex; justify-content:space-between; align-items:flex-end; font-size:9px; color:#555; }
+.sig-line { width:180px; border-top:1px solid #999; margin:48px 0 4px; }
 
 @media print {
   .no-print { display:none !important; }
   .page { padding:12px 20px; }
   table.roi { font-size:8px; }
+  table.roi th, table.roi td { padding:2px 5px; }
 }
 </style>
 </head>
 <body>
 {% set sd = p.get('solar_data') or {} %}
 {% set sk = solar_kpis or {} %}
+{% set eq = equipos or {} %}
 <div class="page">
 
 <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
 <div class="header">
   <div>
     {% if logo_b64 %}
-    <img src="{{ logo_b64 }}" alt="Corze" style="max-height:56px;max-width:160px;object-fit:contain">
+      <img src="{{ logo_b64 }}" alt="Corze" style="max-height:56px;max-width:155px;object-fit:contain;display:block">
     {% else %}
-    <div style="font-size:22px;font-weight:900;color:#F5A623">CORZE</div>
+      <div style="font-size:24px;font-weight:900;color:#F5A623">CORZE</div>
     {% endif %}
     <div style="font-size:9px;color:#888;margin-top:3px">Energía Solar</div>
   </div>
-  <div class="header-right">
-    <div class="header-title">Propuesta de sistema fotovoltaico</div>
-    <div class="header-sub">Huechuraba, Santiago &nbsp;·&nbsp; +56 9 8208 7316 &nbsp;·&nbsp; CORZE SpA</div>
-    <div>
+  <div style="text-align:right">
+    <div class="hd-title">Propuesta de sistema<br>fotovoltaico</div>
+    <div class="hd-sub">Huechuraba, Santiago &nbsp;·&nbsp; +56 9 8208 7316 &nbsp;·&nbsp; CORZE SpA</div>
+    <div class="folio-wrap">
       <div class="folio-badge">
-        <small>N° Cotización</small>
+        <span class="folio-label">N° Cotización</span>
         {{ p.folio }}
       </div>
-      &nbsp;
-      <span style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid #ddd;vertical-align:top;margin-top:8px;color:#555">
+      &ensp;
+      <span style="font-size:10px;padding:5px 10px;border-radius:4px;border:1px solid #ddd;vertical-align:top;margin-top:8px;display:inline-block;color:#555">
         {% if p.estado == 'enviado' %}✅ Enviado
         {% elif p.estado == 'aprobado' %}🎉 Aprobado
         {% elif p.estado == 'rechazado' %}❌ Rechazado
@@ -143,119 +148,165 @@ table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
   </div>
 </div>
 
-<!-- ══ META ROW ════════════════════════════════════════════════════════════ -->
-{% set fecha_emision = (p.created_at or '')[:10] %}
-<div class="meta-row">
-  <div class="meta-item"><span>Fecha:</span><strong>{{ fecha_emision }}</strong></div>
-  <div class="meta-item"><span>Vigencia:</span><strong>{{ p.validez_dias or 10 }} días</strong></div>
-  {% if p.trabajador_asignado %}
-  <div class="meta-item"><span>Asesor:</span><strong>{{ p.trabajador_asignado }}</strong></div>
-  {% endif %}
-  {% if p.get('distribuidora') %}
-  <div class="meta-item"><span>Distribuidora:</span><strong>{{ p.distribuidora }}</strong></div>
+<!-- ══ META BAR ════════════════════════════════════════════════════════════ -->
+{% set fecha_raw = (p.created_at or '')[:10] %}
+<div class="meta-bar">
+  <div class="meta-cell">
+    <div class="mc-label">Fecha</div>
+    <div class="mc-val">{{ fecha_raw }}</div>
+  </div>
+  <div class="meta-cell">
+    <div class="mc-label">Vigencia</div>
+    <div class="mc-val">{{ p.validez_dias or 10 }} días</div>
+  </div>
+  <div class="meta-cell">
+    <div class="mc-label">Atendido por</div>
+    <div class="mc-val">{{ p.trabajador_asignado or '—' }}</div>
+  </div>
+  {% if sd.get('region') %}
+  <div class="meta-cell">
+    <div class="mc-label">Región</div>
+    <div class="mc-val">{{ sd.region }}</div>
+  </div>
   {% endif %}
 </div>
 
 <!-- ══ PROPUESTA PARA ══════════════════════════════════════════════════════ -->
 <div class="sec-bar">Propuesta para</div>
-<div class="client-grid">
-  <div class="fl"><span class="lbl">Cliente</span><span class="val">{{ p.nombre_cliente or '' }} {{ p.apellido_cliente or '' }}</span></div>
-  {% if p.rut_cliente %}
-  <div class="fl"><span class="lbl">RUT</span><span class="val">{{ p.rut_cliente }}</span></div>
-  {% endif %}
-  {% if p.email_cliente %}
-  <div class="fl"><span class="lbl">Email</span><span class="val">{{ p.email_cliente }}</span></div>
-  {% endif %}
-  {% if p.telefono_cliente %}
-  <div class="fl"><span class="lbl">Teléfono</span><span class="val">{{ p.telefono_cliente }}</span></div>
-  {% endif %}
-  {% if p.direccion_cliente %}
-  <div class="fl"><span class="lbl">Dirección</span><span class="val">{{ p.direccion_cliente }}</span></div>
-  {% endif %}
-  {% if p.comuna_cliente %}
-  <div class="fl"><span class="lbl">Comuna</span><span class="val">{{ p.comuna_cliente }}</span></div>
-  {% endif %}
-  {% if sd.get('region') %}
-  <div class="fl"><span class="lbl">Región</span><span class="val">{{ sd.region }}</span></div>
-  {% endif %}
+<div class="pp-grid">
+  <div class="pp-row"><span class="pp-lbl">Cliente</span><span class="pp-val">{{ p.nombre_cliente or '' }} {{ p.apellido_cliente or '' }}</span></div>
+  <div class="pp-row"><span class="pp-lbl">RUT</span><span class="pp-val">{{ p.rut_cliente or '—' }}</span></div>
+  <div class="pp-row"><span class="pp-lbl">Email</span><span class="pp-val">{{ p.email_cliente or '—' }}</span></div>
+  <div class="pp-row"><span class="pp-lbl">Teléfono</span><span class="pp-val">{{ p.telefono_cliente or '—' }}</span></div>
+  <div class="pp-row"><span class="pp-lbl">Dirección</span><span class="pp-val">{{ p.direccion_cliente or '—' }}</span></div>
+  <div class="pp-row"><span class="pp-lbl">Comuna</span><span class="pp-val">{{ p.comuna_cliente or '—' }}</span></div>
 </div>
 
-{% if p.notas %}
-<div class="sec-bar" style="margin-top:12px">Mensaje</div>
-<div class="mensaje-box">{{ p.notas }}</div>
-{% endif %}
+<!-- ══ MENSAJE ══════════════════════════════════════════════════════════════ -->
+<div class="sec-bar">Mensaje</div>
+<div class="mensaje">
+  {% if p.notas %}
+    {{ p.notas }}
+  {% else %}
+    Estimado cliente, junto con saludar, le presentamos la propuesta para su sistema fotovoltaico. Forma de pago: Pie inicial 60% / 40% finalizada la instalación. Tenemos la opción de pago con tarjeta de crédito de hasta 6 cuotas sin interés. (Si requiere más cuotas, el interés será de acuerdo a su banco emisor)
+  {% endif %}
+</div>
 
 <!-- ══ RESUMEN EJECUTIVO ════════════════════════════════════════════════════ -->
 {% if sk %}
 <div class="sec-bar">Resumen ejecutivo</div>
-<div class="resumen-grid">
+<div class="re-grid">
   <div class="re-box">
-    <div class="rv">{{ sd.get('potencia_kwp','—') }} kWp</div>
-    <div class="rl">Potencia del sistema</div>
+    <div class="re-val">{{ sd.get('potencia_kwp') or '—' }} kWp</div>
+    <div class="re-sub">Potencia del sistema</div>
   </div>
   <div class="re-box">
-    <div class="rv">{{ '{:,.0f}'.format(sk.gen_anual_kwh or 0).replace(',','.') }}</div>
-    <div class="rl">Generación anual (kWh)</div>
+    <div class="re-val">{{ '{:,.0f}'.format(sk.gen_anual_kwh or 0).replace(',','.') }}</div>
+    <div class="re-sub">Generación anual (kWh)</div>
   </div>
   <div class="re-box">
-    <div class="rv">{{ sk.cobertura_pct or '—' }}%</div>
-    <div class="rl">Cobertura del consumo</div>
+    <div class="re-val">{{ sk.cobertura_pct or '—' }}%</div>
+    <div class="re-sub">Cobertura de consumo</div>
   </div>
   <div class="re-box">
-    <div class="rv">${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</div>
-    <div class="rl">Inversión total</div>
+    <div class="re-val">${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</div>
+    <div class="re-sub">Inversión total</div>
   </div>
   <div class="re-box">
-    <div class="rv">{{ sk.payback_anios or '—' }} años</div>
-    <div class="rl">Payback estimado</div>
+    <div class="re-val">{{ sk.payback_anios or '—' }} años</div>
+    <div class="re-sub">Payback estimado</div>
   </div>
 </div>
 {% endif %}
 
-<!-- ══ PROPUESTA TÉCNICA ═══════════════════════════════════════════════════ -->
+<!-- ══ PROPUESTA TÉCNICA — EQUIPOS ════════════════════════════════════════ -->
 <div class="sec-bar">Propuesta técnica — equipos</div>
-<table class="items">
+<table class="eq">
   <thead>
     <tr>
-      <th>#</th>
+      <th>Componente</th>
       <th>Descripción</th>
-      <th>Cód.</th>
       <th>Cant.</th>
-      <th>P. Unitario</th>
-      <th>Desc.</th>
-      <th>Subtotal</th>
+      <th>Especificación</th>
     </tr>
   </thead>
   <tbody>
-    {% for it in p.get('items') or [] %}
-    <tr>
-      <td style="color:#aaa;text-align:center">{{ loop.index }}</td>
-      <td><strong>{{ it.nombre }}</strong></td>
-      <td style="color:#aaa;font-size:9px">{{ it.codigo or '—' }}</td>
-      <td style="text-align:center">{{ it.cantidad }}</td>
-      <td>${{ '{:,.0f}'.format(it.precio_unitario or 0).replace(',','.') }}</td>
-      <td style="text-align:center">{% if it.descuento_pct %}{{ it.descuento_pct }}%{% else %}—{% endif %}</td>
-      <td><strong>${{ '{:,.0f}'.format(it.subtotal or 0).replace(',','.') }}</strong></td>
-    </tr>
-    {% endfor %}
+    {% if eq.get('paneles') %}
+      {% for it in eq.paneles %}
+      <tr>
+        <td>{% if loop.first %}Paneles solares{% endif %}</td>
+        <td>{{ it.nombre }}</td>
+        <td>{{ it.cantidad }}</td>
+        <td>{{ it._spec or '' }}</td>
+      </tr>
+      {% endfor %}
+    {% endif %}
+    {% if eq.get('inversores') %}
+      {% for it in eq.inversores %}
+      <tr>
+        <td>{% if loop.first %}Inversor{% endif %}</td>
+        <td>{{ it.nombre }}</td>
+        <td>{{ it.cantidad }}</td>
+        <td>{{ it._spec or '' }}</td>
+      </tr>
+      {% endfor %}
+    {% endif %}
+    {% if eq.get('baterias') and eq.baterias %}
+      {% for it in eq.baterias %}
+      <tr>
+        <td>{% if loop.first %}Batería (respaldo){% endif %}</td>
+        <td>{{ it.nombre }}</td>
+        <td>{{ it.cantidad }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td>Batería (respaldo)</td>
+        <td style="color:#aaa">No incluida</td>
+        <td>0</td>
+        <td></td>
+      </tr>
+    {% endif %}
+    {% if eq.get('otros') %}
+      {% for it in eq.otros %}
+      <tr>
+        <td>{{ it.nombre }}</td>
+        <td></td>
+        <td>{{ it.cantidad }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+    {% endif %}
+    {% if not eq.get('paneles') and not eq.get('inversores') %}
+      {% for it in p.get('items') or [] %}
+      <tr>
+        <td>{{ it.nombre }}</td>
+        <td>{{ it.codigo or '' }}</td>
+        <td>{{ it.cantidad }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+    {% endif %}
   </tbody>
 </table>
 
-<!-- ══ PROPUESTA ECONÓMICA ═════════════════════════════════════════════════ -->
+<!-- ══ PROPUESTA ECONÓMICA ════════════════════════════════════════════════ -->
 <div class="sec-bar">Propuesta económica</div>
+<p class="eco-note">Incluye equipos (paneles, inversor, batería si aplica), materiales, instalación, puesta en marcha, diseño y tramitación ante la distribuidora.</p>
 <div class="eco-wrap">
-  <div class="eco-table">
+  <div class="eco-box">
     <div class="eco-row">
-      <span>Precio lista</span>
+      <span>Precio de lista (antes de descuento)</span>
       <span>${{ '{:,.0f}'.format(p.subtotal_bruto or 0).replace(',','.') }}</span>
     </div>
     {% if p.descuento_general_pct %}
-    <div class="eco-row desc">
-      <span>Descuento ({{ p.descuento_general_pct }}%)</span>
+    <div class="eco-row disc">
+      <span>Descuento comercial ({{ p.descuento_general_pct }}%)</span>
       <span>− ${{ '{:,.0f}'.format(p.monto_descuento or 0).replace(',','.') }}</span>
     </div>
     <div class="eco-row">
-      <span>Inversión neta</span>
+      <span>Inversión neta (precio oferta)</span>
       <span>${{ '{:,.0f}'.format(p.subtotal_neto or 0).replace(',','.') }}</span>
     </div>
     {% endif %}
@@ -266,17 +317,18 @@ table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
     </div>
     {% endif %}
     <div class="eco-row total">
-      <span>TOTAL con IVA</span>
+      <span>TOTAL PROPUESTA (IVA incluido)</span>
       <span>${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</span>
     </div>
-    <div class="eco-row card" style="margin-top:4px;font-size:9px">
-      <span>Total con tarjeta (7%)</span>
+    <div class="eco-row card">
+      <span>Total con recargo tarjeta de crédito (7%)</span>
       <span>${{ '{:,.0f}'.format((p.total or 0) * 1.07).replace(',','.') }}</span>
     </div>
   </div>
 </div>
+<p class="eco-cond">Condiciones: precio en pesos chilenos (CLP), IVA incluido. Incluye instalación, puesta en marcha y gestión de conexión ante la distribuidora. Garantías según fabricante de cada equipo.</p>
 
-<!-- ══ CONSUMO VS GENERACIÓN MENSUAL ══════════════════════════════════════ -->
+<!-- ══ CONSUMO VS. GENERACIÓN MENSUAL ESTIMADA ════════════════════════════ -->
 {% if sk and sk.gen_por_mes %}
 <div class="sec-bar">Consumo vs. generación mensual estimada</div>
 {% set ns_max = namespace(mx=1) %}
@@ -284,32 +336,31 @@ table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
   {% if m.consumo > ns_max.mx %}{% set ns_max.mx = m.consumo %}{% endif %}
   {% if m.generacion > ns_max.mx %}{% set ns_max.mx = m.generacion %}{% endif %}
 {% endfor %}
-{% set mx = ns_max.mx %}
-<div class="leyenda">
+<div class="ley">
   <span class="lc">Consumo (kWh)</span>
-  <span class="lg">Generación (kWh)</span>
+  <span class="lg">Generación estimada (kWh)</span>
 </div>
-<table class="mes-table">
+<table class="mes">
   <thead>
     <tr>
       <th>Mes</th>
       <th>Consumo</th>
       <th>Generación</th>
-      <th style="text-align:left;padding-left:8px">Distribución</th>
+      <th style="text-align:left;padding-left:10px">Distribución</th>
     </tr>
   </thead>
   <tbody>
     {% for m in sk.gen_por_mes %}
-    {% set cw = [(m.consumo / mx * 160) | int, 1] | max %}
-    {% set gw = [(m.generacion / mx * 160) | int, 1] | max %}
+    {% set cw = [(m.consumo / ns_max.mx * 180) | int, 1] | max %}
+    {% set gw = [(m.generacion / ns_max.mx * 180) | int, 1] | max %}
     <tr>
       <td>{{ m.mes }}</td>
       <td>{{ '{:,.0f}'.format(m.consumo).replace(',','.') }}</td>
       <td>{{ '{:,.0f}'.format(m.generacion).replace(',','.') }}</td>
-      <td class="bar-cell" style="padding-left:8px">
+      <td class="bar-cell">
         <div class="bar-wrap">
-          {% if m.consumo > 0 %}<div class="bar bar-cons" style="width:{{ cw }}px"></div>{% endif %}
-          <div class="bar bar-gen" style="width:{{ gw }}px"></div>
+          {% if m.consumo > 0 %}<div class="bar b-c" style="width:{{ cw }}px"></div>{% endif %}
+          <div class="bar b-g" style="width:{{ gw }}px"></div>
         </div>
       </td>
     </tr>
@@ -318,7 +369,7 @@ table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
 </table>
 {% endif %}
 
-<!-- ══ RETORNO DE LA INVERSIÓN 25 AÑOS ════════════════════════════════════ -->
+<!-- ══ RETORNO DE LA INVERSIÓN — 25 AÑOS ══════════════════════════════════ -->
 {% if sk and sk.proyeccion %}
 <div class="sec-bar" style="margin-top:16px">Retorno de la inversión — flujo neto acumulado a 25 años</div>
 <table class="roi">
@@ -336,7 +387,7 @@ table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
     {% set pb = sk.payback_anios %}
     {% for yr in sk.proyeccion %}
     {% set is_pb = pb and yr.anio == (pb | int + 1) %}
-    <tr{% if is_pb %} class="payback-row"{% endif %}>
+    <tr{% if is_pb %} class="pb"{% endif %}>
       <td>{{ yr.anio }}</td>
       <td>{{ '{:,.0f}'.format(yr.gen).replace(',','.') }}</td>
       <td>{{ '{:,.0f}'.format(yr.tarifa).replace(',','.') }}</td>
@@ -353,72 +404,62 @@ table.roi tbody tr.payback-row td:first-child { color:#F5A623; }
 
 <!-- ══ INDICADORES CLAVE ═══════════════════════════════════════════════════ -->
 {% if sk %}
-<div class="sec-bar">Indicadores clave</div>
+<div class="sec-bar">Indicadores clave de retorno</div>
 <div class="kpi-grid">
   <div class="kpi-box">
-    <div class="kv">{{ sk.payback_anios or '—' }} <span class="ks">años</span></div>
-    <div class="kl">Payback</div>
+    <div class="kpi-v">{{ sk.payback_anios or '—' }}<span class="kpi-u">años</span></div>
+    <div class="kpi-l">Payback estimado</div>
   </div>
   <div class="kpi-box">
-    <div class="kv">${{ '{:,.1f}'.format((sk.ahorro_10 or 0)/1e6).replace(',','.') }}M <span class="ks">CLP</span></div>
-    <div class="kl">Ahorro 10 años</div>
+    <div class="kpi-v">${{ '{:,.1f}'.format((sk.ahorro_10 or 0) / 1e6).replace(',','.') }}M<span class="kpi-u">CLP</span></div>
+    <div class="kpi-l">Ahorro proyectado 10 años</div>
   </div>
   <div class="kpi-box">
-    <div class="kv">${{ '{:,.1f}'.format((sk.ahorro_15 or 0)/1e6).replace(',','.') }}M <span class="ks">CLP</span></div>
-    <div class="kl">Ahorro 15 años</div>
+    <div class="kpi-v">${{ '{:,.1f}'.format((sk.ahorro_15 or 0) / 1e6).replace(',','.') }}M<span class="kpi-u">CLP</span></div>
+    <div class="kpi-l">Ahorro proyectado 15 años</div>
   </div>
   <div class="kpi-box">
-    <div class="kv">${{ '{:,.1f}'.format((sk.ahorro_25 or 0)/1e6).replace(',','.') }}M <span class="ks">CLP</span></div>
-    <div class="kl">Ahorro 25 años</div>
+    <div class="kpi-v">${{ '{:,.1f}'.format((sk.ahorro_25 or 0) / 1e6).replace(',','.') }}M<span class="kpi-u">CLP</span></div>
+    <div class="kpi-l">Ahorro proyectado 25 años</div>
   </div>
 </div>
 {% if sk.co2_anual_ton %}
-<div style="font-size:9px;color:#27AE60;margin:4px 0 8px;text-align:center">
-  🌱 CO₂ evitado: <strong>{{ sk.co2_anual_ton }} ton/año</strong>
+<div style="text-align:center;font-size:9.5px;color:#27AE60;margin:6px 0 10px">
+  🌱 CO₂ evitado: <strong>{{ sk.co2_anual_ton }} ton/año</strong> equivalente al consumo de {{ (sk.co2_anual_ton * 1000 / 130) | int }} hogares
 </div>
 {% endif %}
 {% endif %}
 
-<!-- ══ CONDICIONES GENERALES ═══════════════════════════════════════════════ -->
+<!-- ══ CONDICIONES GENERALES Y ACEPTACIÓN ════════════════════════════════ -->
 <div class="sec-bar">Condiciones generales y aceptación</div>
-<div class="cond-box">
-  {% if p.condiciones %}
-  <p style="white-space:pre-line">{{ p.condiciones }}</p>
-  {% else %}
-  <ul>
-    <li>La presente cotización tiene una vigencia de <strong>{{ p.validez_dias or 10 }} días</strong> desde la fecha de emisión.</li>
-    <li>Los precios indicados incluyen instalación, puesta en marcha y tramitación ante distribuidora.</li>
-    <li>Los paneles y equipos cuentan con garantía de fábrica de acuerdo a ficha técnica de cada producto.</li>
-    <li>La generación estimada corresponde a valores referenciales basados en datos históricos de radiación solar.</li>
-    <li>El retorno de inversión proyectado considera un incremento tarifario del 5% anual y degradación de paneles del 0,5% anual.</li>
-    <li>La firma de este documento constituye aceptación de los términos y condiciones de la propuesta.</li>
-  </ul>
-  {% endif %}
-</div>
+<div class="cond-box">{% if p.condiciones %}{{ p.condiciones }}{% else %}• Esta propuesta es válida por el número de días indicado en la portada de esta cotización.
+• Los valores de generación, ahorro y payback son estimaciones basadas en irradiancia promedio de la región y consumo histórico declarado por el cliente; el desempeño real puede variar.
+• Precios en pesos chilenos, IVA incluido. No incluye obras civiles no especificadas ni aumentos de potencia contratada con la distribuidora, salvo que se indique expresamente.
+• La aceptación de esta propuesta se formaliza con la firma de un contrato de instalación y el pago del anticipo acordado.{% endif %}</div>
 
 <!-- ══ FOOTER + FIRMA ══════════════════════════════════════════════════════ -->
 <div class="footer">
   <div>
-    <div style="font-size:10px;font-weight:700;color:#1C3A6B">CORZE SpA</div>
-    <div>Av. Las Torres 1277 · Huechuraba, Santiago</div>
-    <div>+56 9 8208 7316 · contacto@corze.cl</div>
+    <div style="font-size:10.5px;font-weight:800;color:#1C3A6B;margin-bottom:3px">CORZE SpA</div>
+    <div>Av. Las Torres 1277  ·  Huechuraba, Santiago</div>
+    <div>+56 9 8208 7316  ·  contacto@corze.cl</div>
   </div>
   <div style="text-align:center">
     <div class="sig-line"></div>
-    <div style="font-size:10px;font-weight:700">{{ p.trabajador_asignado or 'Asesor comercial' }}</div>
+    <div style="font-size:10.5px;font-weight:700">{{ p.trabajador_asignado or 'Asesor comercial' }}</div>
     <div style="font-size:9px;color:#888">Corze Energía Solar</div>
   </div>
 </div>
 
 <!-- ══ BOTÓN IMPRIMIR ══════════════════════════════════════════════════════ -->
-<div class="no-print" style="text-align:center;margin-top:24px">
+<div class="no-print" style="text-align:center;margin-top:28px;display:flex;justify-content:center;gap:10px">
   <button onclick="window.print()"
-    style="background:#1C3A6B;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:10px">
+    style="background:#1C3A6B;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
     🖨️ Imprimir / Guardar PDF
   </button>
   <a href="/admin/presupuestos"
-    style="background:#f0f0f0;color:#333;border:none;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none">
-    ← Volver
+    style="background:#f0f0f0;color:#333;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center">
+    ← Volver al listado
   </a>
 </div>
 
