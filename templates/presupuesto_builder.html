@@ -724,14 +724,58 @@ async function guardar(estadoOverride) {
   };
 
   const url = PRESUPUESTO_ID ? `/api/presupuestos/${PRESUPUESTO_ID}/edit` : '/api/presupuestos/add';
-  const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-  const res = await r.json();
-  if (res.ok) {
-    showToast('Presupuesto guardado', 'success');
-    if (!PRESUPUESTO_ID && res.id) setTimeout(() => location.href = `/admin/presupuestos/${res.id}`, 800);
-  } else {
-    showToast(res.error || 'Error guardando', 'error');
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+  try {
+    const r   = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const res = await r.json();
+    if (res.ok) {
+      const docId  = res.id || PRESUPUESTO_ID;
+      const estado = estadoOverride || data.estado;
+      mostrarConfirmacion(nombre, docId, estado, data.total);
+    } else {
+      showToast(res.error || 'Error guardando', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '✅ Guardar y Marcar Enviado'; }
+    }
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Guardar y Marcar Enviado'; }
   }
+}
+
+function mostrarConfirmacion(nombre, docId, estado, total) {
+  const fmt = n => '$' + Math.round(n||0).toLocaleString('es-CL');
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border1);border-radius:16px;padding:40px 48px;text-align:center;max-width:420px;width:90%">
+      <div style="font-size:48px;margin-bottom:12px">✅</div>
+      <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:6px">
+        Presupuesto ${estado === 'enviado' ? 'enviado' : 'guardado'}
+      </div>
+      <div style="font-size:14px;color:var(--gray2);margin-bottom:4px">${nombre}</div>
+      <div style="font-size:24px;font-weight:700;color:var(--blue);margin-bottom:24px">${fmt(total)}</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a href="/admin/presupuestos/${docId}/pdf" target="_blank"
+           style="background:var(--card2);border:1px solid var(--border2);color:var(--white);
+                  padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
+          📄 Ver PDF
+        </a>
+        <a href="/admin/presupuestos/${docId}/pdf?download=1" download
+           style="background:var(--card2);border:1px solid var(--border2);color:var(--white);
+                  padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
+          📥 Descargar
+        </a>
+        <a href="/admin/presupuestos"
+           style="background:var(--blue);color:var(--white);
+                  padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700">
+          ← Volver al listado
+        </a>
+      </div>
+      <div style="font-size:11px;color:var(--gray3);margin-top:16px">Redirigiendo en 5 segundos…</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { location.href = '/admin/presupuestos'; }, 5000);
 }
 
 async function enviarEmail() {
