@@ -45,6 +45,7 @@
 .col-instalacion   .kanban-col-header { border-top:3px solid #1ABC9C; border-radius:12px 12px 0 0; }
 .col-finalizado    .kanban-col-header { border-top:3px solid #2ECC71; border-radius:12px 12px 0 0; }
 .col-postventa     .kanban-col-header { border-top:3px solid #F5A623; border-radius:12px 12px 0 0; }
+.col-perdido       .kanban-col-header { border-top:3px solid #E74C3C; border-radius:12px 12px 0 0; }
 /* Notas */
 .nota-item { background:var(--card2); border-radius:8px; padding:9px 12px; margin-bottom:8px; border-left:3px solid var(--blue); }
 .nota-texto { font-size:12px; color:var(--white); white-space:pre-wrap; line-height:1.5; }
@@ -92,7 +93,8 @@
     'Contrato Firmado':'col-contrato',
     'En Instalación':'col-instalacion',
     'Proyecto Finalizado':'col-finalizado',
-    'Post Venta':'col-postventa'
+    'Post Venta':'col-postventa',
+    'Cliente Perdido':'col-perdido'
   } %}
   {% for etapa in etapas %}
   {% set etapa_leads = leads|selectattr('etapa','equalto',etapa)|list %}

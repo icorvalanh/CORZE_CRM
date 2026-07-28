@@ -3375,6 +3375,7 @@ ETAPAS_PIPELINE = [
     'En Instalación',
     'Proyecto Finalizado',
     'Post Venta',
+    'Cliente Perdido',
 ]
 
 @app.route('/admin/pipeline')
