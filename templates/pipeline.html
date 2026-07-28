@@ -33,7 +33,10 @@
 
 /* Colores por etapa */
 .col-nuevo         .kanban-col-header { border-top:3px solid #3498DB; border-radius:12px 12px 0 0; }
+.col-intento1      .kanban-col-header { border-top:3px solid #5DADE2; border-radius:12px 12px 0 0; }
+.col-intento2      .kanban-col-header { border-top:3px solid #A569BD; border-radius:12px 12px 0 0; }
 .col-contactado    .kanban-col-header { border-top:3px solid #9B59B6; border-radius:12px 12px 0 0; }
+.col-cuentaluz     .kanban-col-header { border-top:3px solid #F0B27A; border-radius:12px 12px 0 0; }
 .col-visita        .kanban-col-header { border-top:3px solid #F39C12; border-radius:12px 12px 0 0; }
 .col-propuesta     .kanban-col-header { border-top:3px solid #E67E22; border-radius:12px 12px 0 0; }
 .col-negociacion   .kanban-col-header { border-top:3px solid #E74C3C; border-radius:12px 12px 0 0; }
@@ -42,6 +45,13 @@
 .col-instalacion   .kanban-col-header { border-top:3px solid #1ABC9C; border-radius:12px 12px 0 0; }
 .col-finalizado    .kanban-col-header { border-top:3px solid #2ECC71; border-radius:12px 12px 0 0; }
 .col-postventa     .kanban-col-header { border-top:3px solid #F5A623; border-radius:12px 12px 0 0; }
+/* Notas */
+.nota-item { background:var(--card2); border-radius:8px; padding:9px 12px; margin-bottom:8px; border-left:3px solid var(--blue); }
+.nota-texto { font-size:12px; color:var(--white); white-space:pre-wrap; line-height:1.5; }
+.nota-meta  { font-size:10px; color:var(--gray3); margin-top:5px; }
+.nota-add   { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.nota-add textarea { background:var(--card2); border:1px solid var(--border2); border-radius:8px; color:var(--white); font-size:12px; padding:8px 10px; resize:vertical; min-height:72px; outline:none; }
+.nota-add textarea:focus { border-color:var(--blue); }
 </style>
 {% endblock %}
 {% block content %}
@@ -71,7 +81,10 @@
 <div class="kanban-wrap" id="kanbanWrap">
   {% set col_class = {
     'Nuevo Lead':'col-nuevo',
+    'Intento Llamado 1°':'col-intento1',
+    'Intento Llamado 2°':'col-intento2',
     'Contactado':'col-contactado',
+    'Esperando Cuenta Luz':'col-cuentaluz',
     'Visita Técnica Agendada':'col-visita',
     'Propuesta Enviada':'col-propuesta',
     'En Negociación':'col-negociacion',
@@ -391,7 +404,7 @@ function renderPanel(lead, presupuestos = []) {
       </div>
     </div>` : ''}
 
-    ${lead.notas ? `<div class="panel-section"><h4>Notas</h4><div style="font-size:12px;color:var(--gray1);white-space:pre-wrap;background:var(--card2);border-radius:8px;padding:10px 12px">${lead.notas}</div></div>` : ''}
+    ${lead.notas ? `<div class="panel-section"><h4>Nota inicial</h4><div style="font-size:12px;color:var(--gray1);white-space:pre-wrap;background:var(--card2);border-radius:8px;padding:10px 12px">${lead.notas}</div></div>` : ''}
 
     <div class="panel-section">
       <h4>☀️ Propuestas enviadas</h4>
@@ -419,7 +432,19 @@ function renderPanel(lead, presupuestos = []) {
     </div>
 
     <div class="panel-section">
-      <h4>Historial</h4>
+      <h4>📝 Notas del lead</h4>
+      <div id="notasContainer_${lead.id}">
+        ${renderNotas(lead.notas_historial || [])}
+      </div>
+      <div class="nota-add">
+        <textarea id="notaInput_${lead.id}" placeholder="Escribe una nota... (ej: Llamé al cliente, no contestó. Intentar mañana.)"></textarea>
+        <button class="btn btn-primary" style="font-size:12px;padding:7px 14px;align-self:flex-end"
+                onclick="agregarNota('${lead.id}')">💾 Guardar nota</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Historial de cambios</h4>
       ${historial.length ? historial.map(h => `
         <div class="hist-item">
           <div class="hist-dot"></div>
@@ -436,6 +461,41 @@ function renderPanel(lead, presupuestos = []) {
               onclick="eliminarLead('${lead.id}','${lead.nombre}')">🗑️ Eliminar</button>
     </div>
   `;
+}
+
+function renderNotas(notas) {
+  if (!notas || !notas.length) return '<div style="font-size:11px;color:var(--gray3);margin-bottom:8px">Sin notas aún</div>';
+  return notas.slice().reverse().map(n => `
+    <div class="nota-item">
+      <div class="nota-texto">${n.texto.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="nota-meta">🕐 ${n.fecha || ''} &nbsp;·&nbsp; 👤 ${n.autor || ''}</div>
+    </div>`).join('');
+}
+
+async function agregarNota(leadId) {
+  const input = document.getElementById(`notaInput_${leadId}`);
+  const texto = input?.value?.trim();
+  if (!texto) { showToast('Escribe algo antes de guardar', 'error'); return; }
+  const r = await fetch(`/api/leads/${leadId}/notas`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({texto})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    input.value = '';
+    const cont = document.getElementById(`notasContainer_${leadId}`);
+    if (cont) {
+      const nuevaNota = `<div class="nota-item">
+        <div class="nota-texto">${d.nota.texto.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div class="nota-meta">🕐 ${d.nota.fecha} &nbsp;·&nbsp; 👤 ${d.nota.autor}</div>
+      </div>`;
+      cont.insertAdjacentHTML('afterbegin', nuevaNota);
+      if (cont.querySelector('[style*="Sin notas"]')) cont.innerHTML = nuevaNota;
+    }
+    showToast('Nota guardada', 'success');
+  } else {
+    showToast(d.error || 'Error guardando nota', 'error');
+  }
 }
 
 function cerrarPanel() {

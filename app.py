@@ -3363,7 +3363,10 @@ def api_calcular_cotizacion():
 
 ETAPAS_PIPELINE = [
     'Nuevo Lead',
+    'Intento Llamado 1°',
+    'Intento Llamado 2°',
     'Contactado',
+    'Esperando Cuenta Luz',
     'Visita Técnica Agendada',
     'Propuesta Enviada',
     'En Negociación',
@@ -3436,6 +3439,21 @@ def api_leads_mover_etapa(doc_id):
                               session.get('usuario', ''),
                               f'{etapa_anterior} → {nueva_etapa}')
     return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/leads/<doc_id>/notas', methods=['POST'])
+@login_required
+def api_leads_add_nota(doc_id):
+    data  = request.get_json()
+    texto = (data.get('texto') or '').strip()
+    if not texto:
+        return jsonify({'ok': False, 'error': 'Texto requerido'})
+    nota = {
+        'texto':  texto,
+        'autor':  session.get('usuario', 'Sistema'),
+        'fecha':  datetime.now().strftime('%Y-%m-%d %H:%M'),
+    }
+    ok = db.add_nota_lead(doc_id, nota)
+    return jsonify({'ok': ok, 'nota': nota})
 
 @app.route('/api/leads/<doc_id>/presupuestos', methods=['GET'])
 @login_required

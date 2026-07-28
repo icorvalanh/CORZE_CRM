@@ -1385,6 +1385,18 @@ class FirebaseDB:
             print(f'Error add_historial_lead: {e}')
             return False
 
+    def add_nota_lead(self, lead_id: str, nota: dict) -> bool:
+        try:
+            from google.cloud.firestore_v1 import ArrayUnion
+            self.db.collection('leads').document(lead_id).update({
+                'notas_historial': ArrayUnion([nota]),
+                'updated_at': self._now(),
+            })
+            return True
+        except Exception as e:
+            print(f'Error add_nota_lead: {e}')
+            return False
+
     # ── TRABAJADORES ──────────────────────────────────────────────────────────
     def add_trabajador(self, data: dict) -> tuple:
         try:
