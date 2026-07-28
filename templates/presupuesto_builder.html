@@ -721,15 +721,12 @@ function recalcular() {
   const kWp  = potW * nPanel / 1000;
 
   // Equipment display
-  document.getElementById('dPanelKwp').textContent   = kWp>0 ? kWp.toFixed(2)+' kWp' : (potW ? potW+'W ea.' : '—');
-  document.getElementById('dPanelSub').textContent   = nPanel>0 ? fmt(subPaneles) : '—';
-  document.getElementById('dPanelPrecio').textContent= selPanel ? 'Precio unitario: '+fmt(pPanel) : 'Precio unitario: —';
-  document.getElementById('dInversorSpec').textContent  = selInversor ? (selInversor.potencia_w ? selInversor.potencia_w+'W' : '—') : '—';
-  document.getElementById('dInversorSub').textContent   = nInversor>0 ? fmt(subInversor) : '—';
-  document.getElementById('dInversorPrecio').textContent= selInversor ? 'Precio unitario: '+fmt(pInversor) : 'Precio unitario: —';
-  document.getElementById('dBateriaSpec').textContent   = selBateria ? (selBateria.capacidad_kwh ? selBateria.capacidad_kwh+' kWh' : '—') : '—';
-  document.getElementById('dBateriaSub').textContent    = nBateria>0 ? fmt(subBateria) : '—';
-  document.getElementById('dBateriaPrecio').textContent = selBateria ? 'Precio unitario: '+fmt(pBateria) : 'Precio unitario: —';
+  document.getElementById('dPanelKwp').textContent  = kWp>0 ? kWp.toFixed(2)+' kWp' : (potW ? potW+'W ea.' : '—');
+  document.getElementById('dPanelSub').textContent  = nPanel>0 ? fmt(subPaneles) : '—';
+  document.getElementById('dInversorSpec').textContent = selInversor ? (selInversor.potencia_w ? selInversor.potencia_w+'W' : '—') : '—';
+  document.getElementById('dInversorSub').textContent  = nInversor>0 ? fmt(subInversor) : '—';
+  document.getElementById('dBateriaSpec').textContent  = selBateria ? (selBateria.capacidad_kwh ? selBateria.capacidad_kwh+' kWh' : '—') : '—';
+  document.getElementById('dBateriaSub').textContent   = nBateria>0 ? fmt(subBateria) : '—';
 
   // Consumo
   let totalCons = 0;
