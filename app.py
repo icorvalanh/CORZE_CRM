@@ -1111,6 +1111,45 @@ def api_seed_ventas_gastos():
     seed_col('gastos_corze', GASTOS, 'id_gasto')
     return jsonify({'ok': True, 'ventas': len(VENTAS), 'gastos': len(GASTOS)})
 
+@app.route('/api/admin/seed-accesorios', methods=['POST'])
+@login_required
+def api_seed_accesorios():
+    """Importa accesorios desde lista de materiales a productos_solar."""
+    # Precios unitarios = total_lista / cantidad
+    ACCESORIOS = [
+        dict(codigo='ACC-001', nombre='Riel 5000mm (Versionpro)',                                          categoria='Accesorio', precio_venta=20028,  precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-002', nombre='Midclamp 30mm',                                                     categoria='Accesorio', precio_venta=493,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-003', nombre='Endclamp',                                                          categoria='Accesorio', precio_venta=493,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-004', nombre='Groundclip 30x50 mm2',                                             categoria='Accesorio', precio_venta=115,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-005', nombre='Tornillo de Conexión a Tierra Groundlug',                          categoria='Accesorio', precio_venta=1200,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-006', nombre='Perno Partido con Espiga 6AWG',                                    categoria='Accesorio', precio_venta=67,     precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-007', nombre='Tubo EMT 32MMX3MTS Espesor 1,0 MM',                               categoria='Accesorio', precio_venta=2352,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-008', nombre='Caja Metal A-11 100X100X65MM 20-25MM Pre Galvanizada c/Tapa',      categoria='Accesorio', precio_venta=1109,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-009', nombre='Caja Metal A-01 100X65X65MM 1/2-3/4" Pre Galvanizada c/Tapa',     categoria='Accesorio', precio_venta=907,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-010', nombre='Prensa Estopa PG-7 3-6,5MM',                                      categoria='Accesorio', precio_venta=101,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-011', nombre='Prensa Estopa PG-16 10-14MM',                                     categoria='Accesorio', precio_venta=1350,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-012', nombre='Conector EMT a Flexible 32MM',                                    categoria='Accesorio', precio_venta=1344,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-013', nombre='Conector Recto para Flexible con PVC 32MM',                       categoria='Accesorio', precio_venta=979,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-014', nombre='Abrazadera Tipo Caddy 25MM para EMT',                             categoria='Accesorio', precio_venta=153,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-015', nombre='Base Ajustable Delantera y Trasera 15/30°',                       categoria='Accesorio', precio_venta=7300,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-016', nombre='Cable RV-K Negro 6MM Extraflexible',                              categoria='Accesorio', precio_venta=1260,   precio_costo=0, unidad='metro',  stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-017', nombre='Cable Solar FV (H1Z2Z2-K) 4MM',                                  categoria='Accesorio', precio_venta=500,    precio_costo=0, unidad='metro',  stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+    ]
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    col = db.db.collection('productos_solar')
+    existing = {d.to_dict().get('codigo'): d.id for d in col.stream() if d.to_dict().get('codigo','').startswith('ACC')}
+    created = updated = 0
+    for p in ACCESORIOS:
+        p['created_at'] = p.get('created_at', now)
+        p['updated_at'] = now
+        if p['codigo'] in existing:
+            col.document(existing[p['codigo']]).set(p)
+            updated += 1
+        else:
+            col.add(p)
+            created += 1
+    return jsonify({'ok': True, 'creados': created, 'actualizados': updated, 'total': len(ACCESORIOS)})
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  VITRINA PÚBLICA — corze.cl
 # ══════════════════════════════════════════════════════════════════════════════
