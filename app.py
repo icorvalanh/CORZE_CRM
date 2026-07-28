@@ -1134,6 +1134,10 @@ def api_seed_accesorios():
         dict(codigo='ACC-015', nombre='Base Ajustable Delantera y Trasera 15/30°',                       categoria='Accesorio', precio_venta=7300,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-016', nombre='Cable RV-K Negro 6MM Extraflexible',                              categoria='Accesorio', precio_venta=1260,   precio_costo=0, unidad='metro',  stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-017', nombre='Cable Solar FV (H1Z2Z2-K) 4MM',                                  categoria='Accesorio', precio_venta=500,    precio_costo=0, unidad='metro',  stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-018', nombre='Tablero Metálico 400X300X200MM IP66 IK10 RAL 7035',               categoria='Accesorio', precio_venta=43800,  precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-019', nombre='Automático NXB-63H 2X40A 10KA C',                                 categoria='Accesorio', precio_venta=7458,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-020', nombre='Repartidor Bipolar 125A (2X25MM + 5X6MM)',                        categoria='Accesorio', precio_venta=3480,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-021', nombre='Barra de Conexión DIN 8 Polos Verde Aislada',                    categoria='Accesorio', precio_venta=1186,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
     ]
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     col = db.db.collection('productos_solar')
