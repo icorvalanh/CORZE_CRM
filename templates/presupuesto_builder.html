@@ -364,7 +364,6 @@
 
       <!-- Instalación -->
       <div class="price-section">
-        <div class="price-row sub-item"><span class="lbl">Instalación base</span><span class="val" id="rInstBase">—</span></div>
         <div class="price-row sub-item"><span class="lbl">Costos adicionales</span><span class="val" id="rCostosAdic">$0</span></div>
         <div class="price-row sub-item"><span class="lbl">Diseño y tramitación</span><span class="val" id="rDiseno">$150.000</span></div>
         <div class="price-row bold" style="margin-top:4px"><span class="lbl">Subtotal directos</span><span class="val" id="rSubDirectos">$0</span></div>
@@ -486,16 +485,6 @@ const HSP_REGION = {
 const FACT_EST = {
   'Ene':1.2857,'Feb':1.2078,'Mar':1.1006,'Abr':0.9253,'May':0.7597,'Jun':0.6331,
   'Jul':0.6623,'Ago':0.7987,'Sep':0.9545,'Oct':1.1104,'Nov':1.2468,'Dic':1.3149
-};
-const INSTALL_TABLE = {
-  4:1386555,5:1428571,6:1470588,7:1512605,8:1554622,9:1596639,10:1638655,
-  11:1764706,12:1932773,13:2100840,14:2184874,15:2268908,16:2352941,17:2436975,
-  18:2478992,19:2521008,20:2563025,21:2605042,22:2689076,23:2752101,24:2815126,
-  25:2878151,26:2941176,27:3004202,28:3067227,29:3130252,30:3193277,31:3256302,
-  32:3319328,33:3382353,34:3445378,35:3508403,36:3571429,37:3634454,38:3697479,
-  39:3760504,40:3823529,41:3886555,42:3949580,43:4012605,44:4075630,45:4138655,
-  46:4201681,47:4264706,48:4327731,49:4390756,50:4453782,51:4516807,52:4579832,
-  53:4642857,54:4705882,55:4768907,56:4831933,57:4894958,58:4957983,59:5021008
 };
 const EXTRAS_DEF = [
   {id:'bat1',     label:'Instalación batería (1ª)',          unit:'primera bat.',   base:350000, perPanel:false},
@@ -752,10 +741,6 @@ function recalcular() {
     document.getElementById('genGrid').style.display = 'none';
   }
 
-  // Instalación
-  const nClamped = Math.min(Math.max(nPanel,4),59);
-  const instBase = nPanel>=4 ? (INSTALL_TABLE[nClamped]||0) : 0;
-
   // Extras
   let subAdic = 0;
   EXTRAS_DEF.forEach(ex => {
@@ -774,7 +759,7 @@ function recalcular() {
   document.getElementById('dSubAdicionales').textContent = fmt(subAdic + disenoTram);
 
   // Cadena de precios
-  const subDirectos = subEquipos + instBase + subAdic + disenoTram;
+  const subDirectos = subEquipos + subAdic + disenoTram;
   const margenPct   = parseFloat(document.getElementById('fMargen').value)||0;
   const margen      = subDirectos * margenPct / 100;
   const precioLista = subDirectos + margen;
@@ -791,7 +776,6 @@ function recalcular() {
   document.getElementById('rBateria').textContent    = subBateria>0  ? fmt(subBateria)  : '—';
   document.getElementById('rMateriales').textContent = subMaterieles>0 ? fmt(subMaterieles) : '—';
   document.getElementById('rSubEquipos').textContent = fmt(subEquipos);
-  document.getElementById('rInstBase').textContent   = instBase>0 ? fmt(instBase) : (nPanel>0?'N/A (< 4 paneles)':'—');
   document.getElementById('rCostosAdic').textContent = fmt(subAdic);
   document.getElementById('rDiseno').textContent     = fmt(disenoTram);
   document.getElementById('rSubDirectos').textContent= fmt(subDirectos);
@@ -890,9 +874,7 @@ async function guardar(estadoOverride) {
   // Cadena de precios
   const subMaterieles2 = materiales.reduce((s,m)=>s+m.subtotal,0);
   const subEquipos  = pPanel*nPanel + pInversor*nInversor + pBateria*nBateria + subMaterieles2;
-  const nClamped    = Math.min(Math.max(nPanel,4),59);
-  const instBase    = nPanel>=4 ? (INSTALL_TABLE[nClamped]||0) : 0;
-  const subDirectos = subEquipos + instBase + subAdic + disenoTram;
+  const subDirectos = subEquipos + subAdic + disenoTram;
   const margenPct   = parseFloat(document.getElementById('fMargen').value)||0;
   const margen      = subDirectos * margenPct / 100;
   const precioLista = subDirectos + margen;
@@ -938,7 +920,6 @@ async function guardar(estadoOverride) {
     distribuidora:        document.getElementById('fDistribuidora').value.trim(),
     items, solar_data, equipos_data,
     costos_adicionales:   extrasData,
-    instalacion_base:     instBase,
     costo_diseno_tramitacion: disenoTram,
     subtotal_equipos:     subEquipos,
     subtotal_directos:    subDirectos,
