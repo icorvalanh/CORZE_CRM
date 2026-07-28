@@ -212,8 +212,11 @@
         <span class="equip-display" id="dPanelKwp" title="Potencia del sistema">—</span>
         <span class="equip-display equip-sub" id="dPanelSub">—</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 64px;gap:6px;margin-bottom:14px">
-        <div style="font-size:11px;color:var(--gray3);padding-left:2px" id="dPanelPrecio">Precio unitario: —</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
+        <span style="font-size:11px;color:var(--gray3);flex-shrink:0">Precio unit.:</span>
+        <input type="text" class="inline-input" id="oPanelPrecio" style="width:110px" placeholder="$0"
+               oninput="recalcular()" onfocus="this.select()" title="Puedes modificar el precio solo para este presupuesto">
+        <span id="dPanelPrecioOrig" style="font-size:9px;color:var(--gray3);font-style:italic"></span>
       </div>
 
       <!-- Inversor -->
@@ -226,7 +229,12 @@
         <span class="equip-display" id="dInversorSpec" title="Especificación">—</span>
         <span class="equip-display equip-sub" id="dInversorSub">—</span>
       </div>
-      <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dInversorPrecio">Precio unitario: —</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
+        <span style="font-size:11px;color:var(--gray3);flex-shrink:0">Precio unit.:</span>
+        <input type="text" class="inline-input" id="oInversorPrecio" style="width:110px" placeholder="$0"
+               oninput="recalcular()" onfocus="this.select()" title="Puedes modificar el precio solo para este presupuesto">
+        <span id="dInversorPrecioOrig" style="font-size:9px;color:var(--gray3);font-style:italic"></span>
+      </div>
 
       <!-- Batería -->
       <div class="equip-lbl">BATERÍA (opcional)</div>
@@ -238,7 +246,12 @@
         <span class="equip-display" id="dBateriaSpec" title="Especificación">—</span>
         <span class="equip-display equip-sub" id="dBateriaSub">—</span>
       </div>
-      <div style="margin-bottom:14px;font-size:11px;color:var(--gray3);padding-left:2px" id="dBateriaPrecio">Precio unitario: —</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
+        <span style="font-size:11px;color:var(--gray3);flex-shrink:0">Precio unit.:</span>
+        <input type="text" class="inline-input" id="oBateriaPrecio" style="width:110px" placeholder="$0"
+               oninput="recalcular()" onfocus="this.select()" title="Puedes modificar el precio solo para este presupuesto">
+        <span id="dBateriaPrecioOrig" style="font-size:9px;color:var(--gray3);font-style:italic"></span>
+      </div>
 
       <!-- Materiales, montaje y otros (multi-item) -->
       <div class="equip-lbl">MONTAJE, MATERIALES Y ACCESORIOS</div>
@@ -505,6 +518,20 @@ let calcTimer = null;
 const fmt  = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
 const fmtK = n => { n=Math.round(n||0); if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString('es-CL'); };
 
+// ── Precio override helpers ──────────────────────────────────────────────────
+function setPrecioInput(inputId, hintId, valor, valorOrig) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.value = valor ? '$' + Math.round(valor).toLocaleString('es-CL') : '';
+  const hint = document.getElementById(hintId);
+  if (hint) hint.textContent = valorOrig ? '(inventario: '+fmt(valorOrig)+')' : '';
+}
+function readPrecioInput(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el || !el.value.trim()) return 0;
+  return parseInt(el.value.replace(/[^0-9]/g, '')) || 0;
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   renderExtras();
@@ -556,14 +583,20 @@ async function cargarProductos() {
 // ── Equipment changes ─────────────────────────────────────────────────────────
 function onPanelChange() {
   selPanel = paneles.find(p => p.id === document.getElementById('selPanel').value) || null;
+  const p = selPanel ? (parseInt(selPanel.precio_venta)||0) : 0;
+  setPrecioInput('oPanelPrecio', 'dPanelPrecioOrig', p, 0);
   recalcular();
 }
 function onInversorChange() {
   selInversor = inversores.find(p => p.id === document.getElementById('selInversor').value) || null;
+  const p = selInversor ? (parseInt(selInversor.precio_venta)||0) : 0;
+  setPrecioInput('oInversorPrecio', 'dInversorPrecioOrig', p, 0);
   recalcular();
 }
 function onBateriaChange() {
   selBateria = baterias.find(p => p.id === document.getElementById('selBateria').value) || null;
+  const p = selBateria ? (parseInt(selBateria.precio_venta)||0) : 0;
+  setPrecioInput('oBateriaPrecio', 'dBateriaPrecioOrig', p, 0);
   recalcular();
 }
 // ── Materiales multi-item ────────────────────────────────────────────────────
@@ -606,6 +639,18 @@ function updateMaterialQty(idx, val) {
   recalcular();
 }
 
+function updateMaterialPrecio(idx, el) {
+  const v = parseInt(el.value.replace(/[^0-9]/g, '')) || 0;
+  materiales[idx].precio_unitario = v;
+  materiales[idx].subtotal = v * materiales[idx].cantidad;
+  const subEl = document.getElementById('matSub_'+idx);
+  if (subEl) subEl.textContent = fmt(materiales[idx].subtotal);
+  const total = materiales.reduce((s,m)=>s+m.subtotal,0);
+  const subEl2 = document.getElementById('dSubMateriales');
+  if (subEl2) subEl2.textContent = 'Total materiales: '+fmt(total);
+  recalcular();
+}
+
 function renderMateriales() {
   const cont = document.getElementById('materialesContainer');
   const subEl = document.getElementById('dSubMateriales');
@@ -615,11 +660,15 @@ function renderMateriales() {
     return;
   }
   cont.innerHTML = materiales.map((m,i) => `
-    <div style="display:grid;grid-template-columns:1fr 62px 108px 28px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border1)">
+    <div style="display:grid;grid-template-columns:1fr 108px 58px 100px 24px;gap:5px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border1)">
       <div style="overflow:hidden">
         <div style="font-size:12px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${m.nombre}">${m.nombre}</div>
-        <div style="font-size:10px;color:var(--gray3)">${m.categoria} · ${fmt(m.precio_unitario)} c/u</div>
+        <div style="font-size:10px;color:var(--gray3)">${m.categoria}</div>
       </div>
+      <input type="text" class="inline-input" style="width:100%;text-align:right;font-size:11px"
+             value="${m.precio_unitario ? fmt(m.precio_unitario) : ''}"
+             placeholder="$0" title="Precio unitario (solo este presupuesto)"
+             oninput="updateMaterialPrecio(${i},this)" onfocus="this.select()">
       <input type="number" class="equip-qty" value="${m.cantidad}" min="1" style="width:100%" oninput="updateMaterialQty(${i},this.value)">
       <span id="matSub_${i}" style="font-size:12px;font-weight:700;color:#2ECC71;text-align:right">${fmt(m.subtotal)}</span>
       <button onclick="quitarMaterial(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;line-height:1;padding:0">×</button>
@@ -657,9 +706,9 @@ function recalcular() {
   const nInversor = parseInt(document.getElementById('qInversor').value) || 0;
   const nBateria  = parseInt(document.getElementById('qBateria').value)  || 0;
 
-  const pPanel    = selPanel    ? (parseInt(selPanel.precio_venta)    || 0) : 0;
-  const pInversor = selInversor ? (parseInt(selInversor.precio_venta) || 0) : 0;
-  const pBateria  = selBateria  ? (parseInt(selBateria.precio_venta)  || 0) : 0;
+  const pPanel    = selPanel    ? (readPrecioInput('oPanelPrecio')    || parseInt(selPanel.precio_venta)||0)    : 0;
+  const pInversor = selInversor ? (readPrecioInput('oInversorPrecio') || parseInt(selInversor.precio_venta)||0) : 0;
+  const pBateria  = selBateria  ? (readPrecioInput('oBateriaPrecio')  || parseInt(selBateria.precio_venta)||0)  : 0;
 
   const subPaneles  = pPanel    * nPanel;
   const subInversor = pInversor * nInversor;
@@ -816,9 +865,9 @@ async function guardar(estadoOverride) {
   const nInversor = parseInt(document.getElementById('qInversor').value) || 0;
   const nBateria  = parseInt(document.getElementById('qBateria').value)  || 0;
 
-  const pPanel    = selPanel    ? (parseInt(selPanel.precio_venta)    ||0) : 0;
-  const pInversor = selInversor ? (parseInt(selInversor.precio_venta) ||0) : 0;
-  const pBateria  = selBateria  ? (parseInt(selBateria.precio_venta)  ||0) : 0;
+  const pPanel    = selPanel    ? (readPrecioInput('oPanelPrecio')    || parseInt(selPanel.precio_venta)||0)    : 0;
+  const pInversor = selInversor ? (readPrecioInput('oInversorPrecio') || parseInt(selInversor.precio_venta)||0) : 0;
+  const pBateria  = selBateria  ? (readPrecioInput('oBateriaPrecio')  || parseInt(selBateria.precio_venta)||0)  : 0;
 
   // Items array para compatibilidad con PDF
   const items = [];
@@ -960,17 +1009,26 @@ async function cargarPresupuesto(p) {
   const eq = p.equipos_data||{};
   if (eq.panel?.id) {
     document.getElementById('selPanel').value = eq.panel.id;
-    onPanelChange();
+    selPanel = paneles.find(p => p.id === eq.panel.id) || null;
+    const invP = selPanel ? parseInt(selPanel.precio_venta)||0 : 0;
+    const savedP = eq.panel.precio || invP;
+    setPrecioInput('oPanelPrecio', 'dPanelPrecioOrig', savedP, savedP !== invP ? invP : 0);
     document.getElementById('qPanel').value = eq.panel.cantidad||0;
   }
   if (eq.inversor?.id) {
     document.getElementById('selInversor').value = eq.inversor.id;
-    onInversorChange();
+    selInversor = inversores.find(p => p.id === eq.inversor.id) || null;
+    const invI = selInversor ? parseInt(selInversor.precio_venta)||0 : 0;
+    const savedI = eq.inversor.precio || invI;
+    setPrecioInput('oInversorPrecio', 'dInversorPrecioOrig', savedI, savedI !== invI ? invI : 0);
     document.getElementById('qInversor').value = eq.inversor.cantidad||0;
   }
   if (eq.bateria?.id) {
     document.getElementById('selBateria').value = eq.bateria.id;
-    onBateriaChange();
+    selBateria = baterias.find(p => p.id === eq.bateria.id) || null;
+    const invB = selBateria ? parseInt(selBateria.precio_venta)||0 : 0;
+    const savedB = eq.bateria.precio || invB;
+    setPrecioInput('oBateriaPrecio', 'dBateriaPrecioOrig', savedB, savedB !== invB ? invB : 0);
     document.getElementById('qBateria').value = eq.bateria.cantidad||0;
   }
   // Restaurar materiales (nuevo formato)
