@@ -274,8 +274,18 @@
       <span id="callTimer" style="font-size:11px;font-weight:700;color:#e74c3c;display:none;background:#2d0a0a;padding:3px 10px;border-radius:6px">⏱ 0:00</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#4a5568;cursor:pointer">
-        <input type="checkbox" id="callOnlyPhone" checked onchange="rebuilCallQueue()"> Solo con teléfono
+      <div style="display:flex;gap:4px">
+        <button id="callFilterBtn_llamadas" onclick="setCallFilter('llamadas',this)"
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:700;background:#0a1f0a;border:1px solid #27ae6066;color:#2ecc71">
+          📞 Para llamar
+        </button>
+        <button id="callFilterBtn_todos" onclick="setCallFilter('todos',this)"
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:600;background:#1e2a38;border:1px solid #2d3748;color:#718096">
+          Todos
+        </button>
+      </div>
+      <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#4a5568;cursor:pointer">
+        <input type="checkbox" id="callOnlyPhone" checked onchange="rebuilCallQueue()"> Solo con tel.
       </label>
       <button onclick="cerrarModoLlamadas()" style="background:#1e2a38;border:1px solid #2d3748;color:#a0aec0;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px">✕ Salir</button>
     </div>
@@ -310,8 +320,20 @@
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="callLeadTags"></div>
 
-        <div style="font-size:11px;color:#4a5568;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Última nota</div>
-        <div id="callLastNota" style="font-size:12px;color:#718096;background:#0d1520;border-radius:8px;padding:10px 14px;min-height:36px;border-left:2px solid #1e2a38;white-space:pre-wrap;max-height:70px;overflow:hidden"></div>
+        <!-- Datos clave extraídos -->
+        <div id="callDatosKey" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px"></div>
+
+        <!-- Cuerpo del email / descripción -->
+        <div style="font-size:10px;color:#4a5568;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">📧 Lo que escribió el cliente</div>
+        <div id="callEmailBody"
+             style="font-size:12px;color:#a0aec0;background:#080d14;border:1px solid #1e2a38;border-left:3px solid #3498db55;border-radius:8px;padding:12px 14px;white-space:pre-wrap;line-height:1.6;max-height:140px;overflow-y:auto;cursor:pointer"
+             onclick="this.style.maxHeight = this.style.maxHeight==='none' ? '140px' : 'none'"
+             title="Clic para expandir/contraer"></div>
+        <div style="font-size:10px;color:#2d3748;margin-top:3px;text-align:right">↕ clic para expandir</div>
+
+        <!-- Última nota del equipo -->
+        <div style="font-size:10px;color:#4a5568;margin-top:12px;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">📝 Última nota del equipo</div>
+        <div id="callLastNota" style="font-size:11px;color:#718096;background:#0d1117;border-radius:8px;padding:8px 12px;border-left:2px solid #2d3748;white-space:pre-wrap;max-height:52px;overflow:hidden"></div>
       </div>
 
       <!-- Grabar -->
@@ -856,6 +878,7 @@ async function importarEML(input) {
 
 let callQueue    = [];
 let callIdx      = 0;
+let callFilter   = 'llamadas'; // 'llamadas' = Nuevo + Intento1 + Intento2 | 'todos'
 let callSession  = { llamadas: 0, notas: 0, saltados: 0 };
 let mediaStream  = null;
 let mediaRec     = null;
@@ -864,18 +887,53 @@ let timerInt     = null;
 let timerSecs    = 0;
 let callStarted  = false;
 
+const ETAPAS_LLAMADAS = ['Nuevo Lead', 'Intento Llamado 1°', 'Intento Llamado 2°'];
+
 const ETAPAS_QUICK = [
-  { label: '📵 No contesta',     etapa: 'Intento Llamado 1°', color: '#5DADE2' },
-  { label: '📵 2° intento',      etapa: 'Intento Llamado 2°', color: '#A569BD' },
-  { label: '✅ Contactado',       etapa: 'Contactado',         color: '#9B59B6' },
-  { label: '📄 Pedir cuenta luz', etapa: 'Esperando Cuenta Luz', color: '#F0B27A' },
+  { label: '📵 No contesta 1°',  etapa: 'Intento Llamado 1°',     color: '#5DADE2' },
+  { label: '📵 No contesta 2°',  etapa: 'Intento Llamado 2°',     color: '#A569BD' },
+  { label: '✅ Contactado',       etapa: 'Contactado',             color: '#9B59B6' },
+  { label: '📄 Pedir cuenta luz', etapa: 'Esperando Cuenta Luz',  color: '#F0B27A' },
   { label: '🏠 Agendar visita',   etapa: 'Visita Técnica Agendada', color: '#F39C12' },
-  { label: '❌ Perdido',          etapa: 'Cliente Perdido',    color: '#E74C3C' },
+  { label: '❌ Perdido',          etapa: 'Cliente Perdido',        color: '#E74C3C' },
 ];
+
+const ETAPA_COLORS = {
+  'Nuevo Lead':              '#3498DB',
+  'Intento Llamado 1°':      '#5DADE2',
+  'Intento Llamado 2°':      '#A569BD',
+  'Contactado':              '#9B59B6',
+  'Esperando Cuenta Luz':    '#F0B27A',
+  'Visita Técnica Agendada': '#F39C12',
+  'Propuesta Enviada':       '#E67E22',
+  'En Negociación':          '#E74C3C',
+  'Contrato Firmado':        '#27AE60',
+  'En Instalación':          '#1ABC9C',
+  'Proyecto Finalizado':     '#2ECC71',
+  'Cliente Perdido':         '#E74C3C',
+};
+
+function setCallFilter(f, btn) {
+  callFilter = f;
+  document.querySelectorAll('[id^="callFilterBtn_"]').forEach(b => {
+    b.style.background = '#1e2a38';
+    b.style.borderColor = '#2d3748';
+    b.style.color = '#718096';
+  });
+  btn.style.background = f === 'llamadas' ? '#0a1f0a' : '#0a0f1f';
+  btn.style.borderColor = f === 'llamadas' ? '#27ae6066' : '#3498db66';
+  btn.style.color = f === 'llamadas' ? '#2ecc71' : '#3498db';
+  callIdx = 0;
+  rebuilCallQueue();
+}
 
 function rebuilCallQueue() {
   const onlyPhone = document.getElementById('callOnlyPhone').checked;
-  callQueue = leadsData.filter(l => !onlyPhone || (l.telefono && l.telefono.trim()));
+  callQueue = leadsData.filter(l => {
+    if (callFilter === 'llamadas' && !ETAPAS_LLAMADAS.includes(l.etapa)) return false;
+    if (onlyPhone && !(l.telefono && l.telefono.trim())) return false;
+    return true;
+  });
   callIdx = Math.min(callIdx, Math.max(0, callQueue.length - 1));
   renderCallLeadList();
   renderCallLead();
@@ -884,6 +942,12 @@ function rebuilCallQueue() {
 function abrirModoLlamadas() {
   callSession = { llamadas: 0, notas: 0, saltados: 0 };
   callIdx = 0;
+  callFilter = 'llamadas';
+  // Reset filter button styles
+  const btnL = document.getElementById('callFilterBtn_llamadas');
+  const btnT = document.getElementById('callFilterBtn_todos');
+  if (btnL) { btnL.style.background='#0a1f0a'; btnL.style.borderColor='#27ae6066'; btnL.style.color='#2ecc71'; }
+  if (btnT) { btnT.style.background='#1e2a38'; btnT.style.borderColor='#2d3748';   btnT.style.color='#718096'; }
   rebuilCallQueue();
   document.getElementById('callHud').style.display = 'flex';
 }
@@ -897,21 +961,28 @@ function cerrarModoLlamadas() {
 
 function renderCallLeadList() {
   const el = document.getElementById('callLeadList');
+  if (!callQueue.length) {
+    el.innerHTML = `<div style="padding:20px 14px;text-align:center;color:#4a5568;font-size:11px">Sin leads en cola</div>`;
+    return;
+  }
   el.innerHTML = callQueue.map((l, i) => {
     const active = i === callIdx;
+    const etapaColor = ETAPA_COLORS[l.etapa] || '#4a5568';
     return `<div onclick="goToCallLead(${i})"
-               style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #161e28;
+               style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #111820;
                       background:${active ? '#0a1f2a' : 'transparent'};
                       border-left:${active ? '3px solid #2ecc71' : '3px solid transparent'}">
-      <div style="font-size:11px;font-weight:700;color:${active?'#f7fafc':'#718096'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-        ${l.nombre || ''} ${l.apellido || ''}
+      <div style="font-size:11px;font-weight:700;color:${active?'#f7fafc':'#a0aec0'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${(l.nombre || '') + ' ' + (l.apellido || '')}
       </div>
-      <div style="font-size:10px;color:${l.telefono ? '#3498db' : '#4a5568'}">
+      <div style="font-size:9px;margin-top:2px;padding:1px 6px;border-radius:4px;display:inline-block;background:${etapaColor}22;color:${etapaColor};font-weight:700">
+        ${l.etapa || '—'}
+      </div>
+      <div style="font-size:10px;color:${l.telefono ? '#3498db' : '#4a5568'};margin-top:2px">
         ${l.telefono || 'sin tel.'}
       </div>
     </div>`;
   }).join('');
-  // Scroll active into view
   const items = el.children;
   if (items[callIdx]) items[callIdx].scrollIntoView({ block: 'nearest' });
 }
@@ -927,7 +998,13 @@ function renderCallLead() {
   document.getElementById('callProgress').textContent = `${callIdx + 1} / ${total}`;
   document.getElementById('callLeadName').textContent = `${lead.nombre || ''} ${lead.apellido || ''}`.trim() || '(Sin nombre)';
   document.getElementById('callLeadEmpresa').textContent = lead.empresa || '';
-  document.getElementById('callEtapaBadge').textContent = lead.etapa || 'Sin etapa';
+
+  const etapaColor = ETAPA_COLORS[lead.etapa] || '#4a5568';
+  const etapaBadge = document.getElementById('callEtapaBadge');
+  etapaBadge.textContent = lead.etapa || 'Sin etapa';
+  etapaBadge.style.background = etapaColor + '22';
+  etapaBadge.style.color = etapaColor;
+  etapaBadge.style.border = `1px solid ${etapaColor}55`;
 
   const phone = (lead.telefono || '').trim();
   const phoneEl = document.getElementById('callPhoneText');
@@ -942,21 +1019,52 @@ function renderCallLead() {
   emailLink.href = lead.email ? `mailto:${lead.email}` : '#';
   emailLink.style.opacity = lead.email ? '1' : '0.4';
 
-  // Tags
+  // Tags de origen/tipo
   const tags = [];
   if (lead.tipo_proyecto) tags.push(['🏠', lead.tipo_proyecto, '#1a3a2a', '#2ecc71']);
-  if (lead.origen)        tags.push(['🔗', lead.origen, '#1a1a3a', '#9B59B6']);
-  if (lead.region)        tags.push(['📍', lead.region, '#1a2a3a', '#3498db']);
-  if (lead.consumo_kwh)   tags.push(['⚡', lead.consumo_kwh + ' kWh/mes', '#1a200a', '#F5A623']);
+  if (lead.origen)        tags.push(['🔗', lead.origen,        '#1a1a3a', '#9B59B6']);
+  if (lead.region)        tags.push(['📍', lead.region,        '#1a2a3a', '#3498db']);
   document.getElementById('callLeadTags').innerHTML = tags.map(([icon, txt, bg, color]) =>
     `<span style="font-size:10px;padding:3px 10px;border-radius:20px;background:${bg};color:${color};border:1px solid ${color}33">
       ${icon} ${txt}</span>`).join('');
 
-  // Last nota
-  const notas = lead.notas_historial || [];
-  const lastNota = notas.length ? notas[notas.length - 1] : null;
+  // ── Datos clave (cuenta de luz, kWh, proyecto) ──────────────────────────────
+  const datoItems = [];
+  if (lead.consumo_estimado) datoItems.push({ icon: '💡', label: 'Cuenta de luz', val: lead.consumo_estimado, color: '#F5A623' });
+  if (lead.consumo_kwh)      datoItems.push({ icon: '⚡', label: 'Consumo',       val: lead.consumo_kwh + ' kWh/mes', color: '#2ecc71' });
+  if (lead.tipo_proyecto)    datoItems.push({ icon: '🏠', label: 'Tipo proyecto', val: lead.tipo_proyecto, color: '#3498db' });
+  if (lead.ciudad)           datoItems.push({ icon: '📍', label: 'Ciudad',        val: lead.ciudad, color: '#9B59B6' });
+
+  // Intentar extraer datos del cuerpo del email si no hay campos estructurados
+  const notasText = lead.notas || '';
+  if (!lead.consumo_estimado) {
+    const mMatch = notasText.match(/\$[\d.,][\d.,]*/);
+    if (mMatch) datoItems.unshift({ icon: '💡', label: 'Cuenta de luz (est.)', val: mMatch[0], color: '#F5A623' });
+  }
+
+  document.getElementById('callDatosKey').style.display = datoItems.length ? 'grid' : 'none';
+  document.getElementById('callDatosKey').innerHTML = datoItems.map(d =>
+    `<div style="background:#080d14;border:1px solid #1e2a38;border-top:2px solid ${d.color}55;border-radius:8px;padding:8px 10px">
+      <div style="font-size:9px;color:#4a5568;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${d.icon} ${d.label}</div>
+      <div style="font-size:13px;font-weight:800;color:${d.color};margin-top:3px">${d.val}</div>
+    </div>`).join('');
+
+  // ── Cuerpo del email / notas del lead ───────────────────────────────────────
+  const emailBodyEl = document.getElementById('callEmailBody');
+  emailBodyEl.style.maxHeight = '140px'; // reset on lead change
+  if (notasText && notasText.trim()) {
+    emailBodyEl.textContent = notasText;
+    emailBodyEl.style.color = '#a0aec0';
+  } else {
+    emailBodyEl.textContent = 'Sin descripción ni email registrado para este lead.';
+    emailBodyEl.style.color = '#4a5568';
+  }
+
+  // ── Última nota del equipo ──────────────────────────────────────────────────
+  const notasHist = lead.notas_historial || [];
+  const lastNota = notasHist.length ? notasHist[notasHist.length - 1] : null;
   document.getElementById('callLastNota').textContent = lastNota
-    ? `${lastNota.texto}` : (lead.notas || 'Sin notas previas');
+    ? `${lastNota.autor || ''}: ${lastNota.texto}` : 'Sin notas del equipo aún.';
 
   // Stage buttons
   document.getElementById('callEtapaButtons').innerHTML = ETAPAS_QUICK.map(e =>
