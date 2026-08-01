@@ -129,11 +129,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
 <div class="header">
   <div>
-    {% if logo_b64 %}
-      <img src="{{ logo_b64 }}" alt="Corze" style="max-height:56px;max-width:155px;object-fit:contain;display:block">
-    {% else %}
-      <img src="{{ url_for('static', filename='assets/logo_corze_negro.png') }}" alt="Corze" style="max-height:56px;max-width:155px;object-fit:contain;display:block">
-    {% endif %}
+    <img src="{{ logo_b64 }}" alt="Corze" style="max-height:56px;max-width:155px;object-fit:contain;display:block">
     <div style="font-size:9px;color:#888;margin-top:3px">Energía Solar</div>
   </div>
   <div style="text-align:right">
@@ -222,6 +218,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 {% endif %}
 
 <!-- ══ PROPUESTA TÉCNICA — EQUIPOS ════════════════════════════════════════ -->
+{% set _ca = p.get('costos_adicionales') or {} %}
 <div class="sec-bar">Propuesta técnica — equipos</div>
 <table class="eq">
   <thead>
@@ -270,15 +267,13 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
         <td></td>
       </tr>
     {% endif %}
-    {% if not eq.get('paneles') and not eq.get('inversores') %}
-      {% for it in (p.get('items') or []) if it.get('categoria') in ('Panel Solar','Inversor','Batería') %}
-      <tr>
-        <td>{{ it.categoria }}</td>
-        <td>{{ it.nombre }}</td>
-        <td>{{ it.cantidad }}</td>
-        <td></td>
-      </tr>
-      {% endfor %}
+    {% if _ca.get('cargador_ev') %}
+    <tr>
+      <td>Cargador EV</td>
+      <td>Instalación cargador vehículo eléctrico</td>
+      <td>{{ _ca.cargador_ev.get('cantidad', 1) }}</td>
+      <td></td>
+    </tr>
     {% endif %}
   </tbody>
 </table>

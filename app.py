@@ -735,6 +735,16 @@ def get_logo_b64():
     except:
         return ''
 
+def get_logo_negro_b64():
+    """Devuelve el logo negro como base64 para documentos impresos (PDF)."""
+    import base64, os
+    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'assets', 'logo_corze_negro.png')
+    try:
+        with open(logo_path, 'rb') as f:
+            return 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
+    except:
+        return get_logo_b64()
+
 def render_contrato(car, folio, fecha, **kwargs):
     """Helper para renderizar el contrato con todos los datos."""
     precio_pub     = int(car.get('precio_publicacion') or car.get('precio_pedido',0))
@@ -1183,7 +1193,7 @@ def api_seed_accesorios():
         dict(codigo='ACC-001', nombre='Riel 5000mm (Versionpro)',                                          categoria='Accesorio', precio_venta=20028,  precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-002', nombre='Midclamp 30mm',                                                     categoria='Accesorio', precio_venta=493,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-003', nombre='Endclamp',                                                          categoria='Accesorio', precio_venta=493,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
-        dict(codigo='ACC-004', nombre='Groundclip 30x50 mm2',                                             categoria='Accesorio', precio_venta=115,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
+        dict(codigo='ACC-004', nombre='Groundclip 30x50 mm2',                                             categoria='Accesorio', precio_venta=500,    precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-005', nombre='Tornillo de Conexión a Tierra Groundlug',                          categoria='Accesorio', precio_venta=1200,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-006', nombre='Perno Partido con Espiga 6AWG',                                    categoria='Accesorio', precio_venta=67,     precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-007', nombre='Tubo EMT 32MMX3MTS Espesor 1,0 MM',                               categoria='Accesorio', precio_venta=2352,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
@@ -3036,7 +3046,7 @@ def presupuesto_pdf(doc_id):
     p = db.get_presupuesto_by_id(doc_id)
     if not p:
         return '<h2>Presupuesto no encontrado</h2>', 404
-    logo_b64 = get_logo_b64()
+    logo_b64 = get_logo_negro_b64()
     sd = p.get('solar_data') or {}
     solar_kpis = _calcular_solar_kpis(sd, p.get('total', 0)) if sd.get('potencia_kwp') else {}
     equipos = _categorizar_items(p.get('items') or [])
@@ -3068,7 +3078,7 @@ def api_presupuestos_enviar_email(doc_id):
     if not EMAIL_PASS:
         return jsonify({'ok': False, 'error': 'EMAIL_PASS no configurada en las variables de entorno'})
 
-    logo_b64 = get_logo_b64()
+    logo_b64 = get_logo_negro_b64()
     sd_email = p.get('solar_data') or {}
     solar_kpis_email = _calcular_solar_kpis(sd_email, p.get('total', 0)) if sd_email.get('potencia_kwp') else {}
     equipos_email = _categorizar_items(p.get('items') or [])
@@ -3140,10 +3150,16 @@ def _categorizar_items(items: list) -> dict:
     paneles, inversores, baterias, otros = [], [], [], []
     for it in items:
         n = (it.get('nombre') or '').lower()
-        if any(k in n for k in ['panel','bifacial','monocristalino','policristalino',
-                                  'jinko','longi','canadiansolar','trina','yingli']) \
-                or _re.search(r'\b\d{3,4}\s*w\b', n):
-            # Extraer potencia unitaria para mostrar en propuesta
+        cat = (it.get('categoria') or '').lower()
+        # Panel solar: usar categoría si está definida, sino inferir por nombre
+        # 'panel' solo aplica si inicia el nombre — evita falsos positivos como "zinc/panel"
+        is_panel = (cat == 'panel solar') or (not cat and (
+            any(k in n for k in ['bifacial','monocristalino','policristalino',
+                                  'jinko','longi','canadiansolar','trina','yingli'])
+            or _re.search(r'\b\d{3,4}\s*w\b', n)
+            or _re.match(r'panel', n)
+        ))
+        if is_panel:
             m = _re.search(r'(\d{3,4})\s*[Ww]', it.get('nombre',''))
             it = dict(it)
             it['_spec'] = f"{m.group(1)} W c/u" if m else ''
