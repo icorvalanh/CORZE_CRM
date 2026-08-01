@@ -3050,15 +3050,26 @@ def presupuesto_pdf(doc_id):
     sd = p.get('solar_data') or {}
     solar_kpis = _calcular_solar_kpis(sd, p.get('total', 0)) if sd.get('potencia_kwp') else {}
     equipos = _categorizar_items(p.get('items') or [])
-    resp = make_response(render_template('presupuesto_pdf.html',
-                                         p=p, logo_b64=logo_b64,
-                                         solar_kpis=solar_kpis, equipos=equipos))
+    html = render_template('presupuesto_pdf.html',
+                           p=p, logo_b64=logo_b64,
+                           solar_kpis=solar_kpis, equipos=equipos)
     if request.args.get('download'):
         nombre = (p.get('nombre_cliente','') or 'cliente').replace(' ', '_')
         folio  = p.get('folio', doc_id[:8])
-        resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
-        resp.headers['Content-Type'] = 'text/html'
-    return resp
+        try:
+            from weasyprint import HTML as WP_HTML
+            pdf_bytes = WP_HTML(string=html, base_url=request.host_url).write_pdf()
+            resp = make_response(pdf_bytes)
+            resp.headers['Content-Type'] = 'application/pdf'
+            resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.pdf"'
+            return resp
+        except Exception as e:
+            app.logger.error(f'weasyprint error: {e}')
+            resp = make_response(html)
+            resp.headers['Content-Type'] = 'text/html'
+            resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
+            return resp
+    return make_response(html)
 
 @app.route('/api/presupuestos/<doc_id>/enviar-email', methods=['POST'])
 @login_required

@@ -1,2 +1,5 @@
+[phases.setup]
+aptPkgs = ["libpangocairo-1.0-0", "libgdk-pixbuf2.0-0", "shared-mime-info", "fonts-liberation"]
+
 [start]
 cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120"
