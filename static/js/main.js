@@ -58,11 +58,11 @@ async function api(url, method = 'GET', body = null, timeout = 20000) {
 function fmtTel(raw) {
   if (!raw) return '';
   const digits = String(raw).replace(/\D/g, '');
-  // +56 9 XXXX XXXX  (12 dígitos con código país)
+  // +56 9 XXXX XXXX  (11 dígitos: 56 + 9 dígitos del número)
   if (digits.length === 11 && digits.startsWith('569')) {
-    return `+56 9 ${digits.slice(4, 8)} ${digits.slice(8)}`;
+    return `+56 9 ${digits.slice(3, 7)} ${digits.slice(7)}`;
   }
-  // 56 9 XXXX XXXX  (11 dígitos sin +)
+  // +56 X XXXX XXXX  (11 dígitos, número fijo u otro)
   if (digits.length === 11 && digits.startsWith('56')) {
     return `+56 ${digits[2]} ${digits.slice(3, 7)} ${digits.slice(7)}`;
   }

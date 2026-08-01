@@ -716,7 +716,7 @@ def fmt_tel_filter(raw):
         return ''
     digits = ''.join(c for c in str(raw) if c.isdigit())
     if len(digits) == 11 and digits.startswith('569'):
-        return f'+56 9 {digits[4:8]} {digits[8:]}'
+        return f'+56 9 {digits[3:7]} {digits[7:]}'
     if len(digits) == 11 and digits.startswith('56'):
         return f'+56 {digits[2]} {digits[3:7]} {digits[7:]}'
     if len(digits) == 9 and digits.startswith('9'):
