@@ -54,9 +54,13 @@ async function api(url, method = 'GET', body = null, timeout = 20000) {
   }
 }
 
-function today() {
-  return new Date().toISOString().split('T')[0];
+// GMT-4 date helpers — usar estos en lugar de new Date().toISOString()
+function dStr(d) {
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
 }
+function today() { return dStr(new Date()); }
 
 function formatDate(d) {
   if (!d) return '—';

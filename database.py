@@ -1,8 +1,11 @@
 # database.py — VTA Web v2.1 · Inventario unificado
 
 import os, json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
+
+_TZ = timezone(timedelta(hours=-4))
+def _cl(): return datetime.now(_TZ).replace(tzinfo=None)
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -26,14 +29,14 @@ class FirebaseDB:
         self.db = firestore.client()
 
     @staticmethod
-    def _now():  return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    def _now():  return _cl().strftime('%Y-%m-%d %H:%M:%S')
     @staticmethod
-    def _today(): return datetime.now().strftime('%Y-%m-%d')
+    def _today(): return _cl().strftime('%Y-%m-%d')
     @staticmethod
     def _calc_dias(ingreso, hasta=''):
         try:
             d1 = datetime.strptime(ingreso[:10], '%Y-%m-%d')
-            d2 = datetime.strptime(hasta[:10], '%Y-%m-%d') if hasta else datetime.now()
+            d2 = datetime.strptime(hasta[:10], '%Y-%m-%d') if hasta else _cl()
             return max(0, (d2 - d1).days)
         except: return 0
 
@@ -185,7 +188,7 @@ class FirebaseDB:
             'stock_antiguedad':[],
         }
         try:
-            mes  = datetime.now().strftime('%Y-%m')
+            mes  = _cl().strftime('%Y-%m')
             docs = self.get_all_inventario()
 
             estado_c: Dict[str,int] = {}
@@ -673,7 +676,7 @@ class FirebaseDB:
             ts = d.get('cached_at', '')
             if ts:
                 from dateutil import parser as dp
-                age = datetime.now() - dp.parse(ts).replace(tzinfo=None)
+                age = _cl() - dp.parse(ts).replace(tzinfo=None)
                 if age > timedelta(hours=24):
                     return {}
             return d
@@ -709,9 +712,9 @@ class FirebaseDB:
     def _next_finanzas_id(self) -> str:
         try:
             count = len(list(self.db.collection('finanzas_corze').limit(9999).stream()))
-            return f"CORZE-{datetime.now().year}-{count+1:05d}"
+            return f"CORZE-{_cl().year}-{count+1:05d}"
         except Exception:
-            return f"CORZE-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            return f"CORZE-{_cl().strftime('%Y%m%d%H%M%S')}"
 
     def get_all_finanzas(self, tipo: str = '', mes: str = '') -> List[dict]:
         try:
@@ -761,7 +764,7 @@ class FirebaseDB:
             num = len(docs) + 1
             return f"VTA-{num:03d}"
         except Exception:
-            return f"VTA-{datetime.now().strftime('%H%M%S')}"
+            return f"VTA-{_cl().strftime('%H%M%S')}"
 
     def get_all_ventas_corze(self) -> List[dict]:
         try:
@@ -808,7 +811,7 @@ class FirebaseDB:
             num = len(docs) + 1
             return f"GTO-{num:03d}"
         except Exception:
-            return f"GTO-{datetime.now().strftime('%H%M%S')}"
+            return f"GTO-{_cl().strftime('%H%M%S')}"
 
     def get_all_gastos_corze(self) -> List[dict]:
         try:
@@ -935,7 +938,7 @@ class FirebaseDB:
     def get_docs_por_vencer(self, dias: int = 30) -> List[dict]:
         from datetime import timedelta
         try:
-            hoy      = datetime.now().date()
+            hoy      = _cl().date()
             umbral   = (hoy + timedelta(days=dias)).strftime('%Y-%m-%d')
             hoy_str  = hoy.strftime('%Y-%m-%d')
             campos   = ['fecha_permiso_circ', 'fecha_soap', 'fecha_revision_tec']
@@ -1208,7 +1211,7 @@ class FirebaseDB:
     # ── PRESUPUESTOS ──────────────────────────────────────────────────────────
     def _next_presupuesto_folio(self) -> str:
         try:
-            year = datetime.now().year
+            year = _cl().year
             col = self.db.collection('presupuestos')
             docs = list(col.stream())
             # Contar los del año actual
@@ -1225,7 +1228,7 @@ class FirebaseDB:
             return f'CORZE-{year}-{max_num + 1:04d}'
         except Exception:
             import random
-            return f'CORZE-{datetime.now().year}-{random.randint(1000, 9999)}'
+            return f'CORZE-{_cl().year}-{random.randint(1000, 9999)}'
 
     def add_presupuesto(self, data: dict) -> tuple:
         try:
@@ -1464,7 +1467,7 @@ class FirebaseDB:
             'tareas_pendientes': 0,
         }
         try:
-            mes = datetime.now().strftime('%Y-%m')
+            mes = _cl().strftime('%Y-%m')
             etapas_ganadas = {'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado', 'Post Venta'}
             etapas_activas = set(ETAPAS_PIPELINE) - {'Proyecto Finalizado', 'Post Venta'}
 

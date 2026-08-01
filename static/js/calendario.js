@@ -141,7 +141,7 @@ function renderVista() {
 function renderMes() {
   const year  = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const today = new Date().toISOString().slice(0, 10);
+  const hoy = today();
 
   const primerDia = new Date(year, month, 1).getDay();
   const diasMes   = new Date(year, month + 1, 0).getDate();
@@ -159,16 +159,16 @@ function renderMes() {
     if (dayNum < 1) {
       const prev = new Date(year, month, dayNum);
       date = prev; otroMes = true;
-      dateStr = prev.toISOString().slice(0, 10);
+      dateStr = dStr(prev);
     } else if (dayNum > diasMes) {
       const next = new Date(year, month, dayNum);
       date = next; otroMes = true;
-      dateStr = next.toISOString().slice(0, 10);
+      dateStr = dStr(next);
     } else {
       dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
     }
 
-    const isHoy   = dateStr === today;
+    const isHoy   = dateStr === hoy;
     const evs     = allEventos.filter(e => (e.fecha || '').slice(0,10) === dateStr);
     const visible = evs.slice(0, 3);
     const mas     = evs.length - 3;
@@ -196,7 +196,7 @@ function clickDia(dateStr) {
 // ── Vista Semana ──────────────────────────────────────────────────────────────
 function renderSemana() {
   const { lun } = semanaRange(currentDate);
-  const today   = new Date().toISOString().slice(0, 10);
+  const hoy   = today();
   const dias    = Array.from({length:7}, (_, i) => {
     const d = new Date(lun); d.setDate(lun.getDate() + i); return d;
   });
@@ -205,8 +205,8 @@ function renderSemana() {
 
   let html = '<div class="semana-cabecera" style="border-right:1px solid var(--border2)"></div>';
   dias.forEach(d => {
-    const ds  = d.toISOString().slice(0, 10);
-    const hoy = ds === today;
+    const ds  = dStr(d);
+    const hoy = ds === hoy;
     html += `<div class="semana-cabecera${hoy?' hoy':''}" onclick="clickDia('${ds}')" style="cursor:pointer">
       ${DIAS[d.getDay()]}<br><span style="font-size:16px;font-weight:800">${d.getDate()}</span>
     </div>`;
@@ -215,7 +215,7 @@ function renderSemana() {
   HORAS.forEach(hora => {
     html += `<div class="semana-hora">${hora}</div>`;
     dias.forEach(d => {
-      const ds  = d.toISOString().slice(0, 10);
+      const ds  = dStr(d);
       const evs = allEventos.filter(e => {
         if ((e.fecha || '').slice(0, 10) !== ds) return false;
         const hi = e.hora_inicio || '00:00';
@@ -236,7 +236,7 @@ function renderSemana() {
 
 // ── Vista Agenda ──────────────────────────────────────────────────────────────
 function renderAgenda() {
-  const today = new Date().toISOString().slice(0, 10);
+  const hoy = today();
   const sorted = [...allEventos].sort((a, b) => (a.fecha||'').localeCompare(b.fecha||''));
 
   if (!sorted.length) {
@@ -251,7 +251,7 @@ function renderAgenda() {
     const ds = (e.fecha || '').slice(0, 10);
     if (ds !== lastDate) {
       const d = new Date(ds + 'T12:00');
-      const isHoy = ds === today;
+      const isHoy = ds === hoy;
       html += `<div class="agenda-dia-header${isHoy?' hoy-label':''}">
         ${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} ${d.getFullYear()}${isHoy?' — Hoy':''}
       </div>`;
@@ -331,7 +331,7 @@ function resetForm() {
 function setDefaultFecha() {
   const el = document.getElementById('e_fecha');
   if (!el || el.value) return;
-  el.value = new Date().toISOString().slice(0, 10);
+  el.value = today();
 }
 
 // ── Guardar ───────────────────────────────────────────────────────────────────

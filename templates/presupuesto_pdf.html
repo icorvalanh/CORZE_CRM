@@ -296,7 +296,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     </div>
     {% endif %}
     <div class="eco-row total">
-      <span>PRECIO FINAL (IVA incluido)</span>
+      <span>PRECIO FINAL</span>
       <span>${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</span>
     </div>
     <div class="eco-row card">
@@ -305,7 +305,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     </div>
   </div>
 </div>
-<p class="eco-cond">Precio en pesos chilenos (CLP), IVA incluido. Incluye instalación, puesta en marcha y gestión de conexión ante la distribuidora. Garantías según fabricante de cada equipo.</p>
+<p class="eco-cond">Precio en pesos chilenos (CLP). Incluye instalación, puesta en marcha y gestión de conexión ante la distribuidora. Garantías según fabricante de cada equipo.</p>
 </div>
 
 <!-- ══ CONSUMO VS. GENERACIÓN MENSUAL ESTIMADA ════════════════════════════ -->
@@ -502,7 +502,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 <div class="sec-bar">Condiciones generales y aceptación</div>
 <div class="cond-box">{% if p.condiciones %}{{ p.condiciones }}{% else %}• Esta propuesta es válida por el número de días indicado en la portada de esta cotización.
 • Los valores de generación, ahorro y payback son estimaciones basadas en irradiancia promedio de la región y consumo histórico declarado por el cliente; el desempeño real puede variar.
-• Precios en pesos chilenos, IVA incluido. No incluye obras civiles no especificadas ni aumentos de potencia contratada con la distribuidora, salvo que se indique expresamente.
+• Precios en pesos chilenos. No incluye obras civiles no especificadas ni aumentos de potencia contratada con la distribuidora, salvo que se indique expresamente.
 • La aceptación de esta propuesta se formaliza con la firma de un contrato de instalación y el pago del anticipo acordado.{% endif %}</div>
 
 <!-- ══ FOOTER + FIRMA ══════════════════════════════════════════════════════ -->

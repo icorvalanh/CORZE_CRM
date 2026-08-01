@@ -25,8 +25,8 @@ async function loadTareas() {
 
 // ── Alerta urgentes ───────────────────────────────────────────────────────────
 function renderAlerta() {
-  const today  = new Date().toISOString().slice(0, 10);
-  const venc   = allTareas.filter(t => t.estado === 'pendiente' && t.fecha_limite <= today);
+  const hoy  = today();
+  const venc   = allTareas.filter(t => t.estado === 'pendiente' && t.fecha_limite <= hoy);
   const strip  = document.getElementById('alertaUrgentes');
   const txt    = document.getElementById('alertaUrgentesText');
   if (!strip || !txt) return;
@@ -57,7 +57,7 @@ function visibleTareas() {
 function renderTabla() {
   const tbody   = document.getElementById('tablaBody');
   const visible = visibleTareas();
-  const today   = new Date().toISOString().slice(0, 10);
+  const hoy   = today();
 
   if (!visible.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--gray3)">Sin tareas para mostrar</td></tr>';
@@ -68,7 +68,7 @@ function renderTabla() {
     const completada = t.estado === 'completada';
     const rowClass   = completada ? 'tarea-completada' : '';
     const fecha      = (t.fecha_limite || '').slice(0, 10);
-    const delta      = fecha ? Math.ceil((new Date(fecha) - new Date(today)) / 86400000) : null;
+    const delta      = fecha ? Math.ceil((new Date(fecha) - new Date(hoy)) / 86400000) : null;
     const recText    = { 0:'Sin recordatorio', 1:'1 día', 2:'2 días', 3:'3 días', 7:'1 semana', 14:'2 semanas' };
 
     let fechaClass = '', fechaIcon = '';
@@ -171,7 +171,7 @@ function setDefaultFecha() {
   if (!el || el.value) return;
   var tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  el.value = tomorrow.toISOString().slice(0, 10);
+  el.value = dStr(tomorrow);
 }
 
 // ── Guardar ───────────────────────────────────────────────────────────────────
@@ -312,12 +312,12 @@ async function actualizarBadge() {
 async function checkNotificaciones() {
   if (!('Notification' in window)) return;
   var lastCheck = localStorage.getItem('corze_task_notif_date');
-  var today     = new Date().toISOString().slice(0, 10);
-  if (lastCheck === today) return;
+  var hoy     = today();
+  if (lastCheck === hoy) return;
   try {
     var res  = await fetch('/api/tareas/upcoming');
     var data = await res.json();
-    localStorage.setItem('corze_task_notif_date', today);
+    localStorage.setItem('corze_task_notif_date', hoy);
     if (!data.tasks || !data.tasks.length) return;
     if (Notification.permission === 'granted') {
       data.tasks.slice(0, 3).forEach(function(t) {

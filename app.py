@@ -8,7 +8,10 @@ import os, json, threading, imaplib
 import email as _email_lib
 from email.header import decode_header as _email_decode_header
 from email.utils import parseaddr as _parseaddr
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
+
+_TZ = timezone(timedelta(hours=-4))
+def _cl(): return datetime.now(_TZ).replace(tzinfo=None)
 
 from config import USERS, APP_NAME, APP_VERSION
 from database import FirebaseDB
@@ -95,7 +98,7 @@ def _build_vitrina_cars():
         print(f'Error _build_vitrina_cars: {e}')
         return []
 
-    cutoff   = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+    cutoff   = (_cl() - timedelta(days=90)).strftime('%Y-%m-%d')
     publicados = [r for r in all_docs if r.get('estado') == 'Publicado']
     vendidos   = []
     for r in [r for r in all_docs if r.get('estado') == 'Vendido']:
@@ -106,7 +109,7 @@ def _build_vitrina_cars():
         if fv >= cutoff:
             vendidos.append(r)
 
-    ahora = datetime.now()
+    ahora = _cl()
     cars  = []
     for r in publicados + vendidos:
         try:
@@ -438,7 +441,7 @@ def api_export_inv():
     wb.save(output)
     output.seek(0)
 
-    ts = datetime.now().strftime('%Y%m%d_%H%M')
+    ts = _cl().strftime('%Y%m%d_%H%M')
     return Response(
         output.getvalue(),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -688,7 +691,7 @@ def api_guardar_consignacion():
             'modalidad':             data.get('modalidad', 'presencial'),
             'email_propietario':     data.get('email_propietario',''),
             'agente':                session.get('usuario',''),
-            'fecha_ingreso':         datetime.now().strftime('%Y-%m-%d'),
+            'fecha_ingreso':         _cl().strftime('%Y-%m-%d'),
         }
         ok, err = db.add_inventario(doc_data)
         if ok:
@@ -766,14 +769,14 @@ def consignacion_contrato():
     if not car:
         return '<h2>Contrato no encontrado</h2>', 404
     import random
-    folio = f'CORZE-{datetime.now().strftime("%Y%m")}-{random.randint(1000,9999)}'
+    folio = f'CORZE-{_cl().strftime("%Y%m")}-{random.randint(1000,9999)}'
     # Override precio/comision si se pasan como parámetros (regeneración)
     kwargs = {}
     if request.args.get('precio_pub'):
         kwargs['precio_pub'] = int(request.args.get('precio_pub',0))
     if request.args.get('comision_pct'):
         kwargs['comision_pct'] = float(request.args.get('comision_pct',5))
-    return render_contrato(car, folio, datetime.now().strftime('%d/%m/%Y %H:%M'), **kwargs)
+    return render_contrato(car, folio, _cl().strftime('%d/%m/%Y %H:%M'), **kwargs)
 
 @app.route('/api/consignacion/enviar-email', methods=['POST'])
 @login_required
@@ -789,8 +792,8 @@ def api_enviar_email_contrato():
     if not email_to:
         return jsonify({'ok': False, 'error': 'El propietario no tiene email registrado'})
     import random
-    folio = f'CORZE-{datetime.now().strftime("%Y%m")}-{random.randint(1000,9999)}'
-    html_contrato = render_contrato(car, folio, datetime.now().strftime('%d/%m/%Y %H:%M'))
+    folio = f'CORZE-{_cl().strftime("%Y%m")}-{random.randint(1000,9999)}'
+    html_contrato = render_contrato(car, folio, _cl().strftime('%d/%m/%Y %H:%M'))
     html_email = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
       <div style="background:#F5A623;padding:20px;border-radius:10px 10px 0 0;text-align:center">
@@ -1093,7 +1096,7 @@ def api_seed_ventas_gastos():
         dict(id_gasto='GTO-021', fecha='2026-07-23', categoria='Transporte y combustible', descripcion='Flete EMAT - Casa 116', monto_neto=50000, iva=0, monto_total=50000, metodo_pago='Transferencia', responsable='Enrique Corvalán H', empresa='Manuel Bravo (Niño Feliz)', num_documento='Particular Directo'),
     ]
 
-    now = dt.now().isoformat()
+    now = _cl().isoformat()
 
     def seed_col(col_name, rows, id_field):
         col = db.db.collection(col_name)
@@ -1139,7 +1142,7 @@ def api_seed_accesorios():
         dict(codigo='ACC-020', nombre='Repartidor Bipolar 125A (2X25MM + 5X6MM)',                        categoria='Accesorio', precio_venta=3480,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
         dict(codigo='ACC-021', nombre='Barra de Conexión DIN 8 Polos Verde Aislada',                    categoria='Accesorio', precio_venta=1186,   precio_costo=0, unidad='unidad', stock_actual=0, stock_minimo=0, potencia_w=0, activo=True),
     ]
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    now = _cl().strftime('%Y-%m-%d %H:%M:%S')
     col = db.db.collection('productos_solar')
     existing = {d.to_dict().get('codigo'): d.id for d in col.stream() if d.to_dict().get('codigo','').startswith('ACC')}
     created = updated = 0
@@ -1183,7 +1186,7 @@ def api_vitrina():
 
     try:
         vendidos_all = db.get_all_inventario(estado='Vendido') or []
-        cutoff = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+        cutoff = (_cl() - timedelta(days=90)).strftime('%Y-%m-%d')
         vendidos = []
         for r in vendidos_all:
             fv = r.get('fecha_venta') or ''
@@ -1200,7 +1203,7 @@ def api_vitrina():
         print(f'Error vitrina vendidos: {e}')
         vendidos = []
 
-    ahora  = datetime.now()
+    ahora  = _cl()
     public = []
 
     for r in publicados + vendidos:
@@ -1426,8 +1429,7 @@ def api_calendar_eventos():
     token = session.get('google_access_token')
     if not token:
         return jsonify({'ok': False, 'eventos': []})
-    from datetime import timezone
-    ahora = datetime.now(timezone.utc).isoformat()
+    ahora = datetime.now(_TZ).isoformat()
     resp, status = _google_get(GOOGLE_CAL_URL, params={
         'timeMin':      ahora,
         'maxResults':   20,
@@ -1566,7 +1568,7 @@ def api_tareas_badge():
 def api_tareas_upcoming():
     """Tareas pendientes dentro de su ventana de recordatorio (por usuario en sesión)."""
     from datetime import timedelta
-    today   = datetime.now().date()
+    today   = _cl().date()
     usuario = session.get('usuario', '')
     docs    = db.get_all_tareas(estado='pendiente')
     upcoming = []
@@ -1878,15 +1880,15 @@ def cotizacion_print(doc_id):
                  car.get('precio_pedido') or 0)
     validez_dias = int(request.args.get('validez', 7))
     from datetime import timedelta
-    validez_fecha = (datetime.now() + timedelta(days=validez_dias)).strftime('%d/%m/%Y')
+    validez_fecha = (_cl() + timedelta(days=validez_dias)).strftime('%d/%m/%Y')
     return render_template('cotizacion.html',
         car=car, precio=precio,
         validez_fecha=validez_fecha,
         validez_dias=validez_dias,
         logo_b64=get_logo_b64(),
-        fecha_emision=datetime.now().strftime('%d/%m/%Y %H:%M'),
+        fecha_emision=_cl().strftime('%d/%m/%Y %H:%M'),
         agente=session.get('usuario', ''),
-        folio=f'COT-{datetime.now().strftime("%Y%m%d-%H%M%S")}',
+        folio=f'COT-{_cl().strftime("%Y%m%d-%H%M%S")}',
     )
 
 
@@ -1896,7 +1898,7 @@ def cotizacion_print(doc_id):
 @app.route('/admin/finanzas/reporte')
 @login_required
 def finanzas_reporte_print():
-    mes = request.args.get('mes', datetime.now().strftime('%Y-%m'))
+    mes = request.args.get('mes', _cl().strftime('%Y-%m'))
     transacciones = db.get_all_finanzas(mes=mes)
     # Quitar base64 del comprobante para no inflar el HTML
     for t in transacciones:
@@ -1907,7 +1909,7 @@ def finanzas_reporte_print():
         transacciones=transacciones,
         resumen=resumen,
         logo_b64=get_logo_b64(),
-        fecha_generacion=datetime.now().strftime('%d/%m/%Y %H:%M'),
+        fecha_generacion=_cl().strftime('%d/%m/%Y %H:%M'),
         agente=session.get('usuario', ''),
     )
 
@@ -1942,10 +1944,10 @@ def config_page():
 @login_required
 def api_meta():
     if request.method == 'GET':
-        mes = request.args.get('mes', datetime.now().strftime('%Y-%m'))
+        mes = request.args.get('mes', _cl().strftime('%Y-%m'))
         return jsonify(db.get_meta(mes))
     data = request.get_json() or {}
-    mes  = data.get('mes', datetime.now().strftime('%Y-%m'))
+    mes  = data.get('mes', _cl().strftime('%Y-%m'))
     ok   = db.save_meta(mes, int(data.get('unidades', 0)), int(data.get('ingresos', 0)))
     return jsonify({'ok': ok})
 
@@ -3473,7 +3475,7 @@ def api_leads_add_nota(doc_id):
     nota = {
         'texto':  texto,
         'autor':  session.get('usuario', 'Sistema'),
-        'fecha':  datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'fecha':  _cl().strftime('%Y-%m-%d %H:%M'),
     }
     ok = db.add_nota_lead(doc_id, nota)
     return jsonify({'ok': ok, 'nota': nota})
