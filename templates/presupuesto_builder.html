@@ -404,9 +404,33 @@
           </label>
           <span class="val" id="rIva" style="color:var(--gray3)">$0</span>
         </div>
-        <div class="price-row total-final">
-          <span>TOTAL</span>
-          <span id="rTotal">$0</span>
+        <div class="price-row total-final" style="align-items:flex-start;flex-direction:column;gap:6px;padding:10px 0 4px">
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+            <span>TOTAL</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span id="rTotal" style="font-size:17px;font-weight:800;color:var(--blue)">$0</span>
+              <button id="btnEditTotal" onclick="toggleTotalManual()"
+                      title="Editar total manualmente"
+                      style="background:var(--card2);border:1px solid var(--border2);color:var(--gray2);
+                             border-radius:5px;padding:2px 7px;cursor:pointer;font-size:11px;line-height:1.4">
+                ✏️
+              </button>
+            </div>
+          </div>
+          <!-- Input total manual -->
+          <div id="totalManualWrap" style="display:none;width:100%;flex-direction:column;gap:4px">
+            <div style="font-size:10px;color:#F5A623;font-weight:600">⚠️ Total editado manualmente</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="totalManualInput" type="text" placeholder="Ej: 7.800.000"
+                     style="flex:1;background:var(--card2);border:1px solid #F5A62366;border-radius:7px;
+                            color:#F5A623;font-size:14px;font-weight:700;padding:5px 8px;text-align:right"
+                     oninput="fmtTotalManual(this)" onchange="actualizarTotalManual()">
+              <button onclick="limpiarTotalManual()"
+                      style="background:none;border:none;color:var(--gray3);cursor:pointer;font-size:15px;padding:0 4px"
+                      title="Quitar override">✕</button>
+            </div>
+            <div style="font-size:10px;color:var(--gray3)">Calculado: <span id="rTotalCalc">$0</span></div>
+          </div>
         </div>
         <div class="price-row" style="font-size:11px;color:var(--gray3)">
           <span>Total con tarjeta (+7%)</span>
@@ -488,15 +512,16 @@ const FACT_EST = {
   'Jul':0.6623,'Ago':0.7987,'Sep':0.9545,'Oct':1.1104,'Nov':1.2468,'Dic':1.3149
 };
 const EXTRAS_DEF = [
-  {id:'bat1',     label:'Instalación batería (1ª)',          unit:'primera bat.',   base:350000, perPanel:false},
-  {id:'bat2',     label:'Instalación batería adicional',     unit:'bat. adicional', base:150000, perPanel:false},
-  {id:'trif',     label:'Instalación trifásica / tableros',  unit:'instalación',    base:300000, perPanel:false},
-  {id:'canal_t',  label:'Canalizaciones trifásicas',         unit:'metro lineal',   base:13000,  perPanel:false},
-  {id:'canal_c',  label:'Canalizaciones zona costera',       unit:'metro lineal',   base:5000,   perPanel:false},
-  {id:'teja',     label:'Instalación teja colonial',         unit:'panel',          base:44000,  perPanel:true},
-  {id:'struct_m', label:'Estructura a la medida',            unit:'panel',          base:21008,  perPanel:true},
-  {id:'fuera_rm', label:'Extra fuera de RM',                 unit:'día',            base:60000,  perPanel:false},
-  {id:'noche',    label:'Extra noche temporada baja',        unit:'noche',          base:120000, perPanel:false},
+  {id:'bat1',     label:'Instalación batería (1ª)',                              unit:'primera bat.',   base:350000, perPanel:false},
+  {id:'bat2',     label:'Instalación batería adicional',                         unit:'bat. adicional', base:150000, perPanel:false},
+  {id:'trif',     label:'Instalación trifásica / tableros',                      unit:'instalación',    base:300000, perPanel:false},
+  {id:'canal_t',  label:'Canalizaciones trifásicas',                             unit:'metro lineal',   base:13000,  perPanel:false},
+  {id:'canal_c',  label:'Canalizaciones zona costera',                           unit:'metro lineal',   base:5000,   perPanel:false},
+  {id:'teja',     label:'Instalación teja colonial',                             unit:'panel',          base:44000,  perPanel:true},
+  {id:'struct_m', label:'Estructura a la medida',                                unit:'panel',          base:21008,  perPanel:true},
+  {id:'fuera_rm', label:'Extra fuera de RM',                                     unit:'día',            base:60000,  perPanel:false},
+  {id:'noche',    label:'Extra noche temporada baja',                            unit:'noche',          base:120000, perPanel:false},
+  {id:'cargador_ev', label:'Instalación cargador vehículo eléctrico',            unit:'instalación',    base:600000, perPanel:false},
 ];
 
 // ── Estado ──────────────────────────────────────────────────────────────────
@@ -507,6 +532,39 @@ let calcTimer = null;
 
 const fmt  = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CL');
 const fmtK = n => { n=Math.round(n||0); if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString('es-CL'); };
+
+// ── Total manual override ────────────────────────────────────────────────────
+function toggleTotalManual() {
+  const wrap = document.getElementById('totalManualWrap');
+  const visible = wrap.style.display === 'flex';
+  activarTotalManual(!visible);
+}
+
+function activarTotalManual(on) {
+  const wrap = document.getElementById('totalManualWrap');
+  const btn  = document.getElementById('btnEditTotal');
+  wrap.style.display = on ? 'flex' : 'none';
+  if (btn) btn.style.background = on ? '#1a1500' : '';
+  if (btn) btn.style.borderColor = on ? '#F5A623' : '';
+  if (!on) document.getElementById('totalManualInput').value = '';
+  recalcular();
+}
+
+function fmtTotalManual(input) {
+  const digits = input.value.replace(/\D/g, '');
+  input.value = digits ? parseInt(digits).toLocaleString('es-CL') : '';
+}
+
+function actualizarTotalManual() { recalcular(); }
+
+function limpiarTotalManual() { activarTotalManual(false); }
+
+function getTotalManual() {
+  const wrap = document.getElementById('totalManualWrap');
+  if (!wrap || wrap.style.display === 'none') return 0;
+  const val = document.getElementById('totalManualInput').value.replace(/\D/g, '');
+  return parseInt(val) || 0;
+}
 
 // ── Precio override helpers ──────────────────────────────────────────────────
 function setPrecioInput(inputId, hintId, valor, valorOrig) {
@@ -670,22 +728,45 @@ function renderMateriales() {
 // ── Extras ────────────────────────────────────────────────────────────────────
 function renderExtras() {
   document.getElementById('extrasContainer').innerHTML = EXTRAS_DEF.map(ex => `
-    <div class="extra-row">
+    <div class="extra-row" style="flex-wrap:wrap;gap:6px 8px">
       <input type="checkbox" class="extra-check" id="chk_${ex.id}" onchange="toggleExtra('${ex.id}')">
-      <span class="extra-label">${ex.label}</span>
-      <span class="extra-unit">${ex.unit}</span>
-      <input type="number" class="extra-qty" id="qty_${ex.id}" value="1" min="0" disabled oninput="recalcular()">
-      <span class="extra-sub" id="sub_${ex.id}">—</span>
+      <span class="extra-label" style="min-width:140px">${ex.label}</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <span style="font-size:9px;color:var(--gray3)">$ unit.</span>
+        <input type="text" id="precio_${ex.id}" value="${ex.base.toLocaleString('es-CL')}"
+               style="width:82px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;
+                      padding:3px 5px;color:var(--white);font-size:11px;text-align:right"
+               disabled
+               oninput="fmtExtraPrecio(this)" onchange="recalcular()">
+        <span style="font-size:9px;color:var(--gray3)">×</span>
+        <input type="number" class="extra-qty" id="qty_${ex.id}" value="1" min="0" disabled
+               style="width:44px" oninput="recalcular()">
+        <span class="extra-sub" id="sub_${ex.id}" style="width:88px;text-align:right">—</span>
+      </div>
     </div>`).join('');
 }
 
+function fmtExtraPrecio(input) {
+  const digits = input.value.replace(/\D/g, '');
+  input.value = digits ? parseInt(digits).toLocaleString('es-CL') : '';
+}
+
+function getExtraBase(id) {
+  const el = document.getElementById('precio_' + id);
+  if (!el) return EXTRAS_DEF.find(e => e.id === id)?.base || 0;
+  return parseInt(el.value.replace(/\D/g, '')) || 0;
+}
+
 function toggleExtra(id) {
-  const chk = document.getElementById('chk_'+id);
-  const qty = document.getElementById('qty_'+id);
-  qty.disabled = !chk.checked;
-  if (chk.checked) {
+  const chk   = document.getElementById('chk_' + id);
+  const qty   = document.getElementById('qty_' + id);
+  const precio= document.getElementById('precio_' + id);
+  const on    = chk.checked;
+  qty.disabled    = !on;
+  precio.disabled = !on;
+  if (on) {
     const ex = EXTRAS_DEF.find(e => e.id === id);
-    if (ex && ex.perPanel) qty.value = parseInt(document.getElementById('qPanel').value)||1;
+    if (ex && ex.perPanel) qty.value = parseInt(document.getElementById('qPanel').value) || 1;
   }
   recalcular();
 }
@@ -745,11 +826,12 @@ function recalcular() {
   // Extras
   let subAdic = 0;
   EXTRAS_DEF.forEach(ex => {
-    const chk = document.getElementById('chk_'+ex.id);
-    const qty = document.getElementById('qty_'+ex.id);
+    const chk   = document.getElementById('chk_'+ex.id);
+    const qty   = document.getElementById('qty_'+ex.id);
     const subEl = document.getElementById('sub_'+ex.id);
     if (chk?.checked) {
-      const sub = ex.base * (parseFloat(qty?.value)||0);
+      const base = getExtraBase(ex.id);
+      const sub  = base * (parseFloat(qty?.value)||0);
       subAdic += sub;
       if (subEl) subEl.textContent = fmt(sub);
     } else {
@@ -785,12 +867,16 @@ function recalcular() {
   document.getElementById('rDescuento').textContent  = fmt(descMonto);
   document.getElementById('rSubNeto').textContent    = fmt(subNeto);
   document.getElementById('rIva').textContent        = fmt(iva);
-  document.getElementById('rTotal').textContent      = fmt(total);
-  document.getElementById('rTotalTarjeta').textContent = fmt(total*1.07);
+  // Total manual override
+  document.getElementById('rTotalCalc').textContent = fmt(total);
+  const manualTotal = getTotalManual();
+  const totalFinal  = manualTotal > 0 ? manualTotal : total;
+  document.getElementById('rTotal').textContent        = fmt(totalFinal);
+  document.getElementById('rTotalTarjeta').textContent = fmt(totalFinal * 1.07);
 
   // KPIs solares (debounced, backend)
   clearTimeout(calcTimer);
-  calcTimer = setTimeout(() => actualizarKpisSolares(kWp, total), 700);
+  calcTimer = setTimeout(() => actualizarKpisSolares(kWp, totalFinal), 700);
 }
 
 // ── Solar KPIs desde backend ──────────────────────────────────────────────────
@@ -862,12 +948,14 @@ async function guardar(estadoOverride) {
   const extrasData = {};
   let subAdic = 0;
   EXTRAS_DEF.forEach(ex => {
-    const chk=document.getElementById('chk_'+ex.id);
-    const qty=document.getElementById('qty_'+ex.id);
+    const chk  = document.getElementById('chk_'+ex.id);
+    const qty  = document.getElementById('qty_'+ex.id);
     if (chk?.checked) {
-      const q=parseFloat(qty?.value)||0, sub=ex.base*q;
-      extrasData[ex.id]={label:ex.label, cantidad:q, precio_unitario:ex.base, subtotal:sub};
-      subAdic+=sub;
+      const base = getExtraBase(ex.id);
+      const q    = parseFloat(qty?.value)||0;
+      const sub  = base * q;
+      extrasData[ex.id] = {label:ex.label, cantidad:q, precio_unitario:base, subtotal:sub};
+      subAdic += sub;
     }
   });
   const disenoTram = parseInt(document.getElementById('sDisenoTram').value)||0;
@@ -932,7 +1020,9 @@ async function guardar(estadoOverride) {
     subtotal_neto:        subNeto,
     incluye_iva:          inclIva,
     monto_iva:            iva,
-    total,
+    total:                getTotalManual() > 0 ? getTotalManual() : total,
+    total_calculado:      total,
+    total_manual:         getTotalManual() || null,
     notas:                document.getElementById('fNotas').value.trim(),
     condiciones:          document.getElementById('fCondiciones').value.trim(),
     trabajador_asignado:  document.getElementById('fTrabajador').value,
@@ -1029,9 +1119,21 @@ async function cargarPresupuesto(p) {
   // Restaurar extras
   const extras = p.costos_adicionales||{};
   Object.keys(extras).forEach(id => {
-    const chk=document.getElementById('chk_'+id), qty=document.getElementById('qty_'+id);
-    if (chk) { chk.checked=true; if(qty){qty.disabled=false; qty.value=extras[id].cantidad||1;} }
+    const chk    = document.getElementById('chk_'+id);
+    const qty    = document.getElementById('qty_'+id);
+    const precio = document.getElementById('precio_'+id);
+    if (chk) {
+      chk.checked = true;
+      if (qty)    { qty.disabled = false;    qty.value = extras[id].cantidad||1; }
+      if (precio) { precio.disabled = false; precio.value = (extras[id].precio_unitario||0).toLocaleString('es-CL'); }
+    }
   });
+
+  // Restaurar total manual si existe
+  if (p.total_manual) {
+    document.getElementById('totalManualInput').value = Math.round(p.total_manual).toLocaleString('es-CL');
+    activarTotalManual(true);
+  }
 
   if (!Object.keys(eq).length && p.items?.length)
     showToast('Presupuesto guardado en formato anterior — re-selecciona los equipos', 'info', 6000);
