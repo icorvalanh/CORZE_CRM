@@ -59,6 +59,7 @@
         <td>
           <a href="{{ url_for('presupuesto_ver', doc_id=p.id) }}" class="btn-icon" title="Ver/Editar">✏️</a>
           <a href="{{ url_for('presupuesto_pdf', doc_id=p.id) }}" class="btn-icon" title="Ver PDF" target="_blank">📄</a>
+          <button class="btn-icon" title="Duplicar como plantilla" onclick="duplicar('{{ p.id }}','{{ p.folio }}',this)">📋</button>
           <button class="btn-icon" title="Eliminar" onclick="eliminar('{{ p.id }}','{{ p.folio }}',this)">🗑️</button>
         </td>
       </tr>
@@ -87,6 +88,20 @@ function filtrar() {
     if (matchQ && matchE) count++;
   });
   document.getElementById('countLabel').textContent = count + ' presupuesto(s)';
+}
+
+async function duplicar(id, folio, btn) {
+  if (!confirm(`¿Duplicar presupuesto ${folio} como nuevo borrador?`)) return;
+  btn.disabled = true;
+  const r = await fetch(`/api/presupuestos/${id}/duplicar`, { method: 'POST' });
+  const d = await r.json();
+  if (d.ok && d.id) {
+    showToast('Presupuesto duplicado', 'success');
+    setTimeout(() => { window.location.href = `/admin/presupuestos/${d.id}/ver`; }, 600);
+  } else {
+    showToast(d.error || 'Error duplicando', 'error');
+    btn.disabled = false;
+  }
 }
 
 async function eliminar(id, folio, btn) {

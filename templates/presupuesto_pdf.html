@@ -270,21 +270,11 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
         <td></td>
       </tr>
     {% endif %}
-    {% if eq.get('otros') %}
-      {% for it in eq.otros %}
-      <tr>
-        <td>{{ it.nombre }}</td>
-        <td></td>
-        <td>{{ it.cantidad }}</td>
-        <td></td>
-      </tr>
-      {% endfor %}
-    {% endif %}
     {% if not eq.get('paneles') and not eq.get('inversores') %}
-      {% for it in p.get('items') or [] %}
+      {% for it in (p.get('items') or []) if it.get('categoria') in ('Panel Solar','Inversor','Batería') %}
       <tr>
+        <td>{{ it.categoria }}</td>
         <td>{{ it.nombre }}</td>
-        <td>{{ it.codigo or '' }}</td>
         <td>{{ it.cantidad }}</td>
         <td></td>
       </tr>
@@ -299,37 +289,23 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 <p class="eco-note">Incluye equipos (paneles, inversor, batería si aplica), materiales, instalación, puesta en marcha, diseño y tramitación ante la distribuidora.</p>
 <div class="eco-wrap">
   <div class="eco-box">
-    <div class="eco-row">
-      <span>Precio de lista (antes de descuento)</span>
-      <span>${{ '{:,.0f}'.format(p.subtotal_bruto or 0).replace(',','.') }}</span>
-    </div>
     {% if p.descuento_general_pct %}
     <div class="eco-row disc">
-      <span>Descuento comercial ({{ p.descuento_general_pct }}%)</span>
+      <span>Descuento aplicado ({{ p.descuento_general_pct }}%)</span>
       <span>− ${{ '{:,.0f}'.format(p.monto_descuento or 0).replace(',','.') }}</span>
-    </div>
-    <div class="eco-row">
-      <span>Inversión neta (precio oferta)</span>
-      <span>${{ '{:,.0f}'.format(p.subtotal_neto or 0).replace(',','.') }}</span>
-    </div>
-    {% endif %}
-    {% if p.incluye_iva %}
-    <div class="eco-row">
-      <span>IVA (19%)</span>
-      <span>${{ '{:,.0f}'.format(p.monto_iva or 0).replace(',','.') }}</span>
     </div>
     {% endif %}
     <div class="eco-row total">
-      <span>TOTAL PROPUESTA (IVA incluido)</span>
+      <span>PRECIO FINAL (IVA incluido)</span>
       <span>${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</span>
     </div>
     <div class="eco-row card">
-      <span>Total con recargo tarjeta de crédito (7%)</span>
+      <span>Opción pago con tarjeta de crédito (+7%)</span>
       <span>${{ '{:,.0f}'.format((p.total or 0) * 1.07).replace(',','.') }}</span>
     </div>
   </div>
 </div>
-<p class="eco-cond">Condiciones: precio en pesos chilenos (CLP), IVA incluido. Incluye instalación, puesta en marcha y gestión de conexión ante la distribuidora. Garantías según fabricante de cada equipo.</p>
+<p class="eco-cond">Precio en pesos chilenos (CLP), IVA incluido. Incluye instalación, puesta en marcha y gestión de conexión ante la distribuidora. Garantías según fabricante de cada equipo.</p>
 </div>
 
 <!-- ══ CONSUMO VS. GENERACIÓN MENSUAL ESTIMADA ════════════════════════════ -->

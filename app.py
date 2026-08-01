@@ -1267,7 +1267,8 @@ def google_oauth_start():
     """Inicia el flujo OAuth con Google Calendar."""
     client_id    = os.environ.get('GOOGLE_CLIENT_ID', '')
     redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI',
-                   'https://vta.up.railway.app/oauth/google/callback')
+                   request.host_url.rstrip('/') + '/oauth/google/callback')
+    from urllib.parse import urlencode
     params = {
         'client_id':     client_id,
         'redirect_uri':  redirect_uri,
@@ -1275,8 +1276,8 @@ def google_oauth_start():
         'scope':         GOOGLE_SCOPES,
         'access_type':   'offline',
         'prompt':        'consent',
+        'login_hint':    'contacto@corze.cl',
     }
-    from urllib.parse import urlencode
     url = GOOGLE_AUTH_URL + '?' + urlencode(params)
     return redirect(url)
 
@@ -1286,7 +1287,7 @@ def google_oauth_callback():
     """Google redirige aquí con el código de autorización."""
     code         = request.args.get('code')
     redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI',
-                   'https://vta.up.railway.app/oauth/google/callback')
+                   request.host_url.rstrip('/') + '/oauth/google/callback')
     if not code:
         return 'Error: no se recibió código de autorización', 400
 
@@ -1301,10 +1302,16 @@ def google_oauth_callback():
     if 'access_token' not in tokens:
         return f'Error obteniendo token: {tokens}', 400
 
-    # Guardar tokens en sesión
     session['google_access_token']  = tokens.get('access_token')
     session['google_refresh_token'] = tokens.get('refresh_token', '')
-    return redirect(url_for('crm') + '?calendar=conectado')
+    return redirect(url_for('calendario') + '?calendar=conectado')
+
+@app.route('/api/calendar/disconnect', methods=['POST'])
+@login_required
+def api_calendar_disconnect():
+    session.pop('google_access_token', None)
+    session.pop('google_refresh_token', None)
+    return jsonify({'ok': True})
 
 def _google_refresh_token():
     """Renueva el access token usando el refresh token guardado en sesión."""
@@ -2945,6 +2952,19 @@ def api_presupuestos_edit(doc_id):
 def api_presupuestos_delete(doc_id):
     ok = db.delete_presupuesto(doc_id)
     return jsonify({'ok': ok})
+
+@app.route('/api/presupuestos/<doc_id>/duplicar', methods=['POST'])
+@login_required
+def api_presupuestos_duplicar(doc_id):
+    original = db.get_presupuesto_by_id(doc_id)
+    if not original:
+        return jsonify({'ok': False, 'error': 'Presupuesto no encontrado'})
+    copia = {k: v for k, v in original.items() if k != 'id'}
+    copia['estado'] = 'borrador'
+    copia['creado_por'] = session.get('usuario', '')
+    copia.pop('folio', None)
+    ok, new_id = db.add_presupuesto(copia)
+    return jsonify({'ok': ok, 'id': new_id if ok else None, 'error': None if ok else new_id})
 
 @app.route('/admin/presupuestos/<doc_id>/pdf')
 @login_required

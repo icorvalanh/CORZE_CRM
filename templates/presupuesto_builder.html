@@ -74,6 +74,7 @@
     <a href="{{ url_for('presupuesto_pdf', doc_id=presupuesto.id) }}" class="btn btn-secondary" target="_blank">📄 Ver PDF</a>
     <a href="{{ url_for('presupuesto_pdf', doc_id=presupuesto.id) }}?download=1" class="btn btn-secondary" download>📥 Descargar</a>
     <button class="btn btn-secondary" onclick="enviarEmail()">📧 Enviar Email</button>
+    <button class="btn btn-secondary" onclick="duplicarPresupuesto()">📋 Duplicar</button>
     {% endif %}
     <button class="btn btn-secondary" onclick="withBtn(this, () => guardar('borrador'))">💾 Guardar Borrador</button>
     <button class="btn btn-primary"   onclick="withBtn(this, () => guardar('enviado'))">✅ Guardar y Marcar Enviado</button>
@@ -1093,6 +1094,19 @@ async function enviarEmail() {
   const d=await r.json();
   if(d.ok) showToast('Email enviado correctamente','success');
   else showToast(d.error||'Error enviando email','error');
+}
+
+async function duplicarPresupuesto() {
+  if (!PRESUPUESTO_ID){showToast('Guarda el presupuesto primero','error');return;}
+  if (!confirm('¿Duplicar este presupuesto como nuevo borrador?')) return;
+  const r=await fetch(`/api/presupuestos/${PRESUPUESTO_ID}/duplicar`,{method:'POST'});
+  const d=await r.json();
+  if(d.ok && d.id){
+    showToast('Presupuesto duplicado','success');
+    setTimeout(()=>{window.location.href='/admin/presupuestos/'+d.id+'/ver';},600);
+  } else {
+    showToast(d.error||'Error duplicando','error');
+  }
 }
 </script>
 {% endblock %}

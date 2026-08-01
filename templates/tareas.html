@@ -6,9 +6,7 @@
     <h1 class="page-title">✅ Tareas</h1>
     <div style="display:flex;gap:6px">
       <select id="filtAsignado" class="filter-select" style="font-size:11px;padding:5px 10px" onchange="aplicarFiltros()">
-        <option value="">Todos</option>
-        <option value="Ignacio">Ignacio</option>
-        <option value="Nicolas">Nicolás</option>
+        <option value="">Todos los trabajadores</option>
       </select>
     </div>
   </div>
@@ -32,7 +30,7 @@
     </button>
   </div>
   <div class="toolbar-right">
-    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar tarea, vehículo..."
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar tarea, cliente..."
            oninput="buscar(this.value)">
   </div>
 </div>
@@ -44,8 +42,8 @@
       <tr>
         <th style="width:32px"></th>
         <th>Tarea</th>
-        <th>Vehículo</th>
-        <th>Asignado</th>
+        <th>Cliente</th>
+        <th>Trabajador</th>
         <th>Vence</th>
         <th>Recordatorio</th>
         <th>Prioridad</th>
@@ -71,7 +69,7 @@
     <div class="form-row-4">
       <div class="form-group col-2">
         <label>Título *</label>
-        <input id="t_titulo" placeholder="Ej: Cambio de aceite pendiente">
+        <input id="t_titulo" placeholder="Ej: Revisar propuesta del cliente">
       </div>
       <div class="form-group">
         <label>Prioridad</label>
@@ -85,8 +83,6 @@
         <label>Asignado a</label>
         <select id="t_asignado">
           <option value="Todos">👥 Todos</option>
-          <option value="Ignacio">Ignacio</option>
-          <option value="Nicolas">Nicolás</option>
         </select>
       </div>
     </div>
@@ -115,19 +111,19 @@
       </div>
     </div>
 
-    <!-- Vehículo -->
-    <div class="form-section">VEHÍCULO VINCULADO</div>
+    <!-- Cliente -->
+    <div class="form-section">CLIENTE VINCULADO</div>
     <div class="form-group">
-      <label>Buscar vehículo (opcional)</label>
-      <input id="t_vehiculo_search" placeholder="Buscar patente o modelo..."
-             oninput="buscarVehiculoTarea(this.value)" autocomplete="off">
-      <div id="tVehiculoSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;z-index:100;position:relative"></div>
-      <div id="tVehiculoSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
-        <span id="tVehiculoDesc"></span>
-        <button onclick="limpiarVehiculoTarea()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
+      <label>Buscar cliente (opcional)</label>
+      <input id="t_cliente_search" placeholder="Buscar por nombre, email o empresa..."
+             oninput="buscarClienteTarea(this.value)" autocomplete="off">
+      <div id="tClienteSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;z-index:100;position:relative"></div>
+      <div id="tClienteSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
+        <span id="tClienteDesc"></span>
+        <button onclick="limpiarClienteTarea()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
       </div>
-      <input type="hidden" id="t_vehiculo_id">
-      <input type="hidden" id="t_vehiculo_desc_hidden">
+      <input type="hidden" id="t_cliente_id">
+      <input type="hidden" id="t_cliente_desc_hidden">
     </div>
 
   </div>
@@ -139,21 +135,16 @@
 </div>
 
 <style>
-/* Prioridad badges */
 .prio-alta   {background:#3B0D0A;color:#E74C3C;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
 .prio-media  {background:#2D2500;color:#F1C40F;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
 .prio-baja   {background:#0D3B22;color:#2ECC71;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
-/* Estado badges */
 .est-pend    {background:#2D2500;color:#F1C40F;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
 .est-comp    {background:#0D3B22;color:#2ECC71;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
-/* Fecha vencida */
 .fecha-venc  {color:#E74C3C;font-weight:700}
 .fecha-hoy   {color:#F1C40F;font-weight:700}
 .fecha-prox  {color:#F39C12;font-weight:600}
-/* Row tachado cuando completado */
 tr.tarea-completada td { opacity:.5; }
 tr.tarea-completada .tarea-titulo { text-decoration:line-through; }
-/* Checkbox custom */
 .task-check {
   width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);
   cursor:pointer;appearance:none;background:var(--card2);

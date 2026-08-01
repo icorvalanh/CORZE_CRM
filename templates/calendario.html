@@ -10,7 +10,10 @@
       <button class="tipo-btn" id="tabAgenda" onclick="setVista('agenda',this)">Agenda</button>
     </div>
   </div>
-  <button class="btn btn-primary" onclick="openModal()">➕ Nuevo evento</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div id="gcalStatus" style="font-size:11px;display:flex;align-items:center;gap:6px"></div>
+    <button class="btn btn-primary" onclick="openModal()">➕ Nuevo evento</button>
+  </div>
 </div>
 
 <!-- Navegación mes -->
@@ -55,7 +58,7 @@
     <div class="form-row-4">
       <div class="form-group col-2">
         <label>Título *</label>
-        <input id="e_titulo" placeholder="Ej: Visita cliente — Patricio">
+        <input id="e_titulo" placeholder="Ej: Visita técnica — Juan Pérez">
       </div>
       <div class="form-group">
         <label>Tipo</label>
@@ -71,8 +74,6 @@
         <label>Responsable</label>
         <select id="e_asignado">
           <option value="Todos">👥 Todos</option>
-          <option value="Ignacio">Ignacio</option>
-          <option value="Nicolas">Nicolás</option>
         </select>
       </div>
     </div>
@@ -107,26 +108,28 @@
     </div>
     <div class="form-row-4">
       <div class="form-group col-2">
-        <label>Vehículo vinculado (opcional)</label>
-        <input id="e_vehiculo_search" placeholder="Buscar patente o modelo..."
-               oninput="buscarVehiculoCal(this.value)" autocomplete="off">
-        <div id="eVehiculoSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;position:relative;z-index:100"></div>
-        <div id="eVehiculoSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
-          <span id="eVehiculoDesc"></span>
-          <button onclick="limpiarVehiculoCal()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
+        <label>Cliente vinculado (opcional)</label>
+        <input id="e_cliente_search" placeholder="Buscar por nombre, email o empresa..."
+               oninput="buscarClienteCal(this.value)" autocomplete="off">
+        <div id="eClienteSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;position:relative;z-index:100"></div>
+        <div id="eClienteSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
+          <span id="eClienteDesc"></span>
+          <button onclick="limpiarClienteCal()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
         </div>
-        <input type="hidden" id="e_vehiculo_id">
-        <input type="hidden" id="e_vehiculo_desc_hidden">
+        <input type="hidden" id="e_cliente_id">
+        <input type="hidden" id="e_cliente_nombre_hidden">
+        <input type="hidden" id="e_cliente_email_hidden">
       </div>
       <div class="form-group col-2">
-        <label>Cliente (opcional)</label>
-        <input id="e_cliente" placeholder="Nombre del cliente">
+        <label>Ubicación</label>
+        <input id="e_ubicacion" placeholder="Dirección o link de videollamada">
       </div>
     </div>
 
   </div>
   <div class="modal-footer">
     <button id="btnEliminarEvento" class="btn btn-secondary" style="color:var(--red);display:none" onclick="eliminarEvento()">🗑️ Eliminar</button>
+    <button id="btnGcalExport" class="btn btn-secondary" style="display:none" onclick="exportarGcal()" title="Exportar a Google Calendar">📅 Google Cal</button>
     <button class="btn btn-secondary" onclick="closeModal()">✕ Cancelar</button>
     <button class="btn btn-primary" onclick="withBtn(this, guardarEvento)">💾 Guardar</button>
   </div>
@@ -215,6 +218,16 @@
 .ev-llamada { background:#2d1a3b;color:#9B59B6; }
 .ev-otro    { background:#1a1a1a;color:#95A5A6; }
 .ev-tarea-ext { background:#2D2500;color:#F1C40F;border-left-color:#F1C40F !important; }
+
+/* Google Calendar status chip */
+.gcal-chip {
+  display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+  border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;
+  border:none;transition:opacity .15s;
+}
+.gcal-chip:hover { opacity:.85; }
+.gcal-connected { background:#0D3B22;color:#2ECC71; }
+.gcal-disconnected { background:#1a1a1a;color:#95A5A6; }
 </style>
 
 <script src="{{ url_for('static', filename='js/calendario.js') }}"></script>

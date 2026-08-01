@@ -1,9 +1,10 @@
-// calendario.js — VTA Calendario module
+// calendario.js — CORZE Calendario module
 
 let allEventos  = [];
 let currentDate = new Date();
 let vista       = 'semana';
 let editingId   = null;
+let gcalConnected = false;
 
 const TIPO_COLORS = {
   visita:  'ev-visita',
@@ -26,8 +27,62 @@ const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 document.addEventListener('DOMContentLoaded', () => {
   setDefaultFecha();
+  loadWorkers();
+  checkGcalStatus();
   cargarEventos();
 });
+
+// ── Workers ───────────────────────────────────────────────────────────────────
+async function loadWorkers() {
+  try {
+    const res = await fetch('/api/trabajadores');
+    const workers = await res.json();
+    const sel = document.getElementById('e_asignado');
+    workers.forEach(w => {
+      const name = w.nombre || w.name || '';
+      if (!name) return;
+      sel.innerHTML += `<option value="${escHtml(name)}">${escHtml(name)}</option>`;
+    });
+  } catch(e) {
+    console.error('Error cargando trabajadores', e);
+  }
+}
+
+// ── Google Calendar status ────────────────────────────────────────────────────
+async function checkGcalStatus() {
+  try {
+    const res  = await fetch('/api/calendar/status');
+    const data = await res.json();
+    gcalConnected = data.connected;
+    renderGcalChip();
+  } catch(e) {}
+}
+
+function renderGcalChip() {
+  const el = document.getElementById('gcalStatus');
+  if (!el) return;
+  if (gcalConnected) {
+    el.innerHTML = `<button class="gcal-chip gcal-connected" onclick="desconectarGcal()">
+      ✅ Google Calendar conectado</button>`;
+  } else {
+    el.innerHTML = `<button class="gcal-chip gcal-disconnected" onclick="conectarGcal()">
+      🔗 Conectar Google Calendar</button>`;
+  }
+}
+
+function conectarGcal() {
+  window.location.href = '/oauth/google';
+}
+
+async function desconectarGcal() {
+  if (!confirm('¿Desconectar Google Calendar?')) return;
+  try {
+    await fetch('/api/calendar/disconnect', { method: 'POST' });
+  } catch(e) {}
+  gcalConnected = false;
+  renderGcalChip();
+  showToast('Google Calendar desconectado');
+}
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function cargarEventos() {
@@ -86,7 +141,7 @@ function fmtShort(d) {
 }
 
 function semanaRange(d) {
-  const day = d.getDay(); // 0=dom
+  const day = d.getDay();
   const lun = new Date(d); lun.setDate(d.getDate() - ((day + 6) % 7));
   const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
   return { lun, dom };
@@ -107,7 +162,7 @@ function renderMes() {
 
   const primerDia = new Date(year, month, 1).getDay();
   const diasMes   = new Date(year, month + 1, 0).getDate();
-  const offset    = (primerDia + 6) % 7; // lunes primero
+  const offset    = (primerDia + 6) % 7;
 
   const grid = document.getElementById('calGrid');
   let html = '';
@@ -152,7 +207,6 @@ function evRow(e) {
 }
 
 function clickDia(dateStr) {
-  // Abrir modal con esa fecha
   openModal(null, dateStr);
 }
 
@@ -242,6 +296,7 @@ function openModal(id = null, fechaDefault = null) {
   editingId = id;
   document.getElementById('modalTitle').textContent = id ? 'Editar evento' : 'Nuevo evento';
   document.getElementById('btnEliminarEvento').style.display = id ? 'inline-flex' : 'none';
+  document.getElementById('btnGcalExport').style.display     = (id && gcalConnected) ? 'inline-flex' : 'none';
   resetForm();
 
   if (fechaDefault) {
@@ -259,12 +314,13 @@ function openModal(id = null, fechaDefault = null) {
     document.getElementById('e_hora_fin').value     = e.hora_fin     || '10:00';
     document.getElementById('e_todo_dia').value     = e.todo_dia ? '1' : '0';
     document.getElementById('e_descripcion').value  = e.descripcion  || '';
-    document.getElementById('e_cliente').value      = e.cliente      || '';
-    if (e.vehiculo_id) {
-      document.getElementById('e_vehiculo_id').value          = e.vehiculo_id;
-      document.getElementById('e_vehiculo_desc_hidden').value = e.vehiculo_desc || '';
-      document.getElementById('eVehiculoDesc').textContent    = e.vehiculo_desc || '';
-      document.getElementById('eVehiculoSeleccionado').style.display = 'flex';
+    document.getElementById('e_ubicacion').value    = e.ubicacion    || '';
+    if (e.cliente_id) {
+      document.getElementById('e_cliente_id').value           = e.cliente_id;
+      document.getElementById('e_cliente_nombre_hidden').value = e.cliente_nombre || '';
+      document.getElementById('e_cliente_email_hidden').value  = e.cliente_email  || '';
+      document.getElementById('eClienteDesc').textContent     = e.cliente_nombre  || '';
+      document.getElementById('eClienteSeleccionado').style.display = 'flex';
     }
   }
 
@@ -284,8 +340,8 @@ function resetForm() {
   document.getElementById('e_hora_fin').value    = '10:00';
   document.getElementById('e_todo_dia').value    = '0';
   document.getElementById('e_descripcion').value = '';
-  document.getElementById('e_cliente').value     = '';
-  limpiarVehiculoCal();
+  document.getElementById('e_ubicacion').value   = '';
+  limpiarClienteCal();
   setDefaultFecha();
 }
 
@@ -305,16 +361,17 @@ async function guardarEvento() {
 
   const payload = {
     titulo,
-    tipo:        document.getElementById('e_tipo').value,
-    asignado_a:  document.getElementById('e_asignado').value,
+    tipo:           document.getElementById('e_tipo').value,
+    asignado_a:     document.getElementById('e_asignado').value,
     fecha,
-    hora_inicio: document.getElementById('e_hora_inicio').value,
-    hora_fin:    document.getElementById('e_hora_fin').value,
-    todo_dia:    document.getElementById('e_todo_dia').value === '1',
-    descripcion: document.getElementById('e_descripcion').value.trim(),
-    cliente:     document.getElementById('e_cliente').value.trim(),
-    vehiculo_id:   document.getElementById('e_vehiculo_id').value || null,
-    vehiculo_desc: document.getElementById('e_vehiculo_desc_hidden').value || null,
+    hora_inicio:    document.getElementById('e_hora_inicio').value,
+    hora_fin:       document.getElementById('e_hora_fin').value,
+    todo_dia:       document.getElementById('e_todo_dia').value === '1',
+    descripcion:    document.getElementById('e_descripcion').value.trim(),
+    ubicacion:      document.getElementById('e_ubicacion').value.trim(),
+    cliente_id:     document.getElementById('e_cliente_id').value     || null,
+    cliente_nombre: document.getElementById('e_cliente_nombre_hidden').value || null,
+    cliente_email:  document.getElementById('e_cliente_email_hidden').value  || null,
   };
 
   try {
@@ -326,6 +383,7 @@ async function guardarEvento() {
     });
     const data = await res.json();
     if (!data.ok) { showToast(data.error || 'Error al guardar', 'error'); return; }
+    const savedId = data.id || editingId;
     closeModal();
     await cargarEventos();
     showToast(editingId ? 'Evento actualizado' : 'Evento creado');
@@ -349,41 +407,83 @@ async function eliminarEvento() {
   }
 }
 
-// ── Vehículo search ───────────────────────────────────────────────────────────
-let _calVehTimeout = null;
-async function buscarVehiculoCal(q) {
-  clearTimeout(_calVehTimeout);
-  const box = document.getElementById('eVehiculoSuggestions');
+// ── Exportar a Google Calendar ────────────────────────────────────────────────
+async function exportarGcal() {
+  if (!editingId) return;
+  const e = allEventos.find(x => x.id === editingId);
+  if (!e) return;
+
+  const payload = {
+    titulo:       e.titulo || '',
+    fecha:        (e.fecha || '').slice(0, 10),
+    hora_ini:     e.hora_inicio || '09:00',
+    hora_fin:     e.hora_fin    || '10:00',
+    descripcion:  e.descripcion || '',
+    email_cliente: e.cliente_email || '',
+    ubicacion:    e.ubicacion || 'Corze, Santiago, Chile',
+  };
+
+  try {
+    const res  = await fetch('/api/calendar/agendar', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅ Evento creado en Google Calendar');
+      if (data.link) window.open(data.link, '_blank');
+    } else if (data.auth_url) {
+      if (confirm('Google Calendar no está conectado. ¿Conectar ahora?')) {
+        window.location.href = data.auth_url;
+      }
+    } else {
+      showToast(data.error || 'Error al exportar', 'error');
+    }
+  } catch(e) {
+    showToast('Error de red', 'error');
+  }
+}
+
+// ── Cliente search ────────────────────────────────────────────────────────────
+let _calClienteTimeout = null;
+async function buscarClienteCal(q) {
+  clearTimeout(_calClienteTimeout);
+  const box = document.getElementById('eClienteSuggestions');
   if (q.length < 2) { box.style.display = 'none'; return; }
-  _calVehTimeout = setTimeout(async () => {
+  _calClienteTimeout = setTimeout(async () => {
     try {
-      const res  = await fetch(`/api/inventario?q=${encodeURIComponent(q)}`);
+      const res  = await fetch(`/api/leads?q=${encodeURIComponent(q)}`);
       const rows = await res.json();
       if (!rows.length) { box.style.display = 'none'; return; }
       box.innerHTML = rows.slice(0, 8).map(r => {
-        const label = `${r.marca||''} ${r.modelo||''} ${r.anio||''} — ${r.patente||''}`.trim();
+        const nombre  = `${r.nombre || ''} ${r.apellido || ''}`.trim();
+        const empresa = r.empresa ? ` — ${r.empresa}` : '';
+        const label   = nombre + empresa;
+        const email   = r.email || '';
         return `<div style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border2)"
-                     onmousedown="seleccionarVehiculoCal('${r.id}','${escJs(label)}')">${escHtml(label)}</div>`;
+                     onmousedown="seleccionarClienteCal('${r.id}','${escJs(nombre + empresa)}','${escJs(email)}')">${escHtml(label)}${email ? `<span style='color:var(--gray3);margin-left:6px'>${escHtml(email)}</span>` : ''}</div>`;
       }).join('');
       box.style.display = 'block';
     } catch(e) { console.error(e); }
   }, 250);
 }
 
-function seleccionarVehiculoCal(id, desc) {
-  document.getElementById('e_vehiculo_id').value          = id;
-  document.getElementById('e_vehiculo_desc_hidden').value = desc;
-  document.getElementById('eVehiculoDesc').textContent    = desc;
-  document.getElementById('eVehiculoSeleccionado').style.display = 'flex';
-  document.getElementById('eVehiculoSuggestions').style.display  = 'none';
-  document.getElementById('e_vehiculo_search').value = '';
+function seleccionarClienteCal(id, desc, email) {
+  document.getElementById('e_cliente_id').value            = id;
+  document.getElementById('e_cliente_nombre_hidden').value = desc;
+  document.getElementById('e_cliente_email_hidden').value  = email;
+  document.getElementById('eClienteDesc').textContent      = desc;
+  document.getElementById('eClienteSeleccionado').style.display = 'flex';
+  document.getElementById('eClienteSuggestions').style.display  = 'none';
+  document.getElementById('e_cliente_search').value = '';
 }
 
-function limpiarVehiculoCal() {
-  document.getElementById('e_vehiculo_id').value          = '';
-  document.getElementById('e_vehiculo_desc_hidden').value = '';
-  document.getElementById('eVehiculoSeleccionado').style.display = 'none';
-  const s = document.getElementById('e_vehiculo_search');
+function limpiarClienteCal() {
+  document.getElementById('e_cliente_id').value            = '';
+  document.getElementById('e_cliente_nombre_hidden').value = '';
+  document.getElementById('e_cliente_email_hidden').value  = '';
+  document.getElementById('eClienteSeleccionado').style.display = 'none';
+  const s = document.getElementById('e_cliente_search');
   if (s) s.value = '';
 }
 
