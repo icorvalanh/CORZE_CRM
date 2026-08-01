@@ -710,6 +710,21 @@ def clp_fmt_filter(n):
     try: return f'{int(n):,}'.replace(',','.')
     except: return '—'
 
+@app.template_filter('fmt_tel')
+def fmt_tel_filter(raw):
+    if not raw:
+        return ''
+    digits = ''.join(c for c in str(raw) if c.isdigit())
+    if len(digits) == 11 and digits.startswith('569'):
+        return f'+56 9 {digits[4:8]} {digits[8:]}'
+    if len(digits) == 11 and digits.startswith('56'):
+        return f'+56 {digits[2]} {digits[3:7]} {digits[7:]}'
+    if len(digits) == 9 and digits.startswith('9'):
+        return f'+56 9 {digits[1:5]} {digits[5:]}'
+    if len(digits) == 8:
+        return f'{digits[:4]} {digits[4:]}'
+    return str(raw)
+
 def get_logo_b64():
     """Devuelve el logo como base64 para embeber en HTML imprimible."""
     import base64, os

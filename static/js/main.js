@@ -54,6 +54,29 @@ async function api(url, method = 'GET', body = null, timeout = 20000) {
   }
 }
 
+// Formatea número de teléfono chileno: +56 9 XXXX XXXX
+function fmtTel(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '');
+  // +56 9 XXXX XXXX  (12 dígitos con código país)
+  if (digits.length === 11 && digits.startsWith('569')) {
+    return `+56 9 ${digits.slice(4, 8)} ${digits.slice(8)}`;
+  }
+  // 56 9 XXXX XXXX  (11 dígitos sin +)
+  if (digits.length === 11 && digits.startsWith('56')) {
+    return `+56 ${digits[2]} ${digits.slice(3, 7)} ${digits.slice(7)}`;
+  }
+  // 9 XXXX XXXX  (9 dígitos, empieza con 9)
+  if (digits.length === 9 && digits.startsWith('9')) {
+    return `+56 9 ${digits.slice(1, 5)} ${digits.slice(5)}`;
+  }
+  // 8 dígitos locales fijos: XXXX XXXX
+  if (digits.length === 8) {
+    return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+  }
+  return raw; // devolver sin cambios si no reconoce el formato
+}
+
 // GMT-4 date helpers — usar estos en lugar de new Date().toISOString()
 function dStr(d) {
   return d.getFullYear() + '-'

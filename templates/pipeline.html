@@ -119,7 +119,7 @@
         <div style="margin-top:4px"><span class="lead-tipo">{{ lead.tipo_proyecto|title }}</span></div>
         {% endif %}
         {% if lead.telefono %}
-        <div class="lead-tel">📞 {{ lead.telefono }}</div>
+        <div class="lead-tel">📞 {{ lead.telefono|fmt_tel }}</div>
         {% endif %}
         <div class="lead-meta">
           {% if lead.asignado_a %}
@@ -535,7 +535,7 @@ function renderPanel(lead, presupuestos = [], grabaciones = []) {
       <h4>Contacto</h4>
       <div style="display:grid;gap:5px">
         ${lead.email    ? `<div style="font-size:12px">📧 <a href="mailto:${lead.email}" style="color:var(--blue)">${lead.email}</a></div>` : ''}
-        ${lead.telefono ? `<div style="font-size:12px">📞 <a href="tel:${lead.telefono}" style="color:var(--white)">${lead.telefono}</a></div>` : ''}
+        ${lead.telefono ? `<div style="font-size:12px">📞 <a href="tel:${lead.telefono.replace(/\s/g,'')}" style="color:var(--white)">${fmtTel(lead.telefono)}</a></div>` : ''}
         ${lead.empresa  ? `<div style="font-size:12px">🏢 <span style="color:var(--gray1)">${lead.empresa}</span></div>` : ''}
         ${lead.asignado_a ? `<div style="font-size:12px">👤 <span style="color:var(--gray2)">Asesor:</span> ${lead.asignado_a}</div>` : ''}
         <div style="font-size:11px;color:var(--gray3)">Creado: ${(lead.created_at||'').slice(0,10)}</div>
@@ -771,7 +771,7 @@ function buildCard(lead) {
     <div class="lead-name">${lead.nombre||''} ${lead.apellido||''}</div>
     ${lead.empresa ? `<div class="lead-empresa">${lead.empresa}</div>` : ''}
     ${lead.tipo_proyecto ? `<div style="margin-top:4px"><span class="lead-tipo">${lead.tipo_proyecto}</span></div>` : ''}
-    ${lead.telefono ? `<div class="lead-tel">📞 ${lead.telefono}</div>` : ''}
+    ${lead.telefono ? `<div class="lead-tel">📞 ${fmtTel(lead.telefono)}</div>` : ''}
     <div class="lead-meta">
       ${lead.asignado_a ? `<div class="lead-avatar" style="background:#1A2A3A;color:var(--blue)">${lead.asignado_a[0]}</div>` : ''}
       <span class="lead-dias">${(lead.created_at||'').slice(0,10)}</span>
@@ -1071,7 +1071,7 @@ function renderCallLeadList() {
         ${l.etapa || '—'}
       </div>
       <div style="font-size:10px;color:${l.telefono ? '#3498db' : '#4a5568'};margin-top:2px">
-        ${l.telefono || 'sin tel.'}
+        ${l.telefono ? fmtTel(l.telefono) : 'sin tel.'}
       </div>
     </div>`;
   }).join('');
@@ -1101,8 +1101,8 @@ function renderCallLead() {
   const phone = (lead.telefono || '').trim();
   const phoneEl = document.getElementById('callPhoneText');
   const phoneLink = document.getElementById('callPhoneLink');
-  phoneEl.textContent = phone || 'Sin teléfono';
-  phoneLink.href = phone ? `tel:${phone.replace(/\s/g,'')}` : '#';
+  phoneEl.textContent = phone ? fmtTel(phone) : 'Sin teléfono';
+  phoneLink.href = phone ? `tel:${phone.replace(/\D/g,'')}` : '#';
   phoneLink.style.opacity = phone ? '1' : '0.4';
 
   const emailEl = document.getElementById('callEmailText');
