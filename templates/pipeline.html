@@ -293,8 +293,15 @@
 
   <div style="display:flex;flex:1;overflow:hidden">
 
-    <!-- Left: lead list mini -->
-    <div style="width:200px;border-right:1px solid #1e2a38;overflow-y:auto;flex-shrink:0;background:#0d1117" id="callLeadList"></div>
+    <!-- Left: filters + lead list -->
+    <div style="width:210px;border-right:1px solid #1e2a38;flex-shrink:0;background:#0d1117;display:flex;flex-direction:column">
+
+      <!-- Stage filter buttons -->
+      <div id="callStageFilters" style="flex-shrink:0;border-bottom:1px solid #1e2a38;padding:8px 8px 6px"></div>
+
+      <!-- Lead list -->
+      <div id="callLeadList" style="flex:1;overflow-y:auto"></div>
+    </div>
 
     <!-- Center: main HUD -->
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:18px;overflow-y:auto">
@@ -876,9 +883,10 @@ async function importarEML(input) {
 //  MODO LLAMADAS
 // ══════════════════════════════════════════════════════════════════════════════
 
-let callQueue    = [];
-let callIdx      = 0;
-let callFilter   = 'llamadas'; // 'llamadas' = Nuevo + Intento1 + Intento2 | 'todos'
+let callQueue       = [];
+let callIdx         = 0;
+let callFilter      = 'llamadas'; // 'llamadas' = Nuevo + Intento1 + Intento2 | 'todos'
+let callStageFilter = null;       // null = todas las etapas, o string con etapa específica
 let callSession  = { llamadas: 0, notas: 0, saltados: 0 };
 let mediaStream  = null;
 let mediaRec     = null;
@@ -929,20 +937,71 @@ function setCallFilter(f, btn) {
 
 function rebuilCallQueue() {
   const onlyPhone = document.getElementById('callOnlyPhone').checked;
-  callQueue = leadsData.filter(l => {
+  // Base pool según el filtro principal (llamadas vs todos)
+  const pool = leadsData.filter(l => {
     if (callFilter === 'llamadas' && !ETAPAS_LLAMADAS.includes(l.etapa)) return false;
     if (onlyPhone && !(l.telefono && l.telefono.trim())) return false;
     return true;
   });
+  // Filtro secundario por etapa específica
+  callQueue = callStageFilter
+    ? pool.filter(l => l.etapa === callStageFilter)
+    : pool;
   callIdx = Math.min(callIdx, Math.max(0, callQueue.length - 1));
+  renderCallFilters(pool);
   renderCallLeadList();
   renderCallLead();
+}
+
+function setCallStageFilter(etapa) {
+  callStageFilter = (callStageFilter === etapa) ? null : etapa; // toggle
+  callIdx = 0;
+  rebuilCallQueue();
+}
+
+function renderCallFilters(pool) {
+  const el = document.getElementById('callStageFilters');
+  // Contar leads por etapa dentro del pool actual
+  const counts = {};
+  pool.forEach(l => { counts[l.etapa] = (counts[l.etapa] || 0) + 1; });
+  const etapas = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+
+  const totalColor   = !callStageFilter ? '#2ecc71' : '#4a5568';
+  const totalBg      = !callStageFilter ? '#0a1f0a'  : 'transparent';
+  const totalBorder  = !callStageFilter ? '#27ae6055' : '#2d3748';
+
+  let html = `<div style="font-size:9px;color:#4a5568;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding:0 2px">Filtrar por etapa</div>
+    <button onclick="setCallStageFilter(null)"
+            style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;
+                   background:${totalBg};border:1px solid ${totalBorder};color:${totalColor};
+                   border-radius:6px;padding:5px 8px;cursor:pointer;font-size:10px;font-weight:700;margin-bottom:4px">
+      <span>Todas las etapas</span>
+      <span style="background:#1e2a38;border-radius:4px;padding:1px 6px">${pool.length}</span>
+    </button>`;
+
+  etapas.forEach(etapa => {
+    const isActive = callStageFilter === etapa;
+    const col      = ETAPA_COLORS[etapa] || '#4a5568';
+    html += `<button onclick="setCallStageFilter('${etapa.replace(/'/g, "\\'")}')"
+               style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;
+                      background:${isActive ? col + '22' : 'transparent'};
+                      border:1px solid ${isActive ? col + '66' : '#1e2a38'};
+                      color:${isActive ? col : '#718096'};
+                      border-radius:6px;padding:5px 8px;cursor:pointer;font-size:10px;
+                      font-weight:${isActive ? '700' : '500'};margin-bottom:3px;transition:all .1s">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${etapa}</span>
+        <span style="background:#1e2a38;border-radius:4px;padding:1px 6px;flex-shrink:0;margin-left:4px">${counts[etapa]}</span>
+      </button>`;
+  });
+
+  el.innerHTML = html;
 }
 
 function abrirModoLlamadas() {
   callSession = { llamadas: 0, notas: 0, saltados: 0 };
   callIdx = 0;
   callFilter = 'llamadas';
+  callStageFilter = null;
   // Reset filter button styles
   const btnL = document.getElementById('callFilterBtn_llamadas');
   const btnT = document.getElementById('callFilterBtn_todos');
