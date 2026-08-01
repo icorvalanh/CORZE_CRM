@@ -1515,7 +1515,8 @@ def api_contacto_vitrina():
 @app.route('/admin/tareas')
 @login_required
 def tareas():
-    return render_template('tareas.html', page='tareas')
+    trabajadores = db.get_all_trabajadores(solo_activos=True)
+    return render_template('tareas.html', page='tareas', trabajadores=trabajadores)
 
 @app.route('/api/tareas', methods=['GET'])
 @login_required
@@ -1595,7 +1596,8 @@ def api_tareas_upcoming():
 @app.route('/admin/calendario')
 @login_required
 def calendario():
-    return render_template('calendario.html', page='calendario')
+    trabajadores = db.get_all_trabajadores(solo_activos=True)
+    return render_template('calendario.html', page='calendario', trabajadores=trabajadores)
 
 @app.route('/api/calendario', methods=['GET'])
 @login_required

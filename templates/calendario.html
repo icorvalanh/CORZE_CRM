@@ -74,6 +74,9 @@
         <label>Responsable</label>
         <select id="e_asignado">
           <option value="Todos">👥 Todos</option>
+          {% for t in trabajadores %}
+          <option value="{{ t.nombre }} {{ t.apellido or '' }}">{{ t.nombre }} {{ t.apellido or '' }}</option>
+          {% endfor %}
         </select>
       </div>
     </div>

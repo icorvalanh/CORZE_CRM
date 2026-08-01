@@ -27,26 +27,9 @@ const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 document.addEventListener('DOMContentLoaded', () => {
   setDefaultFecha();
-  loadWorkers();
   checkGcalStatus();
   cargarEventos();
 });
-
-// ── Workers ───────────────────────────────────────────────────────────────────
-async function loadWorkers() {
-  try {
-    const res = await fetch('/api/trabajadores');
-    const workers = await res.json();
-    const sel = document.getElementById('e_asignado');
-    workers.forEach(w => {
-      const name = w.nombre || w.name || '';
-      if (!name) return;
-      sel.innerHTML += `<option value="${escHtml(name)}">${escHtml(name)}</option>`;
-    });
-  } catch(e) {
-    console.error('Error cargando trabajadores', e);
-  }
-}
 
 // ── Google Calendar status ────────────────────────────────────────────────────
 async function checkGcalStatus() {
@@ -81,7 +64,7 @@ async function desconectarGcal() {
   } catch(e) {}
   gcalConnected = false;
   renderGcalChip();
-  showToast('Google Calendar desconectado');
+  toast('Google Calendar desconectado');
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -94,7 +77,7 @@ async function cargarEventos() {
     renderVista();
     actualizarLabel();
   } catch(e) {
-    showToast('Error cargando calendario', 'error');
+    toast('Error cargando calendario', 'error');
   }
 }
 
@@ -356,7 +339,7 @@ async function guardarEvento() {
   const titulo      = document.getElementById('e_titulo').value.trim();
   const fecha       = document.getElementById('e_fecha').value;
   if (!titulo || !fecha) {
-    showToast('Título y fecha son requeridos', 'error'); return;
+    toast('Título y fecha son requeridos', 'error'); return;
   }
 
   const payload = {
@@ -382,13 +365,13 @@ async function guardarEvento() {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!data.ok) { showToast(data.error || 'Error al guardar', 'error'); return; }
+    if (!data.ok) { toast(data.error || 'Error al guardar', 'error'); return; }
     const savedId = data.id || editingId;
     closeModal();
     await cargarEventos();
-    showToast(editingId ? 'Evento actualizado' : 'Evento creado');
+    toast(editingId ? 'Evento actualizado' : 'Evento creado');
   } catch(e) {
-    showToast('Error de red', 'error');
+    toast('Error de red', 'error');
   }
 }
 
@@ -398,12 +381,12 @@ async function eliminarEvento() {
   try {
     const res  = await fetch(`/api/calendario/${editingId}`, { method: 'DELETE' });
     const data = await res.json();
-    if (!data.ok) { showToast('Error al eliminar', 'error'); return; }
+    if (!data.ok) { toast('Error al eliminar', 'error'); return; }
     closeModal();
     await cargarEventos();
-    showToast('Evento eliminado');
+    toast('Evento eliminado');
   } catch(e) {
-    showToast('Error de red', 'error');
+    toast('Error de red', 'error');
   }
 }
 
@@ -430,17 +413,17 @@ async function exportarGcal() {
     });
     const data = await res.json();
     if (data.ok) {
-      showToast('✅ Evento creado en Google Calendar');
+      toast('✅ Evento creado en Google Calendar');
       if (data.link) window.open(data.link, '_blank');
     } else if (data.auth_url) {
       if (confirm('Google Calendar no está conectado. ¿Conectar ahora?')) {
         window.location.href = data.auth_url;
       }
     } else {
-      showToast(data.error || 'Error al exportar', 'error');
+      toast(data.error || 'Error al exportar', 'error');
     }
   } catch(e) {
-    showToast('Error de red', 'error');
+    toast('Error de red', 'error');
   }
 }
 
@@ -493,13 +476,4 @@ function escHtml(s) {
 }
 function escJs(s) {
   return String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-}
-function showToast(msg, type = 'success') {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.className = `toast ${type}`;
-  el.classList.remove('hidden');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.add('hidden'), 3500);
 }
