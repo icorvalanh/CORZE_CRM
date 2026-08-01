@@ -496,17 +496,21 @@ async function abrirPanel(id) {
   document.getElementById('panelOverlay').style.display = 'block';
   document.getElementById('panelBody').innerHTML = '<div style="text-align:center;color:var(--gray3);padding:32px">Cargando...</div>';
   try {
-    const [rLead, rPres] = await Promise.all([
+    const [rLead, rPres, rGrab] = await Promise.all([
       fetch(`/api/leads/${id}`),
       fetch(`/api/leads/${id}/presupuestos`),
+      fetch(`/api/leads/${id}/grabaciones`),
     ]);
-    const lead = await rLead.json();
+    const lead        = await rLead.json();
     const presupuestos = await rPres.json();
-    renderPanel(lead, presupuestos);
-  } catch(e) { document.getElementById('panelBody').innerHTML = '<div style="color:var(--red);padding:20px">Error cargando</div>'; }
+    const grabaciones  = await rGrab.json();
+    renderPanel(lead, presupuestos, grabaciones);
+  } catch(e) {
+    document.getElementById('panelBody').innerHTML = '<div style="color:var(--red);padding:20px">Error cargando</div>';
+  }
 }
 
-function renderPanel(lead, presupuestos = []) {
+function renderPanel(lead, presupuestos = [], grabaciones = []) {
   document.getElementById('panelTitle').textContent = `${lead.nombre || ''} ${lead.apellido || ''}`.trim();
   const historial = (lead.historial || []).slice().reverse();
   const fmtMoney = n => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
@@ -587,6 +591,35 @@ function renderPanel(lead, presupuestos = []) {
         <button class="btn btn-primary" style="font-size:12px;padding:7px 14px;align-self:flex-end"
                 onclick="agregarNota('${lead.id}')">💾 Guardar nota</button>
       </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>🎙️ Grabaciones de llamadas</h4>
+      ${grabaciones.length ? `
+        <div id="grabacionesContainer" style="display:flex;flex-direction:column;gap:8px">
+          ${grabaciones.map(g => `
+            <div style="background:var(--card2);border-radius:8px;border:1px solid var(--border2);padding:10px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <div>
+                  <span style="font-size:10px;color:var(--gray3)">${(g.fecha||'').slice(0,16).replace('T',' ')}</span>
+                  ${g.duracion ? `<span style="font-size:10px;color:var(--blue);margin-left:8px">⏱ ${_fmtDur(g.duracion)}</span>` : ''}
+                  ${g.usuario  ? `<span style="font-size:10px;color:var(--gray3);margin-left:8px">· ${g.usuario}</span>` : ''}
+                </div>
+                <button onclick="eliminarGrabacion('${lead.id}','${g.id}',this)"
+                        style="background:none;border:none;color:var(--gray3);cursor:pointer;font-size:12px;padding:0 4px"
+                        title="Eliminar grabación">🗑️</button>
+              </div>
+              ${g.notas ? `<div style="font-size:11px;color:var(--gray2);margin-bottom:8px;font-style:italic">"${g.notas}"</div>` : ''}
+              <div id="player_${g.id}" style="min-height:34px">
+                <button onclick="cargarGrabacion('${lead.id}','${g.id}')"
+                        style="font-size:11px;padding:5px 12px;background:var(--card3);border:1px solid var(--border2);
+                               color:var(--blue);border-radius:6px;cursor:pointer;width:100%">
+                  ▶️ Cargar y escuchar
+                </button>
+              </div>
+            </div>`).join('')}
+        </div>` :
+        `<div style="font-size:12px;color:var(--gray3)">Sin grabaciones de llamadas aún.</div>`}
     </div>
 
     <div class="panel-section">
@@ -1248,9 +1281,13 @@ function stopTimer() {
 // ── Recording ─────────────────────────────────────────────────────────────────
 async function iniciarGrabacion() {
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRec    = new MediaRecorder(mediaStream);
-    recChunks   = [];
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
+    });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus' : 'audio/webm';
+    mediaRec  = new MediaRecorder(mediaStream, { mimeType, audioBitsPerSecond: 24000 });
+    recChunks = [];
     mediaRec.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
     mediaRec.onstop = guardarGrabacion;
     mediaRec.start(500);
@@ -1284,20 +1321,107 @@ function guardarGrabacion() {
   const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
     ? 'audio/webm;codecs=opus' : 'audio/webm';
   const blob  = new Blob(recChunks, { type: mimeType });
-  const url   = URL.createObjectURL(blob);
+  recChunks   = [];
   const lead  = callQueue[callIdx];
   const fname = `llamada_${(lead?.nombre || 'lead').replace(/\s/g,'_')}_${new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'')}.webm`;
+  const durSecs = timerSecs;
 
-  const el = document.createElement('div');
-  el.style.cssText = 'display:flex;align-items:center;gap:10px;background:#0a1520;border:1px solid #1e2a38;border-radius:8px;padding:8px 12px';
-  el.innerHTML = `
-    <audio controls src="${url}" style="height:30px;flex:1;filter:invert(1) brightness(0.7)"></audio>
+  // Mostrar player local inmediatamente
+  const url = URL.createObjectURL(blob);
+  const container = document.getElementById('callRecordings');
+  const rowId = 'rec_' + Date.now();
+  const row = document.createElement('div');
+  row.id = rowId;
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;background:#0a1520;border:1px solid #1e2a38;border-radius:8px;padding:8px 12px';
+  row.innerHTML = `
+    <audio controls src="${url}" style="height:28px;flex:1"></audio>
+    <span style="font-size:10px;color:#4a5568;white-space:nowrap">${_fmtDur(durSecs)}</span>
+    <span id="${rowId}_status" style="font-size:10px;color:#F5A623">⬆️ Subiendo...</span>
     <a href="${url}" download="${fname}"
-       style="font-size:10px;color:#3498db;white-space:nowrap;text-decoration:none;padding:4px 8px;background:#0a0f1f;border:1px solid #3498db44;border-radius:6px">
-      ⬇️ Descargar
+       style="font-size:10px;color:#3498db;white-space:nowrap;text-decoration:none;padding:3px 8px;background:#0a0f1f;border:1px solid #3498db44;border-radius:6px">
+      ⬇️
     </a>`;
-  document.getElementById('callRecordings').appendChild(el);
-  recChunks = [];
+  container.appendChild(row);
+
+  if (!lead) return;
+
+  // Subir al servidor
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const b64   = e.target.result;
+    const rawKB = Math.round(blob.size / 1024);
+    const statusEl = document.getElementById(rowId + '_status');
+
+    if (rawKB > 800) {
+      if (statusEl) statusEl.textContent = `⚠️ Solo local (${rawKB}KB)`;
+      showToast(`Grabación larga (${rawKB}KB) — guardada solo localmente`, 'warning');
+      return;
+    }
+
+    try {
+      const nota = document.getElementById('callNotaInput')?.value.trim() || '';
+      const usuario = document.querySelector('.user-name')?.textContent.trim() || '';
+      const res = await fetch(`/api/leads/${lead.id}/grabaciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_b64: b64, duracion: durSecs, nombre_archivo: fname, usuario, notas: nota }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        if (statusEl) { statusEl.textContent = '✅ Guardada'; statusEl.style.color = '#2ecc71'; }
+        showToast('Grabación guardada en el lead', 'success');
+      } else {
+        if (statusEl) { statusEl.textContent = '❌ Error'; statusEl.style.color = '#e74c3c'; }
+        showToast(data.error || 'Error al guardar grabación', 'error');
+      }
+    } catch(err) {
+      if (statusEl) { statusEl.textContent = '❌ Red'; statusEl.style.color = '#e74c3c'; }
+      showToast('Error de red', 'error');
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
+function _fmtDur(s) {
+  if (!s) return '';
+  const m = Math.floor(s / 60), sec = String(s % 60).padStart(2,'0');
+  return `${m}:${sec}`;
+}
+
+async function cargarGrabacion(leadId, recId) {
+  const playerEl = document.getElementById('player_' + recId);
+  if (!playerEl) return;
+  playerEl.innerHTML = '<span style="font-size:11px;color:var(--gray3)">Cargando audio...</span>';
+  try {
+    const res  = await fetch(`/api/leads/${leadId}/grabaciones/${recId}`);
+    const data = await res.json();
+    if (!data.audio_b64) {
+      playerEl.innerHTML = '<span style="font-size:11px;color:var(--red)">Sin audio guardado</span>';
+      return;
+    }
+    playerEl.innerHTML = `
+      <audio controls style="width:100%;height:32px" src="${data.audio_b64}"></audio>
+      <a href="${data.audio_b64}" download="${data.nombre_archivo || 'grabacion.webm'}"
+         style="display:block;text-align:right;font-size:10px;color:var(--blue);margin-top:4px;text-decoration:none">
+        ⬇️ Descargar
+      </a>`;
+  } catch(e) {
+    playerEl.innerHTML = '<span style="font-size:11px;color:var(--red)">Error cargando audio</span>';
+  }
+}
+
+async function eliminarGrabacion(leadId, recId, btn) {
+  if (!confirm('¿Eliminar esta grabación? No se puede recuperar.')) return;
+  btn.disabled = true;
+  const res  = await fetch(`/api/leads/${leadId}/grabaciones/${recId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) {
+    btn.closest('[style]').remove();
+    showToast('Grabación eliminada', 'success');
+  } else {
+    btn.disabled = false;
+    showToast('Error al eliminar', 'error');
+  }
 }
 
 // ── Revisar bandeja ───────────────────────────────────────────────────────────

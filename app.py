@@ -3542,6 +3542,42 @@ def api_leads_presupuestos(doc_id):
                           'total': p.get('total',0), 'created_at': p.get('created_at','')})
     return jsonify(match)
 
+@app.route('/api/leads/<doc_id>/grabaciones', methods=['GET'])
+@login_required
+def api_lead_grabaciones_list(doc_id):
+    return jsonify(db.get_grabaciones_lead(doc_id))
+
+@app.route('/api/leads/<doc_id>/grabaciones', methods=['POST'])
+@login_required
+def api_lead_grabaciones_add(doc_id):
+    data = request.get_json(force=True)
+    audio_b64 = data.get('audio_b64', '')
+    # Validar tamaño (base64: cada 4 chars = 3 bytes raw)
+    raw_kb = len(audio_b64) * 3 // 4 // 1024
+    if raw_kb > 800:
+        return jsonify({'ok': False, 'error': f'Grabación demasiado larga ({raw_kb} KB). Máximo ~800 KB.'}), 400
+    payload = {
+        'duracion':       data.get('duracion', 0),
+        'nombre_archivo': data.get('nombre_archivo', 'grabacion.webm'),
+        'usuario':        data.get('usuario', session.get('usuario', '')),
+        'notas':          data.get('notas', ''),
+        'audio_b64':      audio_b64,
+    }
+    ok, rec_id = db.add_grabacion_lead(doc_id, payload)
+    return jsonify({'ok': ok, 'id': rec_id if ok else None, 'error': rec_id if not ok else None})
+
+@app.route('/api/leads/<doc_id>/grabaciones/<rec_id>', methods=['GET'])
+@login_required
+def api_lead_grabacion_get(doc_id, rec_id):
+    rec = db.get_grabacion(rec_id)
+    return jsonify(rec)
+
+@app.route('/api/leads/<doc_id>/grabaciones/<rec_id>', methods=['DELETE'])
+@login_required
+def api_lead_grabacion_delete(doc_id, rec_id):
+    ok = db.delete_grabacion(rec_id)
+    return jsonify({'ok': ok})
+
 @app.route('/api/leads/importar-email', methods=['POST'])
 @login_required
 def api_leads_importar_email():

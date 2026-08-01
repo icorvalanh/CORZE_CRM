@@ -1466,6 +1466,53 @@ class FirebaseDB:
             print(f'Error add_nota_lead: {e}')
             return False
 
+    # ── GRABACIONES DE LLAMADAS ───────────────────────────────────────────────
+    def add_grabacion_lead(self, lead_id: str, data: dict) -> tuple:
+        try:
+            data['lead_id'] = lead_id
+            data['fecha']   = self._now()
+            ref = self.db.collection('grabaciones_llamadas').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            print(f'Error add_grabacion_lead: {e}')
+            return False, str(e)
+
+    def get_grabaciones_lead(self, lead_id: str) -> list:
+        try:
+            docs = self.db.collection('grabaciones_llamadas')\
+                .where('lead_id', '==', lead_id).stream()
+            out = []
+            for d in docs:
+                r = d.to_dict()
+                r['id'] = d.id
+                r.pop('audio_b64', None)  # no incluir blob en el listado
+                out.append(r)
+            out.sort(key=lambda x: x.get('fecha', ''), reverse=True)
+            return out
+        except Exception as e:
+            print(f'Error get_grabaciones_lead: {e}')
+            return []
+
+    def get_grabacion(self, rec_id: str) -> dict:
+        try:
+            doc = self.db.collection('grabaciones_llamadas').document(rec_id).get()
+            if doc.exists:
+                r = doc.to_dict()
+                r['id'] = doc.id
+                return r
+            return {}
+        except Exception as e:
+            print(f'Error get_grabacion: {e}')
+            return {}
+
+    def delete_grabacion(self, rec_id: str) -> bool:
+        try:
+            self.db.collection('grabaciones_llamadas').document(rec_id).delete()
+            return True
+        except Exception as e:
+            print(f'Error delete_grabacion: {e}')
+            return False
+
     # ── TRABAJADORES ──────────────────────────────────────────────────────────
     def add_trabajador(self, data: dict) -> tuple:
         try:
