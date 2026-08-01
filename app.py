@@ -1001,6 +1001,51 @@ def api_finanzas_comprobante(doc_id):
     except Exception as e:
         return jsonify({'comprobante': '', 'error': str(e)})
 
+# ── COSTOS FIJOS ──────────────────────────────────────────────────────────────
+@app.route('/api/costos-fijos', methods=['GET'])
+@login_required
+def api_costos_fijos_list():
+    return jsonify(db.get_costos_fijos())
+
+@app.route('/api/costos-fijos', methods=['POST'])
+@login_required
+def api_costos_fijos_add():
+    data = request.get_json()
+    ok, err = db.add_costo_fijo(data)
+    return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
+
+@app.route('/api/costos-fijos/<doc_id>', methods=['PUT'])
+@login_required
+def api_costos_fijos_update(doc_id):
+    data = request.get_json()
+    ok, err = db.update_costo_fijo(doc_id, data)
+    return jsonify({'ok': ok, 'error': err})
+
+@app.route('/api/costos-fijos/<doc_id>', methods=['DELETE'])
+@login_required
+def api_costos_fijos_delete(doc_id):
+    ok = db.delete_costo_fijo(doc_id)
+    return jsonify({'ok': ok})
+
+@app.route('/api/costos-fijos/aplicar', methods=['POST'])
+@login_required
+def api_costos_fijos_aplicar():
+    data = request.get_json()
+    mes  = data.get('mes', '')
+    if not mes:
+        return jsonify({'ok': False, 'error': 'Falta el mes'})
+    ok, result = db.aplicar_costos_fijos(mes, usuario=session.get('usuario', ''))
+    if ok:
+        return jsonify({'ok': True, 'count': result})
+    return jsonify({'ok': False, 'error': result})
+
+@app.route('/api/costos-fijos/estado', methods=['GET'])
+@login_required
+def api_costos_fijos_estado():
+    mes = request.args.get('mes', '')
+    aplicado = db.costos_fijos_aplicados(mes) if mes else False
+    return jsonify({'aplicado': aplicado})
+
 # ── VENTAS CORZE SOLAR ───────────────────────────────────────────────────────
 @app.route('/api/ventas-corze', methods=['GET'])
 @login_required

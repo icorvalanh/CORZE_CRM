@@ -966,34 +966,100 @@ class FirebaseDB:
 
     def get_finanzas_resumen(self, mes: str = '') -> dict:
         try:
-            docs          = self.get_all_finanzas(mes=mes)
-            ing_list      = [r for r in docs if r.get('tipo') == 'ingreso']
-            cos_list      = [r for r in docs if r.get('tipo') == 'costo']
-            transf_list   = [r for r in docs if r.get('tipo') == 'transferencia']
-            ingresos      = sum(int(r.get('monto', 0) or 0) for r in ing_list)
-            costos        = sum(int(r.get('monto', 0) or 0) for r in cos_list)
-            monto_transf  = sum(int(r.get('monto', 0) or 0) for r in transf_list)
-            n_ing         = len(ing_list)
-            n_cos         = len(cos_list)
-            ticket_prom   = round(ingresos / n_ing) if n_ing > 0 else 0
-            margen_pct    = round((ingresos - costos) / ingresos * 100, 2) if ingresos > 0 else 0.0
+            docs     = self.get_all_finanzas(mes=mes)
+            ing_list = [r for r in docs if r.get('tipo') == 'ingreso']
+            egr_list = [r for r in docs if r.get('tipo') in ('costo', 'egreso')]
+            ingresos = sum(int(r.get('monto', 0) or 0) for r in ing_list)
+            egresos  = sum(int(r.get('monto', 0) or 0) for r in egr_list)
             return {
-                'ingresos':      ingresos,
-                'costos':        costos,
-                'balance':       ingresos - costos,
-                'total_transf':  len(transf_list),
-                'monto_transf':  monto_transf,
-                'n_ingresos':    n_ing,
-                'n_costos':      n_cos,
-                'n_total':       len(docs),
-                'ticket_promedio': ticket_prom,
-                'margen_pct':    margen_pct,
+                'ingresos':   ingresos,
+                'egresos':    egresos,
+                'costos':     egresos,
+                'balance':    ingresos - egresos,
+                'n_ingresos': len(ing_list),
+                'n_egresos':  len(egr_list),
+                'n_total':    len(docs),
             }
         except Exception as e:
             print(f'Error get_finanzas_resumen: {e}')
-            return {'ingresos': 0, 'costos': 0, 'balance': 0, 'total_transf': 0,
-                    'n_ingresos': 0, 'n_costos': 0, 'n_total': 0,
-                    'ticket_promedio': 0, 'margen_pct': 0.0}
+            return {'ingresos': 0, 'egresos': 0, 'costos': 0, 'balance': 0,
+                    'n_ingresos': 0, 'n_egresos': 0, 'n_total': 0}
+
+    # ── COSTOS FIJOS ──────────────────────────────────────────────────────────
+    def get_costos_fijos(self) -> list:
+        try:
+            docs = [self._doc(d) for d in
+                    self.db.collection('costos_fijos_corze').stream()]
+            return [r for r in docs if r.get('activo', True)]
+        except Exception as e:
+            print(f'Error get_costos_fijos: {e}')
+            return []
+
+    def add_costo_fijo(self, data: dict) -> tuple:
+        try:
+            data.setdefault('activo', True)
+            data['created_at'] = self._now()
+            data['updated_at'] = self._now()
+            ref = self.db.collection('costos_fijos_corze').add(data)
+            return True, ref[1].id
+        except Exception as e:
+            return False, str(e)
+
+    def update_costo_fijo(self, doc_id: str, data: dict) -> tuple:
+        try:
+            data.pop('id', None)
+            data['updated_at'] = self._now()
+            self.db.collection('costos_fijos_corze').document(doc_id).update(data)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
+    def delete_costo_fijo(self, doc_id: str) -> bool:
+        try:
+            self.db.collection('costos_fijos_corze').document(doc_id).delete()
+            return True
+        except Exception as e:
+            print(f'Error delete_costo_fijo: {e}')
+            return False
+
+    def costos_fijos_aplicados(self, mes: str) -> bool:
+        """Verifica si ya se aplicaron costos fijos para el mes dado."""
+        try:
+            doc = self.db.collection('costos_fijos_aplicados').document(mes).get()
+            return doc.exists
+        except:
+            return False
+
+    def aplicar_costos_fijos(self, mes: str, usuario: str = '') -> tuple:
+        """Genera egresos fijos para el mes. Retorna (ok, cantidad)."""
+        try:
+            if self.costos_fijos_aplicados(mes):
+                return False, 'Ya aplicados para este mes'
+            items = self.get_costos_fijos()
+            if not items:
+                return False, 'Sin costos fijos configurados'
+            fecha = mes + '-01'
+            count = 0
+            for item in items:
+                egreso = {
+                    'tipo':        'egreso',
+                    'descripcion': item.get('nombre', ''),
+                    'categoria':   item.get('categoria', 'Costo fijo'),
+                    'monto':       int(item.get('monto', 0)),
+                    'fecha':       fecha,
+                    'usuario':     usuario,
+                    'notas':       'Generado automáticamente (costo fijo)',
+                    'costo_fijo':  True,
+                }
+                ok, _ = self.add_finanza(egreso)
+                if ok:
+                    count += 1
+            self.db.collection('costos_fijos_aplicados').document(mes).set({
+                'mes': mes, 'fecha': self._now(), 'usuario': usuario, 'count': count
+            })
+            return True, count
+        except Exception as e:
+            return False, str(e)
 
     # ── FLIPPING ──────────────────────────────────────────────────────────────
     def add_flipping(self, data: dict) -> tuple:

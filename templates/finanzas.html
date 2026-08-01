@@ -4,61 +4,53 @@
 <div class="page-header">
   <div style="display:flex;align-items:center;gap:14px">
     <h1 class="page-title">💰 Finanzas</h1>
-    <div style="display:flex;gap:6px" id="mesFiltroWrap">
-      <select id="filtMes" class="filter-select" style="font-size:11px;padding:5px 10px" onchange="cambiarMes(this.value)">
-        <option value="">Todo el tiempo</option>
-      </select>
-    </div>
+    <select id="filtMes" class="filter-select" style="font-size:11px;padding:5px 10px" onchange="cambiarMes(this.value)">
+      <option value="">Todo el tiempo</option>
+    </select>
   </div>
-  <div style="display:flex;gap:8px" id="headerBtns">
-    <button class="btn btn-secondary" onclick="abrirReporte()" title="Reporte mensual PDF" id="btnReporte">📊 Reporte PDF</button>
-    <button class="btn btn-primary" id="btnNuevo" onclick="openModal()">➕ Nueva transacción</button>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" onclick="abrirReporte()" title="Reporte mensual PDF">📊 Reporte</button>
+    <button class="btn btn-secondary" onclick="openModalCF()" title="Gestionar costos fijos">⚙️ Costos fijos</button>
+    <button class="btn btn-primary" onclick="openModal()">➕ Nueva transacción</button>
   </div>
 </div>
 
-<!-- Resumen (solo para Transacciones) -->
-<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:6px" id="resumenStrip"></div>
+<!-- KPI strip: solo INGRESOS / EGRESOS / BALANCE -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px" id="resumenStrip"></div>
 
 <!-- Costos fijos del mes -->
-<div id="costosFijosBar" style="display:none;margin-bottom:8px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 16px">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap" id="costosFijosItems"></div>
-    <div style="display:flex;align-items:center;gap:14px">
-      <div style="font-size:10px;color:var(--gray3)">
-        Balance operacional:
-        <strong id="balanceOp" style="font-size:13px;font-weight:800"></strong>
-      </div>
-      <a href="/admin/config#costos" style="font-size:9px;color:var(--blue)">Editar costos fijos →</a>
-    </div>
+<div id="cfMesBar" style="display:none;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div id="cfMesItems" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px"></div>
+    <button id="btnAplicarCF" class="btn btn-secondary" style="font-size:11px;padding:5px 14px" onclick="aplicarCFMes()">
+      ⚡ Generar egresos fijos del mes
+    </button>
   </div>
 </div>
 
-<!-- ══ TABS PRINCIPALES ══════════════════════════════════════════════════════ -->
-<div class="toolbar" style="margin-top:4px;margin-bottom:0">
-  <div class="toolbar-left" style="gap:4px">
+<!-- ══ TABS ══ -->
+<div class="toolbar" style="margin-top:4px">
+  <div class="toolbar-left">
     <button class="tipo-btn active" id="mainTab_tx"     onclick="switchMainTab('tx',this)">📋 Transacciones</button>
     <button class="tipo-btn"        id="mainTab_ventas" onclick="switchMainTab('ventas',this)">📈 Ventas Solar</button>
     <button class="tipo-btn"        id="mainTab_gastos" onclick="switchMainTab('gastos',this)">🧾 Gastos CORZE</button>
   </div>
 </div>
 
-<!-- ══ PANEL TRANSACCIONES ════════════════════════════════════════════════════ -->
+<!-- ══ PANEL TRANSACCIONES ══ -->
 <div id="panelTx">
   <div class="toolbar" style="margin-top:8px">
     <div class="toolbar-left">
-      <button class="tipo-btn active" id="tab_todos"         onclick="filtrarTipo('', this)">Todas</button>
-      <button class="tipo-btn"        id="tab_ingreso"       onclick="filtrarTipo('ingreso', this)">
+      <button class="tipo-btn active" id="tab_todos"    onclick="filtrarTipo('', this)">Todas</button>
+      <button class="tipo-btn"        id="tab_ingreso"  onclick="filtrarTipo('ingreso', this)">
         <span class="dot" style="background:#27ae60"></span> Ingresos
       </button>
-      <button class="tipo-btn"        id="tab_costo"         onclick="filtrarTipo('costo', this)">
-        <span class="dot" style="background:#e74c3c"></span> Costos
-      </button>
-      <button class="tipo-btn"        id="tab_transferencia" onclick="filtrarTipo('transferencia', this)">
-        <span class="dot" style="background:#3498db"></span> Transferencias
+      <button class="tipo-btn"        id="tab_egreso"   onclick="filtrarTipo('egreso', this)">
+        <span class="dot" style="background:#e74c3c"></span> Egresos
       </button>
     </div>
     <div class="toolbar-right">
-      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar descripción, ID, vehículo..."
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar descripción, ID..."
              oninput="buscar(this.value)">
     </div>
   </div>
@@ -74,7 +66,6 @@
           <th>Descripción</th>
           <th>Monto</th>
           <th>Usuario</th>
-          <th>Vehículo</th>
           <th>Comp.</th>
           <th>Acciones</th>
         </tr>
@@ -84,43 +75,25 @@
   </div>
 </div>
 
-<!-- ══ PANEL VENTAS SOLAR ════════════════════════════════════════════════════ -->
+<!-- ══ PANEL VENTAS SOLAR ══ -->
 <div id="panelVentas" style="display:none">
-
-  <!-- Kpis Ventas -->
   <div id="ventasKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 8px"></div>
-
   <div class="toolbar" style="margin-top:4px">
     <div class="toolbar-left">
       <input type="text" id="searchVentas" class="search-input" placeholder="🔍 Buscar cliente, cotización, vendedor..."
              oninput="filtrarVentas()">
     </div>
     <div class="toolbar-right">
-      <select id="filtEstadoVenta" class="filter-select" style="font-size:11px" onchange="filtrarVentas()">
-        <option value="">Todos los estados</option>
-        <option>Pendiente instalación</option>
-        <option>En instalación</option>
-        <option>Instalado</option>
-        <option>Entregado al cliente</option>
-        <option>Cancelado</option>
-      </select>
+      <button class="btn btn-primary" style="font-size:11px;padding:6px 14px" onclick="openModalVenta()">➕ Nueva venta</button>
     </div>
   </div>
-
   <div class="table-wrap" style="margin-top:8px">
     <table class="vta-table">
       <thead>
         <tr>
-          <th>ID Venta</th>
-          <th>Fecha</th>
-          <th>N° Cot.</th>
-          <th>Cliente</th>
-          <th>Vendedor</th>
-          <th>Monto Venta</th>
-          <th>Forma Pago</th>
-          <th>Estado</th>
-          <th>Comisión</th>
-          <th>Acciones</th>
+          <th>ID</th><th>Fecha</th><th>N° Cot.</th><th>Cliente</th>
+          <th>Vendedor</th><th>Monto</th><th>Pago</th><th>Estado</th>
+          <th>Comisión</th><th>Acciones</th>
         </tr>
       </thead>
       <tbody id="ventasBody"></tbody>
@@ -128,49 +101,33 @@
   </div>
 </div>
 
-<!-- ══ PANEL GASTOS CORZE ════════════════════════════════════════════════════ -->
+<!-- ══ PANEL GASTOS CORZE ══ -->
 <div id="panelGastos" style="display:none">
-
-  <!-- Kpis Gastos -->
   <div id="gastosKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 8px"></div>
-
   <div class="toolbar" style="margin-top:4px">
     <div class="toolbar-left">
-      <input type="text" id="searchGastos" class="search-input" placeholder="🔍 Buscar descripción, empresa, responsable..."
+      <input type="text" id="searchGastos" class="search-input" placeholder="🔍 Buscar descripción, empresa..."
              oninput="filtrarGastos()">
     </div>
     <div class="toolbar-right">
       <select id="filtCatGasto" class="filter-select" style="font-size:11px" onchange="filtrarGastos()">
         <option value="">Todas las categorías</option>
-        <option>Transporte y combustible</option>
-        <option>Indumentaria</option>
-        <option>Marketing</option>
-        <option>Materiales proyectos</option>
-        <option>Herramientas</option>
-        <option>Arriendo / Oficina</option>
-        <option>Software / Herramientas</option>
-        <option>Contabilidad / Legal</option>
-        <option>Sueldos / Personal</option>
-        <option>Otro</option>
+        <option>Transporte y combustible</option><option>Indumentaria</option>
+        <option>Marketing</option><option>Materiales proyectos</option>
+        <option>Herramientas</option><option>Arriendo / Oficina</option>
+        <option>Software / Herramientas</option><option>Contabilidad / Legal</option>
+        <option>Sueldos / Personal</option><option>Otro</option>
       </select>
+      <button class="btn btn-primary" style="font-size:11px;padding:6px 14px" onclick="openModalGasto()">➕ Nuevo gasto</button>
     </div>
   </div>
-
   <div class="table-wrap" style="margin-top:8px">
     <table class="vta-table">
       <thead>
         <tr>
-          <th>ID Gasto</th>
-          <th>Fecha</th>
-          <th>Categoría</th>
-          <th>Descripción</th>
-          <th>Monto neto</th>
-          <th>IVA</th>
-          <th>Total</th>
-          <th>Método pago</th>
-          <th>Responsable</th>
-          <th>Empresa</th>
-          <th>Acciones</th>
+          <th>ID</th><th>Fecha</th><th>Categoría</th><th>Descripción</th>
+          <th>Neto</th><th>IVA</th><th>Total</th>
+          <th>Método pago</th><th>Responsable</th><th>Empresa</th><th>Acciones</th>
         </tr>
       </thead>
       <tbody id="gastosBody"></tbody>
@@ -178,34 +135,30 @@
   </div>
 </div>
 
-<!-- ══════════════ MODAL TRANSACCIONES (existente) ══════════════ -->
+<!-- ══════════ MODAL TRANSACCIÓN ══════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
- <div class="modal-box" style="max-width:600px" onclick="event.stopPropagation()">
+ <div class="modal-box" style="max-width:540px" onclick="event.stopPropagation()">
   <div class="modal-header">
     <span id="modalTitle">Nueva transacción</span>
     <button class="modal-close" onclick="closeModal()">✕</button>
   </div>
   <div class="modal-body">
-    <div class="form-section">TIPO DE TRANSACCIÓN</div>
+    <div class="form-section">TIPO</div>
     <div style="display:flex;gap:10px;margin:10px 0 6px">
-      <label class="tipo-radio" id="tr_ingreso" style="flex:1;justify-content:center">
+      <label class="tipo-radio" style="flex:1;justify-content:center">
         <input type="radio" name="f_tipo" value="ingreso" onchange="onTipoChange()" checked>
         <span style="color:#27ae60;font-size:13px">💰 Ingreso</span>
       </label>
-      <label class="tipo-radio" id="tr_costo" style="flex:1;justify-content:center">
-        <input type="radio" name="f_tipo" value="costo" onchange="onTipoChange()">
-        <span style="color:#e74c3c;font-size:13px">💸 Costo</span>
-      </label>
-      <label class="tipo-radio" id="tr_transferencia" style="flex:1;justify-content:center">
-        <input type="radio" name="f_tipo" value="transferencia" onchange="onTipoChange()">
-        <span style="color:#3498db;font-size:13px">🏦 Transferencia</span>
+      <label class="tipo-radio" style="flex:1;justify-content:center">
+        <input type="radio" name="f_tipo" value="egreso" onchange="onTipoChange()">
+        <span style="color:#e74c3c;font-size:13px">💸 Egreso</span>
       </label>
     </div>
     <div class="form-section">DETALLES</div>
     <div class="form-row-4">
       <div class="form-group col-2">
         <label>Descripción *</label>
-        <input id="f_descripcion" placeholder="Ej: Venta Toyota Corolla 2020">
+        <input id="f_descripcion" placeholder="Ej: Pago instalación cliente">
       </div>
       <div class="form-group">
         <label>Monto CLP *</label>
@@ -226,50 +179,14 @@
         <input id="f_usuario_display" disabled>
       </div>
     </div>
-    <div class="form-section">VEHÍCULO VINCULADO</div>
-    <div class="form-group">
-      <label>Buscar vehículo (opcional)</label>
-      <input id="f_vehiculo_search" placeholder="Buscar patente o modelo..."
-             oninput="buscarVehiculo(this.value)" autocomplete="off">
-      <div id="vehiculoSuggestions" style="display:none;background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto;z-index:100;position:relative"></div>
-      <div id="vehiculoSeleccionado" style="display:none;margin-top:6px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between">
-        <span id="vehiculoDesc"></span>
-        <button onclick="limpiarVehiculo()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
-      </div>
-      <input type="hidden" id="f_vehiculo_id">
-      <input type="hidden" id="f_vehiculo_desc">
-    </div>
-    <div class="form-section" id="secTransfer" style="display:none">DATOS DE TRANSFERENCIA</div>
-    <div id="transFields" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px">
-        <div>
-          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">🔴 Quien paga</div>
-          <div class="form-group" style="margin-bottom:6px"><label>Nombre</label><input id="t_paga_nombre" placeholder="Nombre completo"></div>
-          <div class="form-group" style="margin-bottom:6px"><label>RUT</label><input id="t_paga_rut" placeholder="12.345.678-9"></div>
-          <div class="form-group" style="margin-bottom:6px"><label>Banco</label><input id="t_paga_banco" placeholder="Ej: Banco Chile, BCI..."></div>
-          <div class="form-group" style="margin-bottom:0"><label>N° Cuenta</label><input id="t_paga_cuenta" placeholder="Número de cuenta"></div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:#27ae60;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">🟢 Quien recibe</div>
-          <div class="form-group" style="margin-bottom:6px"><label>Nombre</label><input id="t_recibe_nombre" placeholder="Nombre completo"></div>
-          <div class="form-group" style="margin-bottom:6px"><label>RUT</label><input id="t_recibe_rut" placeholder="12.345.678-9"></div>
-          <div class="form-group" style="margin-bottom:6px"><label>Banco</label><input id="t_recibe_banco" placeholder="Ej: Banco Chile, BCI..."></div>
-          <div class="form-group" style="margin-bottom:0"><label>N° Cuenta</label><input id="t_recibe_cuenta" placeholder="Número de cuenta"></div>
-        </div>
-      </div>
-      <div class="form-group" style="margin-top:4px">
-        <label>N° Operación bancaria</label>
-        <input id="t_num_op" placeholder="Número de operación / referencia">
-      </div>
-    </div>
     <div class="form-section">NOTAS Y COMPROBANTE</div>
     <div class="form-group">
       <label>Notas internas</label>
-      <textarea id="f_notas" rows="2" placeholder="Contexto adicional, número de cuenta, etc."></textarea>
+      <textarea id="f_notas" rows="2" placeholder="Contexto adicional, número de operación, etc."></textarea>
     </div>
     <div class="form-group" style="margin-top:6px">
       <label>Comprobante (imagen o PDF)</label>
-      <label id="compZone" style="display:block;margin-top:4px;background:var(--card2);border:2px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s"
+      <label id="compZone" style="display:block;margin-top:4px;background:var(--card2);border:2px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer"
              ondragover="event.preventDefault()" ondrop="dropComprobante(event)"
              onclick="document.getElementById('compInput').click()">
         <input type="file" id="compInput" accept="image/*,.pdf" style="display:none" onchange="uploadComprobante(this)">
@@ -286,7 +203,60 @@
  </div>
 </div>
 
-<!-- ══════════════ MODAL VENTA ══════════════════════════════════ -->
+<!-- ══════════ MODAL COSTOS FIJOS ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalCF" onclick="if(event.target===this)closeModalCF()">
+ <div class="modal-box" style="max-width:520px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span>⚙️ Costos Fijos Mensuales</span>
+    <button class="modal-close" onclick="closeModalCF()">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:11px;color:var(--gray3);margin-bottom:12px">
+      Define los egresos que se repiten cada mes (arriendo, sueldos, software, etc.).
+      Con un click los puedes generar automáticamente para el mes seleccionado.
+    </p>
+
+    <!-- Formulario agregar -->
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:14px">
+      <div class="form-group" style="margin:0">
+        <label>Nombre *</label>
+        <input id="cf_nombre" placeholder="Ej: Arriendo oficina">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Monto CLP *</label>
+        <input id="cf_monto" type="text" placeholder="$0" oninput="fmtCFMonto(this)">
+      </div>
+      <button class="btn btn-primary" style="height:36px;padding:0 14px;font-size:12px" onclick="withBtn(this, agregarCF)">
+        ➕ Agregar
+      </button>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Categoría</label>
+      <select id="cf_categoria">
+        <option>Arriendo / Oficina</option>
+        <option>Servicios básicos</option>
+        <option>Sueldos / Personal</option>
+        <option>Software / Herramientas</option>
+        <option>Contabilidad / Legal</option>
+        <option>Marketing</option>
+        <option>Combustible</option>
+        <option>Otro</option>
+      </select>
+    </div>
+
+    <!-- Lista de costos fijos -->
+    <div id="cfLista" style="display:flex;flex-direction:column;gap:6px"></div>
+
+    <!-- Total -->
+    <div id="cfTotal" style="margin-top:10px;font-size:12px;font-weight:700;text-align:right;color:var(--text1)"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModalCF()">Cerrar</button>
+  </div>
+ </div>
+</div>
+
+<!-- ══════════ MODAL VENTA ══════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modalVenta" onclick="if(event.target===this)closeModalVenta()">
  <div class="modal-box" style="max-width:680px" onclick="event.stopPropagation()">
   <div class="modal-header">
@@ -296,102 +266,64 @@
   <div class="modal-body">
     <div class="form-section">DATOS DE LA VENTA</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label>ID Venta</label>
-        <input id="vf_id_venta" placeholder="Auto (VTA-XXX)" disabled style="color:var(--gray3)">
-      </div>
-      <div class="form-group">
-        <label>Fecha venta *</label>
-        <input id="vf_fecha_venta" type="date">
-      </div>
-      <div class="form-group">
-        <label>N° Cotización</label>
-        <input id="vf_num_cotizacion" placeholder="Ej: COT-0321">
-      </div>
+      <div class="form-group"><label>ID Venta</label>
+        <input id="vf_id_venta" placeholder="Auto (VTA-XXX)" disabled style="color:var(--gray3)"></div>
+      <div class="form-group"><label>Fecha venta *</label>
+        <input id="vf_fecha_venta" type="date"></div>
+      <div class="form-group"><label>N° Cotización</label>
+        <input id="vf_num_cotizacion" placeholder="Ej: COT-0321"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
-      <div class="form-group">
-        <label>Cliente *</label>
-        <input id="vf_cliente" placeholder="Nombre del cliente">
-      </div>
-      <div class="form-group">
-        <label>Proyecto</label>
-        <input id="vf_proyecto" placeholder="Ej: PRY-001">
-      </div>
+      <div class="form-group"><label>Cliente *</label>
+        <input id="vf_cliente" placeholder="Nombre del cliente"></div>
+      <div class="form-group"><label>Proyecto</label>
+        <input id="vf_proyecto" placeholder="Ej: PRY-001"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
-      <div class="form-group">
-        <label>Vendedor *</label>
+      <div class="form-group"><label>Vendedor *</label>
         <select id="vf_vendedor">
           <option value="">— Seleccionar —</option>
-          <option>Enrique Corvalán H</option>
-          <option>Enrique Corvalán J</option>
-          <option>Ignacio Corvalán</option>
-          <option>José Zelada</option>
-          <option>Otro</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Forma de pago</label>
+          <option>Enrique Corvalán H</option><option>Enrique Corvalán J</option>
+          <option>Ignacio Corvalán</option><option>José Zelada</option><option>Otro</option>
+        </select></div>
+      <div class="form-group"><label>Forma de pago</label>
         <select id="vf_forma_pago">
           <option value="">— Seleccionar —</option>
-          <option>Transferencia</option>
-          <option>Tarjeta crédito</option>
-          <option>Tarjeta débito</option>
-          <option>Efectivo</option>
-          <option>Cheque</option>
-          <option>Financiamiento</option>
-        </select>
-      </div>
+          <option>Transferencia</option><option>Tarjeta crédito</option>
+          <option>Tarjeta débito</option><option>Efectivo</option>
+          <option>Cheque</option><option>Financiamiento</option>
+        </select></div>
     </div>
-
     <div class="form-section" style="margin-top:12px">MONTOS Y COMISIÓN</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
-      <div class="form-group col-2" style="grid-column:span 2">
-        <label>Monto venta CLP *</label>
-        <input id="vf_monto_venta" type="text" placeholder="$0" oninput="fmtVentaMonto(this)">
-      </div>
-      <div class="form-group">
-        <label>Comisión (%)</label>
-        <input id="vf_comision_pct" type="number" min="0" max="100" step="0.5" placeholder="0"
-               oninput="calcVentaComision()">
-      </div>
-      <div class="form-group">
-        <label>Comisión ($)</label>
-        <input id="vf_comision_monto" type="text" placeholder="$0" disabled style="color:var(--gray2)">
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group col-2" style="grid-column:span 1"><label>Monto venta CLP *</label>
+        <input id="vf_monto_venta" type="text" placeholder="$0" oninput="fmtVentaMonto(this)"></div>
+      <div class="form-group"><label>Comisión (%)</label>
+        <input id="vf_comision_pct" type="number" min="0" max="100" step="0.5" placeholder="0" oninput="calcVentaComision()"></div>
+      <div class="form-group"><label>Comisión ($)</label>
+        <input id="vf_comision_monto" type="text" placeholder="$0" disabled style="color:var(--gray2)"></div>
     </div>
-
-    <div class="form-section" style="margin-top:12px">ESTADO E INSTALACIÓN</div>
+    <div class="form-section" style="margin-top:12px">ESTADO</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label>Estado instalación</label>
+      <div class="form-group"><label>Estado instalación</label>
         <select id="vf_estado_instalacion">
-          <option>Pendiente instalación</option>
-          <option>En instalación</option>
-          <option>Instalado</option>
-          <option>Entregado al cliente</option>
-          <option>Cancelado</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Fecha entrega</label>
-        <input id="vf_fecha_entrega" type="date">
-      </div>
+          <option>Pendiente instalación</option><option>En instalación</option>
+          <option>Instalado</option><option>Entregado al cliente</option><option>Cancelado</option>
+        </select></div>
+      <div class="form-group"><label>Fecha entrega</label>
+        <input id="vf_fecha_entrega" type="date"></div>
     </div>
-    <div class="form-group" style="margin-top:4px">
-      <label>Notas</label>
-      <textarea id="vf_notas" rows="2" placeholder="Observaciones de la venta..."></textarea>
-    </div>
+    <div class="form-group" style="margin-top:4px"><label>Notas</label>
+      <textarea id="vf_notas" rows="2"></textarea></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="closeModalVenta()">✕ Cancelar</button>
-    <button class="btn btn-primary" onclick="withBtn(this, guardarVenta)">💾 Guardar venta</button>
+    <button class="btn btn-primary" onclick="withBtn(this, guardarVenta)">💾 Guardar</button>
   </div>
  </div>
 </div>
 
-<!-- ══════════════ MODAL GASTO ══════════════════════════════════ -->
+<!-- ══════════ MODAL GASTO CORZE ════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modalGasto" onclick="if(event.target===this)closeModalGasto()">
  <div class="modal-box" style="max-width:680px" onclick="event.stopPropagation()">
   <div class="modal-header">
@@ -401,91 +333,54 @@
   <div class="modal-body">
     <div class="form-section">DATOS DEL GASTO</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label>ID Gasto</label>
-        <input id="gf_id_gasto" placeholder="Auto (GTO-XXX)" disabled style="color:var(--gray3)">
-      </div>
-      <div class="form-group">
-        <label>Fecha *</label>
-        <input id="gf_fecha" type="date">
-      </div>
-      <div class="form-group">
-        <label>Categoría *</label>
+      <div class="form-group"><label>ID Gasto</label>
+        <input id="gf_id_gasto" placeholder="Auto" disabled style="color:var(--gray3)"></div>
+      <div class="form-group"><label>Fecha *</label>
+        <input id="gf_fecha" type="date"></div>
+      <div class="form-group"><label>Categoría *</label>
         <select id="gf_categoria">
           <option value="">— Seleccionar —</option>
-          <option>Transporte y combustible</option>
-          <option>Indumentaria</option>
-          <option>Marketing</option>
-          <option>Materiales proyectos</option>
-          <option>Herramientas</option>
-          <option>Arriendo / Oficina</option>
-          <option>Software / Herramientas</option>
-          <option>Contabilidad / Legal</option>
-          <option>Sueldos / Personal</option>
-          <option>Otro</option>
-        </select>
-      </div>
+          <option>Transporte y combustible</option><option>Indumentaria</option>
+          <option>Marketing</option><option>Materiales proyectos</option>
+          <option>Herramientas</option><option>Arriendo / Oficina</option>
+          <option>Software / Herramientas</option><option>Contabilidad / Legal</option>
+          <option>Sueldos / Personal</option><option>Otro</option>
+        </select></div>
     </div>
-    <div class="form-group" style="margin-top:4px">
-      <label>Descripción *</label>
-      <input id="gf_descripcion" placeholder="Descripción del gasto">
-    </div>
-
+    <div class="form-group" style="margin-top:4px"><label>Descripción *</label>
+      <input id="gf_descripcion" placeholder="Descripción del gasto"></div>
     <div class="form-section" style="margin-top:12px">MONTOS</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label>Monto neto CLP *</label>
-        <input id="gf_monto_neto" type="text" placeholder="$0" oninput="fmtGastoNeto(this);calcGastoTotal()">
-      </div>
-      <div class="form-group">
-        <label>IVA CLP</label>
-        <input id="gf_iva" type="text" placeholder="$0" oninput="fmtGastoIva(this);calcGastoTotal()">
-      </div>
-      <div class="form-group">
-        <label>Total CLP</label>
-        <input id="gf_monto_total" type="text" placeholder="$0" disabled style="color:var(--gray2);font-weight:700">
-      </div>
+      <div class="form-group"><label>Monto neto CLP *</label>
+        <input id="gf_monto_neto" type="text" placeholder="$0" oninput="fmtGastoNeto(this);calcGastoTotal()"></div>
+      <div class="form-group"><label>IVA CLP</label>
+        <input id="gf_iva" type="text" placeholder="$0" oninput="fmtGastoIva(this);calcGastoTotal()"></div>
+      <div class="form-group"><label>Total CLP</label>
+        <input id="gf_monto_total" type="text" placeholder="$0" disabled style="color:var(--gray2);font-weight:700"></div>
     </div>
-    <div style="margin-top:4px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="gf_iva_19" onchange="aplicarIva19()">
-        Calcular IVA 19% automáticamente desde monto neto
-      </label>
-    </div>
-
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;margin-top:4px">
+      <input type="checkbox" id="gf_iva_19" onchange="aplicarIva19()"> Calcular IVA 19% automáticamente
+    </label>
     <div class="form-section" style="margin-top:12px">PAGO Y PROVEEDOR</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label>Método de pago</label>
+      <div class="form-group"><label>Método de pago</label>
         <select id="gf_metodo_pago">
           <option value="">— Seleccionar —</option>
-          <option>Transferencia</option>
-          <option>Tarjeta crédito</option>
-          <option>Tarjeta débito</option>
-          <option>Efectivo</option>
-          <option>Cheque</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Responsable</label>
+          <option>Transferencia</option><option>Tarjeta crédito</option>
+          <option>Tarjeta débito</option><option>Efectivo</option><option>Cheque</option>
+        </select></div>
+      <div class="form-group"><label>Responsable</label>
         <select id="gf_responsable">
           <option value="">— Seleccionar —</option>
-          <option>Empresa</option>
-          <option>Enrique Corvalán H</option>
-          <option>Enrique Corvalán J</option>
-          <option>Ignacio Corvalán</option>
+          <option>Empresa</option><option>Enrique Corvalán H</option>
+          <option>Enrique Corvalán J</option><option>Ignacio Corvalán</option>
           <option>José Zelada</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Empresa / Proveedor</label>
-        <input id="gf_empresa" placeholder="Nombre del proveedor">
-      </div>
+        </select></div>
+      <div class="form-group"><label>Empresa / Proveedor</label>
+        <input id="gf_empresa" placeholder="Nombre del proveedor"></div>
     </div>
-    <div class="form-group" style="margin-top:4px">
-      <label>N° Boleta / Factura</label>
-      <input id="gf_num_documento" placeholder="Número de documento">
-    </div>
+    <div class="form-group" style="margin-top:4px"><label>N° Boleta / Factura</label>
+      <input id="gf_num_documento" placeholder="Número de documento"></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="closeModalGasto()">✕ Cancelar</button>
@@ -494,8 +389,8 @@
  </div>
 </div>
 
-<!-- Modal comprobante full -->
-<div id="modalComp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;align-items:center;justify-content:center" onclick="document.getElementById('modalComp').style.display='none'">
+<!-- Modal comprobante -->
+<div id="modalComp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;align-items:center;justify-content:center" onclick="this.style.display='none'">
   <img id="modalCompImg" src="" style="max-width:92vw;max-height:92vh;border-radius:12px;object-fit:contain">
 </div>
 
@@ -503,27 +398,24 @@
 .tipo-radio{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--card2);border:2px solid var(--border2);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
 .tipo-radio:has(input:checked){border-color:var(--blue);background:var(--card3);box-shadow:0 0 0 1px var(--blue)}
 .tipo-radio input{display:none}
-.tipo-radio:hover{border-color:var(--border3)}
 .fin-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px}
 .fin-ingreso{background:#0d3b22;color:#27ae60}
-.fin-costo{background:#3b0d0a;color:#e74c3c}
-.fin-transferencia{background:#0d1f3b;color:#3498db}
+.fin-egreso,.fin-costo{background:#3b0d0a;color:#e74c3c}
 .fin-monto-pos{color:#27ae60;font-weight:700}
 .fin-monto-neg{color:#e74c3c;font-weight:700}
-.fin-monto-neutral{color:#3498db;font-weight:700}
-
-/* Ventas/Gastos badges */
 .vg-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
 .badge-pendiente{background:#3b2d0a;color:#F5A623}
 .badge-instalacion{background:#0d2440;color:#3498db}
 .badge-instalado{background:#0d3b1a;color:#2ecc71}
 .badge-entregado{background:#1a3b0d;color:#27ae60}
 .badge-cancelado{background:#3b0d0a;color:#e74c3c}
-.kpi-strip{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;text-align:center}
-.kpi-strip .kv{font-size:20px;font-weight:900;line-height:1.1}
-.kpi-strip .kl{font-size:10px;color:var(--gray3);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+.kpi-strip{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:18px 22px}
+.kpi-strip .kv{font-size:26px;font-weight:900;line-height:1.1;margin:6px 0 4px}
+.kpi-strip .kl{font-size:10px;color:var(--gray3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.kpi-strip .ks{font-size:11px;color:var(--gray3)}
+.cf-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--card2);border-radius:8px;border:1px solid var(--border2)}
 </style>
 
-<script src="{{ url_for('static', filename='js/finanzas.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/finanzas.js') }}?v=7"></script>
 <script src="{{ url_for('static', filename='js/ventas_gastos.js') }}?v=2"></script>
 {% endblock %}

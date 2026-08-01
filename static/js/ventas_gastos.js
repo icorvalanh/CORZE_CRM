@@ -23,42 +23,14 @@ function fmtInput(el) {
 function switchMainTab(tab, btn) {
   currentMainTab = tab;
   document.querySelectorAll('[id^="mainTab_"]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
 
   document.getElementById('panelTx').style.display     = tab === 'tx'     ? '' : 'none';
   document.getElementById('panelVentas').style.display = tab === 'ventas' ? '' : 'none';
   document.getElementById('panelGastos').style.display = tab === 'gastos' ? '' : 'none';
 
-  // Mostrar/ocultar elementos de header según el tab
-  const mesFiltro = document.getElementById('mesFiltroWrap');
-  const resumen   = document.getElementById('resumenStrip');
-  const cfBar     = document.getElementById('costosFijosBar');
-  const btnNuevo  = document.getElementById('btnNuevo');
-  const btnRep    = document.getElementById('btnReporte');
-
-  if (tab === 'tx') {
-    mesFiltro.style.display = '';
-    resumen.style.display   = 'grid';
-    btnRep.style.display    = '';
-    btnNuevo.textContent    = '➕ Nueva transacción';
-    btnNuevo.onclick        = openModal;
-  } else if (tab === 'ventas') {
-    mesFiltro.style.display = 'none';
-    resumen.style.display   = 'none';
-    cfBar.style.display     = 'none';
-    btnRep.style.display    = 'none';
-    btnNuevo.textContent    = '➕ Nueva venta';
-    btnNuevo.onclick        = openModalVenta;
-    loadVentas();
-  } else if (tab === 'gastos') {
-    mesFiltro.style.display = 'none';
-    resumen.style.display   = 'none';
-    cfBar.style.display     = 'none';
-    btnRep.style.display    = 'none';
-    btnNuevo.textContent    = '➕ Nuevo gasto';
-    btnNuevo.onclick        = openModalGasto;
-    loadGastos();
-  }
+  if (tab === 'ventas') loadVentas();
+  if (tab === 'gastos') loadGastos();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -164,12 +136,12 @@ function openModalVenta(data = null) {
   document.getElementById('vf_comision_pct').value       = data?.comision_pct || '';
   document.getElementById('vf_comision_monto').value     = data?.comision_monto ? clp(data.comision_monto) : '';
   document.getElementById('vf_notas').value              = data?.notas || '';
-  if (!data) document.getElementById('vf_fecha_venta').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('modalVenta').style.display = 'flex';
+  if (!data) document.getElementById('vf_fecha_venta').value = today();
+  document.getElementById('modalVenta').classList.add('open');
 }
 
 function closeModalVenta() {
-  document.getElementById('modalVenta').style.display = 'none';
+  document.getElementById('modalVenta').classList.remove('open');
   editingVentaId = null;
 }
 
@@ -322,12 +294,12 @@ function openModalGasto(data = null) {
   document.getElementById('gf_empresa').value      = data?.empresa      || '';
   document.getElementById('gf_num_documento').value= data?.num_documento || '';
   document.getElementById('gf_iva_19').checked     = false;
-  if (!data) document.getElementById('gf_fecha').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('modalGasto').style.display = 'flex';
+  if (!data) document.getElementById('gf_fecha').value = today();
+  document.getElementById('modalGasto').classList.add('open');
 }
 
 function closeModalGasto() {
-  document.getElementById('modalGasto').style.display = 'none';
+  document.getElementById('modalGasto').classList.remove('open');
   editingGastoId = null;
 }
 
