@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vta-v1';
+const CACHE_NAME = 'corze-v2';
 const STATIC_ASSETS = [
   '/static/css/main.css',
   '/static/js/main.js',
@@ -23,8 +23,20 @@ self.addEventListener('activate', evt => {
 
 self.addEventListener('fetch', evt => {
   const url = new URL(evt.request.url);
-  // Solo cachear assets estáticos; dejar pasar API y páginas dinámicas
-  if (url.pathname.startsWith('/static/') && evt.request.method === 'GET') {
+  if (!url.pathname.startsWith('/static/') || evt.request.method !== 'GET') return;
+  // JS/CSS con ?v= → network-first (version param garantiza frescura)
+  const isVersioned = url.search.includes('v=');
+  if (isVersioned) {
+    evt.respondWith(
+      fetch(evt.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(c => c.put(evt.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(evt.request))
+    );
+  } else {
     evt.respondWith(
       caches.match(evt.request).then(cached => {
         if (cached) return cached;
