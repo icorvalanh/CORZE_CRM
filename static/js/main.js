@@ -74,6 +74,13 @@ function fmtTel(raw) {
   if (digits.length === 8) {
     return `${digits.slice(0, 4)} ${digits.slice(4)}`;
   }
+  // 10 dígitos con prefijo 56: número incompleto, normalizar igual
+  if (digits.length === 10 && digits.startsWith('569')) {
+    return `+56 9 ${digits.slice(3, 7)} ${digits.slice(7)}`;
+  }
+  if (digits.length === 10 && digits.startsWith('56')) {
+    return `+56 ${digits[2]} ${digits.slice(3, 7)} ${digits.slice(7)}`;
+  }
   return raw; // devolver sin cambios si no reconoce el formato
 }
 
