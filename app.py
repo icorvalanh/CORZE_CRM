@@ -3547,6 +3547,7 @@ ETAPAS_PIPELINE = [
     'En Instalación',
     'Proyecto Finalizado',
     'Post Venta',
+    'Cerrado',
     'Cliente Perdido',
 ]
 
@@ -3558,6 +3559,16 @@ def pipeline():
     return render_template('pipeline.html', page='pipeline',
                            leads=leads, etapas=ETAPAS_PIPELINE,
                            trabajadores=trabajadores)
+
+@app.route('/api/presupuestos', methods=['GET'])
+@login_required
+def api_presupuestos_list():
+    todos = db.get_all_presupuestos()
+    return jsonify([{
+        'id': p['id'], 'folio': p.get('folio',''), 'estado': p.get('estado',''),
+        'nombre_cliente': p.get('nombre_cliente',''), 'apellido_cliente': p.get('apellido_cliente',''),
+        'total': p.get('total', 0), 'created_at': p.get('created_at',''),
+    } for p in todos])
 
 @app.route('/api/leads/add', methods=['POST'])
 @login_required
@@ -3644,6 +3655,23 @@ def api_leads_presupuestos(doc_id):
             match.append({'id': p['id'], 'folio': p.get('folio',''), 'estado': p.get('estado',''),
                           'total': p.get('total',0), 'created_at': p.get('created_at','')})
     return jsonify(match)
+
+@app.route('/api/leads/<doc_id>/linkear-presupuesto', methods=['POST'])
+@login_required
+def api_lead_linkear_presupuesto(doc_id):
+    """Vincula un presupuesto a un lead guardando lead_id en el presupuesto."""
+    data = request.get_json()
+    pres_id = data.get('presupuesto_id', '').strip()
+    if not pres_id:
+        return jsonify({'ok': False, 'error': 'presupuesto_id requerido'})
+    pres = db.get_presupuesto_by_id(pres_id)
+    if not pres:
+        return jsonify({'ok': False, 'error': 'Presupuesto no encontrado'})
+    try:
+        db.db.collection('presupuestos').document(pres_id).update({'lead_id': doc_id})
+        return jsonify({'ok': True, 'folio': pres.get('folio',''), 'total': pres.get('total',0), 'estado': pres.get('estado','')})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
 @app.route('/api/leads/<doc_id>/grabaciones', methods=['GET'])
 @login_required

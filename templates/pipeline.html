@@ -45,6 +45,7 @@
 .col-instalacion   .kanban-col-header { border-top:3px solid #1ABC9C; border-radius:12px 12px 0 0; }
 .col-finalizado    .kanban-col-header { border-top:3px solid #2ECC71; border-radius:12px 12px 0 0; }
 .col-postventa     .kanban-col-header { border-top:3px solid #F5A623; border-radius:12px 12px 0 0; }
+.col-cerrado       .kanban-col-header { border-top:3px solid #1abc9c; border-radius:12px 12px 0 0; }
 .col-perdido       .kanban-col-header { border-top:3px solid #E74C3C; border-radius:12px 12px 0 0; }
 /* Notas */
 .nota-item { background:var(--card2); border-radius:8px; padding:9px 12px; margin-bottom:8px; border-left:3px solid var(--blue); }
@@ -95,6 +96,7 @@
     'En Instalación':'col-instalacion',
     'Proyecto Finalizado':'col-finalizado',
     'Post Venta':'col-postventa',
+    'Cerrado':'col-cerrado',
     'Cliente Perdido':'col-perdido'
   } %}
   {% for etapa in etapas %}
@@ -259,6 +261,28 @@
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="cerrarModalEmail()">Cancelar</button>
     <button class="btn btn-primary" onclick="withBtn(this, importarEmail)">📥 Crear Lead</button>
+  </div>
+ </div>
+</div>
+
+<!-- Modal Linkear Presupuesto -->
+<div class="modal-overlay" id="modalLinkPres" onclick="if(event.target===this)cerrarModalLinkPresupuesto()">
+ <div class="modal-box" style="max-width:540px" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <span>🔗 Linkear presupuesto al lead</span>
+    <button class="modal-close" onclick="cerrarModalLinkPresupuesto()">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--gray2);margin-bottom:12px">
+      Selecciona el presupuesto que quieres vincular a este lead. Aparecerá en el panel con acceso directo.
+    </p>
+    <input id="linkPresSearch" class="form-input" placeholder="Buscar por folio o cliente..." oninput="filtrarPresupuestosLink()" style="margin-bottom:10px">
+    <div id="linkPresList" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+      <div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">Cargando...</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="cerrarModalLinkPresupuesto()">Cancelar</button>
   </div>
  </div>
 </div>
@@ -557,21 +581,35 @@ function renderPanel(lead, presupuestos = [], grabaciones = []) {
     ${lead.notas ? `<div class="panel-section"><h4>Nota inicial</h4><div style="font-size:12px;color:var(--gray1);white-space:pre-wrap;background:var(--card2);border-radius:8px;padding:10px 12px">${lead.notas}</div></div>` : ''}
 
     <div class="panel-section">
-      <h4>☀️ Propuestas enviadas</h4>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4 style="margin:0">☀️ Propuestas vinculadas</h4>
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px"
+                onclick="abrirModalLinkPresupuesto('${lead.id}')">🔗 Linkear</button>
+      </div>
       ${presupuestos.length ? presupuestos.map(p => `
-        <a href="/admin/presupuestos/${p.id}" style="display:flex;justify-content:space-between;align-items:center;
-           background:var(--card2);border-radius:8px;padding:10px 12px;margin-bottom:6px;
-           text-decoration:none;color:var(--white);border:1px solid var(--border2)">
-          <div>
-            <div style="font-size:12px;font-weight:700">${p.folio || p.id.slice(0,8)}</div>
-            <div style="font-size:10px;color:${estadoColor[p.estado]||'var(--gray2)'};text-transform:capitalize">${p.estado || '—'}</div>
-          </div>
-          <div style="font-size:13px;font-weight:700;color:var(--blue)">${fmtMoney(p.total)}</div>
-        </a>`).join('') :
-        `<div style="font-size:12px;color:var(--gray3)">Sin propuestas aún</div>
-         <a href="/admin/presupuestos/nuevo" class="btn btn-secondary" style="display:inline-block;margin-top:8px;font-size:12px">
-           ➕ Crear propuesta
-         </a>`}
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <a href="/admin/presupuestos/${p.id}/pdf" target="_blank"
+             style="flex:1;display:flex;justify-content:space-between;align-items:center;
+             background:var(--card2);border-radius:8px;padding:10px 12px;
+             text-decoration:none;color:var(--white);border:1px solid var(--border2)">
+            <div>
+              <div style="font-size:12px;font-weight:700">${p.folio || p.id.slice(0,8)}</div>
+              <div style="font-size:10px;color:${estadoColor[p.estado]||'var(--gray2)'};text-transform:capitalize">${p.estado || '—'}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:13px;font-weight:700;color:var(--blue)">${fmtMoney(p.total)}</div>
+              <div style="font-size:9px;color:var(--gray3)">Ver PDF →</div>
+            </div>
+          </a>
+          <a href="/admin/presupuestos/${p.id}" target="_blank"
+             style="background:#1a2a3a;border:1px solid var(--border2);color:var(--blue);border-radius:8px;padding:8px 10px;font-size:11px;text-decoration:none;white-space:nowrap">
+            ✏️ Editar
+          </a>
+        </div>`).join('') :
+        `<div style="font-size:12px;color:var(--gray3);margin-bottom:8px">Sin propuestas vinculadas</div>`}
+      <a href="/admin/presupuestos/nuevo" class="btn btn-secondary" style="display:inline-block;font-size:11px;margin-top:4px">
+        ➕ Crear nueva propuesta
+      </a>
     </div>
 
     <div class="panel-section">
@@ -1439,6 +1477,78 @@ async function revisarBandeja() {
     }
   } finally {
     btn.disabled = false; btn.textContent = '📬 Revisar bandeja';
+  }
+}
+
+// ── Linkear presupuesto ────────────────────────────────────────────────────────
+let _linkLeadId = null;
+let _todosPresupuestos = [];
+
+async function abrirModalLinkPresupuesto(leadId) {
+  _linkLeadId = leadId;
+  document.getElementById('modalLinkPres').classList.add('open');
+  document.getElementById('linkPresSearch').value = '';
+  document.getElementById('linkPresList').innerHTML = '<div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">Cargando...</div>';
+  try {
+    const res = await fetch('/api/presupuestos');
+    _todosPresupuestos = await res.json();
+    filtrarPresupuestosLink();
+  } catch(e) {
+    document.getElementById('linkPresList').innerHTML = '<div style="color:var(--red);font-size:12px;text-align:center;padding:20px">Error cargando presupuestos</div>';
+  }
+}
+
+function cerrarModalLinkPresupuesto() {
+  document.getElementById('modalLinkPres').classList.remove('open');
+  _linkLeadId = null;
+}
+
+function filtrarPresupuestosLink() {
+  const q = document.getElementById('linkPresSearch').value.toLowerCase();
+  const lista = _todosPresupuestos.filter(p =>
+    !q || (p.folio||'').toLowerCase().includes(q) ||
+    (p.nombre_cliente||'').toLowerCase().includes(q) ||
+    (p.apellido_cliente||'').toLowerCase().includes(q)
+  );
+  const fmtM = n => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
+  document.getElementById('linkPresList').innerHTML = lista.length ? lista.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                background:var(--card2);border-radius:8px;padding:10px 12px;
+                border:1px solid var(--border2);cursor:pointer"
+         onclick="confirmarLinkPresupuesto('${p.id}','${p.folio||''}')">
+      <div>
+        <div style="font-size:13px;font-weight:700">${p.folio || p.id.slice(0,8)}</div>
+        <div style="font-size:11px;color:var(--gray2)">${p.nombre_cliente||''} ${p.apellido_cliente||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:700;color:var(--blue)">${fmtM(p.total)}</div>
+        <div style="font-size:10px;color:var(--gray3);text-transform:capitalize">${p.estado||'—'}</div>
+      </div>
+    </div>`).join('') :
+    '<div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">Sin resultados</div>';
+}
+
+async function confirmarLinkPresupuesto(presId, folio) {
+  if (!_linkLeadId) return;
+  try {
+    const res = await fetch(`/api/leads/${_linkLeadId}/linkear-presupuesto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ presupuesto_id: presId }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`✅ Presupuesto ${folio} vinculado al lead`);
+      cerrarModalLinkPresupuesto();
+      abrirPanel(_linkLeadId || leadsData.find(l => l.id === _linkLeadId)?.id);
+      // Reabrir panel con datos frescos
+      const panelLeadId = _linkLeadId;
+      setTimeout(() => abrirPanel(panelLeadId), 300);
+    } else {
+      showToast('❌ ' + (data.error || 'Error al vincular'), 'error');
+    }
+  } catch(e) {
+    showToast('❌ Error de conexión', 'error');
   }
 }
 </script>
