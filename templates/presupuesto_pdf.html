@@ -205,8 +205,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     <div class="re-sub">Cobertura de consumo</div>
   </div>
   <div class="re-box">
-    {% set _tf = (p.total_manual or 0) if (p.total_manual or 0) > 0 else (p.total or 0) %}
-    <div class="re-val">${{ '{:,.0f}'.format(_tf).replace(',','.') }}</div>
+    <div class="re-val">${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</div>
     <div class="re-sub">Inversión total</div>
   </div>
   <div class="re-box">
@@ -284,20 +283,51 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 <p class="eco-note">Incluye equipos (paneles, inversor, batería si aplica), materiales, instalación, puesta en marcha, diseño y tramitación ante la distribuidora.</p>
 <div class="eco-wrap">
   <div class="eco-box">
-    {% set total_final = (p.total_manual or 0) if (p.total_manual or 0) > 0 else (p.total or 0) %}
-    {% if p.descuento_general_pct and not p.total_manual %}
-    <div class="eco-row disc">
-      <span>Descuento aplicado ({{ p.descuento_general_pct }}%)</span>
-      <span>− ${{ '{:,.0f}'.format(p.monto_descuento or 0).replace(',','.') }}</span>
-    </div>
+    {% set tiene_manual   = (p.total_manual or 0) > 0 %}
+    {% set tiene_descuento = (p.descuento_general_pct or 0) > 0 and (p.monto_descuento or 0) > 0 %}
+    {% set precio_pago    = p.total or 0 %}
+
+    {% if tiene_manual and tiene_descuento %}
+      {# Precio manual como base, descuento visible, precio final a pago #}
+      <div class="eco-row" style="font-weight:600">
+        <span>Precio total</span>
+        <span>${{ '{:,.0f}'.format(p.total_manual).replace(',','.') }}</span>
+      </div>
+      <div class="eco-row disc">
+        <span>Descuento aplicado ({{ p.descuento_general_pct }}%)</span>
+        <span>− ${{ '{:,.0f}'.format(p.monto_descuento).replace(',','.') }}</span>
+      </div>
+      <div class="eco-row total">
+        <span>PRECIO FINAL A PAGO</span>
+        <span>${{ '{:,.0f}'.format(precio_pago).replace(',','.') }}</span>
+      </div>
+    {% elif tiene_descuento %}
+      {# Sin manual: reconstruir lista = subtotal_neto + descuento #}
+      {% set precio_lista_pdf = (p.subtotal_neto or 0) + (p.monto_descuento or 0) %}
+      <div class="eco-row" style="font-weight:600">
+        <span>Precio total</span>
+        <span>${{ '{:,.0f}'.format(precio_lista_pdf).replace(',','.') }}</span>
+      </div>
+      <div class="eco-row disc">
+        <span>Descuento aplicado ({{ p.descuento_general_pct }}%)</span>
+        <span>− ${{ '{:,.0f}'.format(p.monto_descuento).replace(',','.') }}</span>
+      </div>
+      <div class="eco-row total">
+        <span>PRECIO FINAL A PAGO</span>
+        <span>${{ '{:,.0f}'.format(precio_pago).replace(',','.') }}</span>
+      </div>
+    {% else %}
+      {# Sin descuento: precio único final #}
+      {% set precio_unico = p.total_manual if tiene_manual else precio_pago %}
+      <div class="eco-row total">
+        <span>PRECIO FINAL</span>
+        <span>${{ '{:,.0f}'.format(precio_unico).replace(',','.') }}</span>
+      </div>
     {% endif %}
-    <div class="eco-row total">
-      <span>PRECIO FINAL</span>
-      <span>${{ '{:,.0f}'.format(total_final).replace(',','.') }}</span>
-    </div>
+
     <div class="eco-row card">
       <span>Opción pago con tarjeta de crédito (+7%)</span>
-      <span>${{ '{:,.0f}'.format(total_final * 1.07).replace(',','.') }}</span>
+      <span>${{ '{:,.0f}'.format(precio_pago * 1.07).replace(',','.') }}</span>
     </div>
   </div>
 </div>
