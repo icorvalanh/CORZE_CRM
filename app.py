@@ -3068,10 +3068,16 @@ def presupuesto_pdf(doc_id):
             return resp
         except Exception as e:
             app.logger.error(f'weasyprint error: {e}')
+            # Fallback: devuelve HTML con autoprint para ?view=1, descarga HTML para ?download=1
+            if request.args.get('view'):
+                autoprint_html = html.replace(
+                    '</body>',
+                    '<script>window.onload=function(){window.print();}</script></body>'
+                )
+                return make_response(autoprint_html)
             resp = make_response(html)
             resp.headers['Content-Type'] = 'text/html'
-            if request.args.get('download'):
-                resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
+            resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
             return resp
     return make_response(html)
 
