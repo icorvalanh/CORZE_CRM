@@ -62,13 +62,15 @@
 
 <!-- ══ MODAL TRABAJADOR ══ -->
 <div class="modal-overlay" id="modalTrabajador" onclick="if(event.target===this)cerrarModal()">
- <div class="modal-box" style="max-width:580px" onclick="event.stopPropagation()">
+ <div class="modal-box" style="max-width:640px" onclick="event.stopPropagation()">
   <div class="modal-header">
     <span id="modalTitle">Nuevo Trabajador</span>
     <button class="modal-close" onclick="cerrarModal()">✕</button>
   </div>
-  <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-height:75vh;overflow-y:auto">
 
+    <!-- ── Datos básicos ── -->
+    <div style="grid-column:1/-1;font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px">Datos personales</div>
     <div class="form-group">
       <label class="form-label">Nombre *</label>
       <input class="form-input" id="tNombre" placeholder="Nombre">
@@ -79,11 +81,11 @@
     </div>
     <div class="form-group">
       <label class="form-label">Cargo *</label>
-      <input class="form-input" id="tCargo" placeholder="Ej: Asesor Comercial">
+      <input class="form-input" id="tCargo" placeholder="Ej: Instalador">
     </div>
     <div class="form-group">
       <label class="form-label">RUT</label>
-      <input class="form-input" id="tRut" placeholder="12.345.678-9">
+      <input class="form-input" id="tRut" placeholder="12.345.678-9" oninput="onRUTInput(this)" onblur="onRUTBlur(this)">
     </div>
     <div class="form-group">
       <label class="form-label">Email</label>
@@ -93,6 +95,56 @@
       <label class="form-label">Teléfono</label>
       <input class="form-input" id="tTelefono" placeholder="+56 9 ...">
     </div>
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Dirección</label>
+      <input class="form-input" id="tDireccion" placeholder="Calle, número, comuna">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nombre cónyuge</label>
+      <input class="form-input" id="tConyuge" placeholder="Nombre completo">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Contacto de emergencia</label>
+      <input class="form-input" id="tContactoEmergencia" placeholder="Nombre y teléfono">
+    </div>
+
+    <!-- ── Datos laborales / salud ── -->
+    <div style="grid-column:1/-1;font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px;margin-top:4px">Salud y previsión</div>
+    <div class="form-group">
+      <label class="form-label">Isapre / Fonasa</label>
+      <input class="form-input" id="tIsapre" placeholder="Ej: Fonasa, Banmédica...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">AFP</label>
+      <input class="form-input" id="tAfp" placeholder="Ej: Habitat, Capital...">
+    </div>
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Alergias a medicamentos</label>
+      <input class="form-input" id="tAlergias" placeholder="Ej: Penicilina, Ibuprofeno... (o Ninguna)">
+    </div>
+
+    <!-- ── Capacitaciones ── -->
+    <div style="grid-column:1/-1;font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px;margin-top:4px">Capacitaciones</div>
+    <div class="form-group" style="grid-column:1/-1">
+      <label class="form-label">Cursos y Certificaciones</label>
+      <textarea class="form-input" id="tCertificaciones" rows="2" placeholder="Ej: Curso instalación fotovoltaica — Eneraldes 2025, Certificación SEC..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Examen ACHS</label>
+      <select class="form-input" id="tAchs">
+        <option value="">— Sin registro —</option>
+        <option value="vigente">✅ Vigente</option>
+        <option value="vencido">⚠️ Vencido</option>
+        <option value="pendiente">🕐 Pendiente</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha venc. ACHS</label>
+      <input class="form-input" type="date" id="tAchsFecha">
+    </div>
+
+    <!-- ── Admin ── -->
+    <div style="grid-column:1/-1;font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px;margin-top:4px">Administración</div>
     <div class="form-group">
       <label class="form-label">Fecha de ingreso</label>
       <input class="form-input" type="date" id="tFechaIngreso">
@@ -134,16 +186,25 @@ function toggleInactivos(show) {
 function abrirModal(data = null) {
   editId = data ? data.id : null;
   document.getElementById('modalTitle').textContent = data ? 'Editar Trabajador' : 'Nuevo Trabajador';
-  document.getElementById('tNombre').value      = data?.nombre     || '';
-  document.getElementById('tApellido').value    = data?.apellido   || '';
-  document.getElementById('tCargo').value       = data?.cargo      || '';
-  document.getElementById('tRut').value         = data?.rut        || '';
-  document.getElementById('tEmail').value       = data?.email      || '';
-  document.getElementById('tTelefono').value    = data?.telefono   || '';
-  document.getElementById('tFechaIngreso').value= data?.fecha_ingreso || '';
-  document.getElementById('tColor').value       = data?.color      || '#F5A623';
-  document.getElementById('tNotas').value       = data?.notas      || '';
-  document.getElementById('tActivo').checked    = data ? !!data.activo : true;
+  document.getElementById('tNombre').value          = data?.nombre              || '';
+  document.getElementById('tApellido').value        = data?.apellido            || '';
+  document.getElementById('tCargo').value           = data?.cargo               || '';
+  document.getElementById('tRut').value             = data?.rut                 || '';
+  document.getElementById('tEmail').value           = data?.email               || '';
+  document.getElementById('tTelefono').value        = data?.telefono            || '';
+  document.getElementById('tDireccion').value       = data?.direccion           || '';
+  document.getElementById('tConyuge').value         = data?.nombre_conyuge      || '';
+  document.getElementById('tContactoEmergencia').value = data?.contacto_emergencia || '';
+  document.getElementById('tIsapre').value          = data?.isapre_fonasa       || '';
+  document.getElementById('tAfp').value             = data?.afp                 || '';
+  document.getElementById('tAlergias').value        = data?.alergias            || '';
+  document.getElementById('tCertificaciones').value = data?.certificaciones     || '';
+  document.getElementById('tAchs').value            = data?.examen_achs         || '';
+  document.getElementById('tAchsFecha').value       = data?.achs_fecha_venc     || '';
+  document.getElementById('tFechaIngreso').value    = data?.fecha_ingreso       || '';
+  document.getElementById('tColor').value           = data?.color               || '#F5A623';
+  document.getElementById('tNotas').value           = data?.notas               || '';
+  document.getElementById('tActivo').checked        = data ? !!data.activo : true;
   document.getElementById('modalTrabajador').classList.add('open');
 }
 
@@ -165,15 +226,24 @@ async function guardarTrabajador() {
   if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
   const data = {
     nombre,
-    apellido:      document.getElementById('tApellido').value.trim(),
-    cargo:         cargo,
-    rut:           document.getElementById('tRut').value.trim(),
-    email:         document.getElementById('tEmail').value.trim(),
-    telefono:      document.getElementById('tTelefono').value.trim(),
-    fecha_ingreso: document.getElementById('tFechaIngreso').value,
-    color:         document.getElementById('tColor').value,
-    notas:         document.getElementById('tNotas').value.trim(),
-    activo:        document.getElementById('tActivo').checked,
+    apellido:             document.getElementById('tApellido').value.trim(),
+    cargo,
+    rut:                  document.getElementById('tRut').value.trim(),
+    email:                document.getElementById('tEmail').value.trim(),
+    telefono:             document.getElementById('tTelefono').value.trim(),
+    direccion:            document.getElementById('tDireccion').value.trim(),
+    nombre_conyuge:       document.getElementById('tConyuge').value.trim(),
+    contacto_emergencia:  document.getElementById('tContactoEmergencia').value.trim(),
+    isapre_fonasa:        document.getElementById('tIsapre').value.trim(),
+    afp:                  document.getElementById('tAfp').value.trim(),
+    alergias:             document.getElementById('tAlergias').value.trim(),
+    certificaciones:      document.getElementById('tCertificaciones').value.trim(),
+    examen_achs:          document.getElementById('tAchs').value,
+    achs_fecha_venc:      document.getElementById('tAchsFecha').value,
+    fecha_ingreso:        document.getElementById('tFechaIngreso').value,
+    color:                document.getElementById('tColor').value,
+    notas:                document.getElementById('tNotas').value.trim(),
+    activo:               document.getElementById('tActivo').checked,
   };
   const url = editId ? `/api/trabajadores/${editId}/edit` : '/api/trabajadores/add';
   let res;
