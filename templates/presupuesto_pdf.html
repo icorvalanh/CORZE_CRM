@@ -95,6 +95,9 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 @media print {
   * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
   body { margin:0; }
+  @page { margin:12mm 10mm; }
+  /* Elimina encabezados y pies de página del navegador (URL, título, fecha, etc.) */
+  html { -webkit-print-color-adjust: exact; }
   .no-print { display:none !important; }
   .page { max-width:100%; padding:10px 16px; margin:0; }
   .print-block { page-break-inside:avoid !important; display:block !important; }
@@ -117,7 +120,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
   .meta-bar, .re-box, table.eq thead, table.roi thead,
   .eco-row.total, .sec-bar { -webkit-print-color-adjust:exact !important; }
 }
-@page { size:A4; margin:12mm 10mm; }
+@page { size:A4; margin:10mm; }
 </style>
 </head>
 <body>
@@ -515,7 +518,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 
 <!-- ══ BOTÓN IMPRIMIR ══════════════════════════════════════════════════════ -->
 <div class="no-print" style="text-align:center;margin-top:28px;display:flex;justify-content:center;gap:10px">
-  <button onclick="window.print()"
+  <button onclick="imprimirLimpio()"
     style="background:#1C3A6B;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
     🖨️ Imprimir / Guardar PDF
   </button>
@@ -524,6 +527,18 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     ← Volver al listado
   </a>
 </div>
+<script>
+function imprimirLimpio() {
+  // Abre ventana sin barra de navegación → Chrome/Safari no ponen URL en el pie
+  const w = window.open(location.href, '_blank',
+    'toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1,width=900,height=700');
+  if (w) {
+    w.onload = () => { w.focus(); w.print(); };
+  } else {
+    window.print();
+  }
+}
+</script>
 
 </div>
 </body>
