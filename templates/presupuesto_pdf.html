@@ -518,27 +518,15 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 
 <!-- ══ BOTÓN IMPRIMIR ══════════════════════════════════════════════════════ -->
 <div class="no-print" style="text-align:center;margin-top:28px;display:flex;justify-content:center;gap:10px">
-  <button onclick="imprimirLimpio()"
-    style="background:#1C3A6B;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
+  <a href="?view=1" target="_blank"
+    style="background:#1C3A6B;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">
     🖨️ Imprimir / Guardar PDF
-  </button>
+  </a>
   <a href="/admin/presupuestos"
     style="background:#f0f0f0;color:#333;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center">
     ← Volver al listado
   </a>
 </div>
-<script>
-function imprimirLimpio() {
-  // Abre ventana sin barra de navegación → Chrome/Safari no ponen URL en el pie
-  const w = window.open(location.href, '_blank',
-    'toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1,width=900,height=700');
-  if (w) {
-    w.onload = () => { w.focus(); w.print(); };
-  } else {
-    window.print();
-  }
-}
-</script>
 
 </div>
 </body>

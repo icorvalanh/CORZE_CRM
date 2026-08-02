@@ -3053,7 +3053,7 @@ def presupuesto_pdf(doc_id):
     html = render_template('presupuesto_pdf.html',
                            p=p, logo_b64=logo_b64,
                            solar_kpis=solar_kpis, equipos=equipos)
-    if request.args.get('download'):
+    if request.args.get('download') or request.args.get('view'):
         nombre = (p.get('nombre_cliente','') or 'cliente').replace(' ', '_')
         folio  = p.get('folio', doc_id[:8])
         try:
@@ -3061,13 +3061,17 @@ def presupuesto_pdf(doc_id):
             pdf_bytes = WP_HTML(string=html, base_url=request.host_url).write_pdf()
             resp = make_response(pdf_bytes)
             resp.headers['Content-Type'] = 'application/pdf'
-            resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.pdf"'
+            if request.args.get('download'):
+                resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.pdf"'
+            else:
+                resp.headers['Content-Disposition'] = f'inline; filename="Cotizacion_{folio}_{nombre}.pdf"'
             return resp
         except Exception as e:
             app.logger.error(f'weasyprint error: {e}')
             resp = make_response(html)
             resp.headers['Content-Type'] = 'text/html'
-            resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
+            if request.args.get('download'):
+                resp.headers['Content-Disposition'] = f'attachment; filename="Cotizacion_{folio}_{nombre}.html"'
             return resp
     return make_response(html)
 
