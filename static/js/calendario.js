@@ -209,9 +209,9 @@ function renderSemana() {
 
   let html = '<div class="semana-cabecera" style="border-right:1px solid var(--border2)"></div>';
   dias.forEach(d => {
-    const ds  = dStr(d);
-    const hoy = ds === hoy;
-    html += `<div class="semana-cabecera${hoy?' hoy':''}" onclick="clickDia('${ds}')" style="cursor:pointer">
+    const ds    = dStr(d);
+    const esHoy = ds === hoy;
+    html += `<div class="semana-cabecera${esHoy?' hoy':''}" onclick="clickDia('${ds}')" style="cursor:pointer">
       ${DIAS[d.getDay()]}<br><span style="font-size:16px;font-weight:800">${d.getDate()}</span>
     </div>`;
   });
