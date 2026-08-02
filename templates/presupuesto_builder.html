@@ -729,23 +729,27 @@ function renderMateriales() {
 
 // ── Extras ────────────────────────────────────────────────────────────────────
 function renderExtras() {
-  document.getElementById('extrasContainer').innerHTML = EXTRAS_DEF.map(ex => `
+  const DEFAULT_ON = ['mano_obra'];
+  document.getElementById('extrasContainer').innerHTML = EXTRAS_DEF.map(ex => {
+    const on = DEFAULT_ON.includes(ex.id);
+    return `
     <div class="extra-row" style="flex-wrap:wrap;gap:6px 8px">
-      <input type="checkbox" class="extra-check" id="chk_${ex.id}" onchange="toggleExtra('${ex.id}')">
+      <input type="checkbox" class="extra-check" id="chk_${ex.id}" ${on ? 'checked' : ''} onchange="toggleExtra('${ex.id}')">
       <span class="extra-label" style="min-width:140px">${ex.label}</span>
       <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
         <span style="font-size:9px;color:var(--gray3)">$ unit.</span>
         <input type="text" id="precio_${ex.id}" value="${ex.base.toLocaleString('es-CL')}"
                style="width:82px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;
                       padding:3px 5px;color:var(--white);font-size:11px;text-align:right"
-               disabled
+               ${on ? '' : 'disabled'}
                oninput="fmtExtraPrecio(this)" onchange="recalcular()">
         <span style="font-size:9px;color:var(--gray3)">×</span>
-        <input type="number" class="extra-qty" id="qty_${ex.id}" value="1" min="0" disabled
+        <input type="number" class="extra-qty" id="qty_${ex.id}" value="1" min="0" ${on ? '' : 'disabled'}
                style="width:44px" oninput="recalcular()">
         <span class="extra-sub" id="sub_${ex.id}" style="width:88px;text-align:right">—</span>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function fmtExtraPrecio(input) {
@@ -813,7 +817,7 @@ function recalcular() {
   const pr     = (parseFloat(document.getElementById('sPR').value)||80)/100;
   const genMes = kWp>0 ? kWp * hsp * 30.4 * pr * orientF : 0;
   const genAnu = genMes * 12;
-  const cob    = totalCons>0 && genAnu>0 ? Math.min(genAnu/totalCons*100, 150) : 0;
+  const cob    = totalCons>0 && genAnu>0 ? genAnu/totalCons*100 : 0;
 
   if (kWp > 0) {
     document.getElementById('genGrid').style.display = '';
@@ -849,11 +853,21 @@ function recalcular() {
   const margen      = subDirectos * margenPct / 100;
   const precioLista = subDirectos + margen;
   const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
-  const descMonto   = precioLista * descPct / 100;
-  const subNeto     = precioLista - descMonto;
   const inclIva     = document.getElementById('fIva').checked;
-  const iva         = inclIva ? subNeto * 0.19 : 0;
-  const total       = subNeto + iva;
+  const manualBase  = getTotalManual();
+
+  // Descuento sobre total manual si está activo, sino sobre precioLista
+  const baseDesc  = manualBase > 0 ? manualBase : precioLista;
+  const descMonto = baseDesc * descPct / 100;
+  const subNeto   = baseDesc - descMonto;
+  const iva       = inclIva ? subNeto * 0.19 : 0;
+  const total     = subNeto + iva;
+
+  // Total calculado puro (sin manual) — para referencia en panel
+  const totalAutoCalc = (() => {
+    const sn = precioLista * (1 - descPct / 100);
+    return inclIva ? sn * 1.19 : sn;
+  })();
 
   // Panel derecho
   document.getElementById('rPaneles').textContent    = subPaneles>0  ? fmt(subPaneles)  : '—';
@@ -869,12 +883,9 @@ function recalcular() {
   document.getElementById('rDescuento').textContent  = fmt(descMonto);
   document.getElementById('rSubNeto').textContent    = fmt(subNeto);
   document.getElementById('rIva').textContent        = fmt(iva);
-  // Total manual override
-  document.getElementById('rTotalCalc').textContent = fmt(total);
-  const manualTotal = getTotalManual();
-  const totalFinal  = manualTotal > 0 ? manualTotal : total;
-  document.getElementById('rTotal').textContent        = fmt(totalFinal);
-  document.getElementById('rTotalTarjeta').textContent = fmt(totalFinal * 1.07);
+  document.getElementById('rTotalCalc').textContent  = fmt(totalAutoCalc);
+  document.getElementById('rTotal').textContent      = fmt(total);
+  document.getElementById('rTotalTarjeta').textContent = fmt(total * 1.07);
 
   // KPIs solares (debounced, backend)
   clearTimeout(calcTimer);
@@ -970,9 +981,11 @@ async function guardar(estadoOverride) {
   const margen      = subDirectos * margenPct / 100;
   const precioLista = subDirectos + margen;
   const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
-  const descMonto   = precioLista * descPct / 100;
-  const subNeto     = precioLista - descMonto;
   const inclIva     = document.getElementById('fIva').checked;
+  const manualBase  = getTotalManual();
+  const baseDesc    = manualBase > 0 ? manualBase : precioLista;
+  const descMonto   = baseDesc * descPct / 100;
+  const subNeto     = baseDesc - descMonto;
   const iva         = inclIva ? subNeto*0.19 : 0;
   const total       = subNeto + iva;
 
@@ -1022,9 +1035,9 @@ async function guardar(estadoOverride) {
     subtotal_neto:        subNeto,
     incluye_iva:          inclIva,
     monto_iva:            iva,
-    total:                getTotalManual() > 0 ? getTotalManual() : total,
+    total:                total,
     total_calculado:      total,
-    total_manual:         getTotalManual() || null,
+    total_manual:         manualBase || null,
     notas:                document.getElementById('fNotas').value.trim(),
     condiciones:          document.getElementById('fCondiciones').value.trim(),
     trabajador_asignado:  document.getElementById('fTrabajador').value,

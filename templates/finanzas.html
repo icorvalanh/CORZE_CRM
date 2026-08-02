@@ -416,6 +416,8 @@
 .cf-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--card2);border-radius:8px;border:1px solid var(--border2)}
 </style>
 
-<script src="{{ url_for('static', filename='js/finanzas.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/ventas_gastos.js') }}?v=2"></script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/finanzas.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='js/ventas_gastos.js') }}?v=3"></script>
 {% endblock %}

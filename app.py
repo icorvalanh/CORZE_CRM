@@ -3548,6 +3548,7 @@ ETAPAS_PIPELINE = [
     'Proyecto Finalizado',
     'Post Venta',
     'Cerrado',
+    'Firmado',
     'Cliente Perdido',
 ]
 

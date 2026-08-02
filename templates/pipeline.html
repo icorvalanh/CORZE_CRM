@@ -46,6 +46,7 @@
 .col-finalizado    .kanban-col-header { border-top:3px solid #2ECC71; border-radius:12px 12px 0 0; }
 .col-postventa     .kanban-col-header { border-top:3px solid #F5A623; border-radius:12px 12px 0 0; }
 .col-cerrado       .kanban-col-header { border-top:3px solid #1abc9c; border-radius:12px 12px 0 0; }
+.col-firmado       .kanban-col-header { border-top:3px solid #8E44AD; border-radius:12px 12px 0 0; }
 .col-perdido       .kanban-col-header { border-top:3px solid #E74C3C; border-radius:12px 12px 0 0; }
 /* Notas */
 .nota-item { background:var(--card2); border-radius:8px; padding:9px 12px; margin-bottom:8px; border-left:3px solid var(--blue); }
@@ -97,6 +98,7 @@
     'Proyecto Finalizado':'col-finalizado',
     'Post Venta':'col-postventa',
     'Cerrado':'col-cerrado',
+    'Firmado':'col-firmado',
     'Cliente Perdido':'col-perdido'
   } %}
   {% for etapa in etapas %}
@@ -989,6 +991,8 @@ const ETAPA_COLORS = {
   'Contrato Firmado':        '#27AE60',
   'En Instalación':          '#1ABC9C',
   'Proyecto Finalizado':     '#2ECC71',
+  'Cerrado':                 '#1ABC9C',
+  'Firmado':                 '#8E44AD',
   'Cliente Perdido':         '#E74C3C',
 };
 

@@ -191,35 +191,44 @@ function buscar(q) {
 
 // ── Modal transacción ─────────────────────────────────────────────────────────
 function openModal(id = null) {
-  editingId = id;
-  document.getElementById('modalTitle').textContent = id ? 'Editar transacción' : 'Nueva transacción';
-  resetForm();
+  try {
+    editingId = id;
+    document.getElementById('modalTitle').textContent = id ? 'Editar transacción' : 'Nueva transacción';
+    resetForm();
 
-  if (id) {
-    const row = allRows.find(r => r.id === id);
-    if (!row) return;
-    const tipo = (row.tipo === 'costo') ? 'egreso' : (row.tipo || 'ingreso');
-    setRadio('f_tipo', tipo);
-    onTipoChange();
-    document.getElementById('f_categoria').value = row.categoria || '';
-    document.getElementById('f_descripcion').value = row.descripcion || '';
-    document.getElementById('f_monto').value = formatClpInput(row.monto || 0);
-    document.getElementById('f_fecha').value = (row.fecha || '').slice(0, 10);
-    document.getElementById('f_notas').value = row.notas || '';
-    if (row.tiene_comprobante) {
-      document.getElementById('compPreview').innerHTML = '✅ <span style="font-size:12px">Comprobante guardado</span>';
+    if (id) {
+      const row = allRows.find(r => r.id === id);
+      if (!row) return;
+      const tipo = (row.tipo === 'costo') ? 'egreso' : (row.tipo || 'ingreso');
+      setRadio('f_tipo', tipo);
+      onTipoChange();
+      document.getElementById('f_categoria').value = row.categoria || '';
+      document.getElementById('f_descripcion').value = row.descripcion || '';
+      document.getElementById('f_monto').value = formatClpInput(row.monto || 0);
+      document.getElementById('f_fecha').value = (row.fecha || '').slice(0, 10);
+      document.getElementById('f_notas').value = row.notas || '';
+      if (row.tiene_comprobante) {
+        document.getElementById('compPreview').innerHTML = '✅ <span style="font-size:12px">Comprobante guardado</span>';
+      }
+    } else {
+      onTipoChange();
     }
-  } else {
-    onTipoChange();
-  }
 
-  const userEl = document.querySelector('.user-name');
-  if (userEl) document.getElementById('f_usuario_display').value = userEl.textContent.trim();
-  document.getElementById('modal').classList.add('open');
+    const userEl = document.querySelector('.user-name');
+    if (userEl) document.getElementById('f_usuario_display').value = userEl.textContent.trim();
+    const modal = document.getElementById('modal');
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+  } catch(e) {
+    console.error('openModal error:', e);
+    toast('Error abriendo formulario: ' + e.message, 'error', 5000);
+  }
 }
 
 function closeModal() {
-  document.getElementById('modal').classList.remove('open');
+  const modal = document.getElementById('modal');
+  modal.classList.remove('open');
+  modal.style.display = '';
   editingId = null;
 }
 
