@@ -94,10 +94,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 
 @media print {
   * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-  body { margin:0; }
-  @page { margin:12mm 10mm; }
-  /* Elimina encabezados y pies de página del navegador (URL, título, fecha, etc.) */
-  html { -webkit-print-color-adjust: exact; }
+  body { margin:0; padding:10mm; }
   .no-print { display:none !important; }
   .page { max-width:100%; padding:10px 16px; margin:0; }
   .print-block { page-break-inside:avoid !important; display:block !important; }
@@ -120,7 +117,7 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
   .meta-bar, .re-box, table.eq thead, table.roi thead,
   .eco-row.total, .sec-bar { -webkit-print-color-adjust:exact !important; }
 }
-@page { size:A4; margin:10mm; }
+@page { size:A4; margin:0; }
 </style>
 </head>
 <body>
