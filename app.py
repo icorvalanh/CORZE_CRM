@@ -1674,26 +1674,31 @@ def calendario():
 @app.route('/api/calendario', methods=['GET'])
 @login_required
 def api_calendario_list():
-    mes  = request.args.get('mes', '')
-    # Eventos propios
-    evs  = db.get_eventos_calendario(mes=mes)
-    # Tareas como eventos (fecha_limite)
-    tareas = db.get_all_tareas(estado='pendiente')
-    for t in tareas:
-        f = str(t.get('fecha_limite', ''))[:10]
-        if not f: continue
-        if mes and not f.startswith(mes): continue
-        evs.append({
-            'id':          t['id'],
-            'titulo':      t.get('titulo', ''),
-            'fecha':       f,
-            'hora_inicio': '',
-            'tipo':        'tarea',
-            'asignado_a':  t.get('asignado_a', ''),
-            'prioridad':   t.get('prioridad', 'media'),
-            '_source':     'tarea',
-        })
-    return jsonify(evs)
+    try:
+        mes  = request.args.get('mes', '')
+        evs  = db.get_eventos_calendario(mes=mes)
+        try:
+            tareas = db.get_all_tareas(estado='pendiente')
+            for t in tareas:
+                f = str(t.get('fecha_limite', ''))[:10]
+                if not f: continue
+                if mes and not f.startswith(mes): continue
+                evs.append({
+                    'id':          t['id'],
+                    'titulo':      t.get('titulo', ''),
+                    'fecha':       f,
+                    'hora_inicio': '',
+                    'tipo':        'tarea',
+                    'asignado_a':  t.get('asignado_a', ''),
+                    'prioridad':   t.get('prioridad', 'media'),
+                    '_source':     'tarea',
+                })
+        except Exception as te:
+            app.logger.warning(f'api_calendario tareas error: {te}')
+        return jsonify(evs)
+    except Exception as e:
+        app.logger.error(f'api_calendario error: {e}')
+        return jsonify([]), 200
 
 @app.route('/api/calendario', methods=['POST'])
 @login_required

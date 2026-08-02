@@ -73,11 +73,15 @@ async function cargarEventos() {
     const year  = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const res   = await fetch(`/api/calendario?mes=${year}-${month}`);
-    allEventos  = await res.json();
+    if (!res.ok) { console.error('calendario status', res.status, await res.text()); }
+    const data  = await res.json();
+    allEventos  = Array.isArray(data) ? data : [];
     renderVista();
     actualizarLabel();
   } catch(e) {
-    toast('Error cargando calendario', 'error');
+    console.error('cargarEventos error:', e);
+    allEventos = [];
+    renderVista();
   }
 }
 
