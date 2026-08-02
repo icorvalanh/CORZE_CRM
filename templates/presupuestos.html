@@ -16,6 +16,7 @@
     <select id="filtEstado" class="filter-select" onchange="filtrar()">
       <option value="">Todos los estados</option>
       <option value="borrador">Borrador</option>
+      <option value="cerrado">Cerrado</option>
       <option value="enviado">Enviado</option>
       <option value="aprobado">Aprobado</option>
       <option value="rechazado">Rechazado</option>
@@ -42,8 +43,8 @@
     </thead>
     <tbody id="tablaBody">
       {% for p in presupuestos %}
-      {% set estadoColor = {'borrador':'#1A2A3A','enviado':'#1A3A1A','aprobado':'#1A3A1A','rechazado':'#3A1A1A'} %}
-      {% set estadoText  = {'borrador':'var(--blue)','enviado':'var(--green)','aprobado':'var(--green)','rechazado':'var(--red)'} %}
+      {% set estadoColor = {'borrador':'#1A2A3A','cerrado':'#1A3A1A','enviado':'#2A2200','aprobado':'#0A2A1A','rechazado':'#3A1A1A'} %}
+      {% set estadoText  = {'borrador':'var(--blue)','cerrado':'var(--green)','enviado':'#F5A623','aprobado':'#1ABC9C','rechazado':'var(--red)'} %}
       <tr>
         <td><a href="{{ url_for('presupuesto_ver', doc_id=p.id) }}" style="color:var(--blue);font-weight:700">{{ p.folio or '—' }}</a></td>
         <td>{{ p.nombre_cliente or '—' }} {{ p.apellido_cliente or '' }}</td>

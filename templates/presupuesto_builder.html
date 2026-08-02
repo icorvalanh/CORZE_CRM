@@ -77,7 +77,7 @@
     <button class="btn btn-secondary" onclick="duplicarPresupuesto()">📋 Duplicar</button>
     {% endif %}
     <button class="btn btn-secondary" onclick="withBtn(this, () => guardar('borrador'))">💾 Guardar Borrador</button>
-    <button class="btn btn-primary"   onclick="withBtn(this, () => guardar('enviado'))">✅ Guardar y Marcar Enviado</button>
+    <button class="btn btn-primary"   onclick="withBtn(this, () => guardar('cerrado'))">✅ Cerrar presupuesto</button>
   </div>
 </div>
 
@@ -458,6 +458,7 @@
             <label class="form-label">Estado</label>
             <select class="form-input" id="fEstado">
               <option value="borrador">Borrador</option>
+              <option value="cerrado">Cerrado</option>
               <option value="enviado">Enviado</option>
               <option value="aprobado">Aprobado</option>
               <option value="rechazado">Rechazado</option>
@@ -1062,7 +1063,7 @@ async function cargarPresupuesto(p) {
 
   const eb = document.getElementById('estadoBadge');
   if (eb) {
-    const colors={borrador:'var(--blue)',enviado:'var(--green)',aprobado:'#1ABC9C',rechazado:'var(--red)'};
+    const colors={borrador:'var(--blue)',cerrado:'var(--green)',enviado:'#F5A623',aprobado:'#1ABC9C',rechazado:'var(--red)'};
     eb.textContent = p.estado||'borrador';
     eb.style.cssText = 'background:#1A2A3A;color:'+(colors[p.estado]||'var(--blue)');
   }
@@ -1175,7 +1176,7 @@ function mostrarConfirmacion(nombre, docId, estado, total) {
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
   ov.innerHTML=`<div style="background:var(--card);border:1px solid var(--border1);border-radius:16px;padding:40px 48px;text-align:center;max-width:420px;width:90%">
     <div style="font-size:48px;margin-bottom:12px">✅</div>
-    <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:6px">Presupuesto ${estado==='enviado'?'enviado':'guardado'}</div>
+    <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:6px">Presupuesto ${estado==='cerrado'?'cerrado':estado==='enviado'?'enviado':'guardado'}</div>
     <div style="font-size:14px;color:var(--gray2);margin-bottom:4px">${nombre}</div>
     <div style="font-size:24px;font-weight:700;color:var(--blue);margin-bottom:24px">${fmt(total)}</div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
