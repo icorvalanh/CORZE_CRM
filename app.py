@@ -3119,7 +3119,8 @@ def presupuesto_pdf(doc_id):
         return '<h2>Presupuesto no encontrado</h2>', 404
     logo_b64 = get_logo_negro_b64()
     sd = p.get('solar_data') or {}
-    solar_kpis = _calcular_solar_kpis(sd, p.get('total', 0)) if sd.get('potencia_kwp') else {}
+    total_final = p.get('total_manual') or p.get('total', 0)
+    solar_kpis = _calcular_solar_kpis(sd, total_final) if sd.get('potencia_kwp') else {}
     equipos = _categorizar_items(p.get('items') or [])
     html = render_template('presupuesto_pdf.html',
                            p=p, logo_b64=logo_b64,
@@ -3152,7 +3153,8 @@ def api_presupuestos_enviar_email(doc_id):
 
     logo_b64 = get_logo_negro_b64()
     sd_email = p.get('solar_data') or {}
-    solar_kpis_email = _calcular_solar_kpis(sd_email, p.get('total', 0)) if sd_email.get('potencia_kwp') else {}
+    total_final_email = p.get('total_manual') or p.get('total', 0)
+    solar_kpis_email = _calcular_solar_kpis(sd_email, total_final_email) if sd_email.get('potencia_kwp') else {}
     equipos_email = _categorizar_items(p.get('items') or [])
     html_body = render_template('presupuesto_pdf.html', p=p, logo_b64=logo_b64,
                                  solar_kpis=solar_kpis_email, equipos=equipos_email)

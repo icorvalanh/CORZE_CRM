@@ -205,7 +205,8 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     <div class="re-sub">Cobertura de consumo</div>
   </div>
   <div class="re-box">
-    <div class="re-val">${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</div>
+    {% set _tf = (p.total_manual or 0) if (p.total_manual or 0) > 0 else (p.total or 0) %}
+    <div class="re-val">${{ '{:,.0f}'.format(_tf).replace(',','.') }}</div>
     <div class="re-sub">Inversión total</div>
   </div>
   <div class="re-box">
@@ -283,7 +284,8 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
 <p class="eco-note">Incluye equipos (paneles, inversor, batería si aplica), materiales, instalación, puesta en marcha, diseño y tramitación ante la distribuidora.</p>
 <div class="eco-wrap">
   <div class="eco-box">
-    {% if p.descuento_general_pct %}
+    {% set total_final = (p.total_manual or 0) if (p.total_manual or 0) > 0 else (p.total or 0) %}
+    {% if p.descuento_general_pct and not p.total_manual %}
     <div class="eco-row disc">
       <span>Descuento aplicado ({{ p.descuento_general_pct }}%)</span>
       <span>− ${{ '{:,.0f}'.format(p.monto_descuento or 0).replace(',','.') }}</span>
@@ -291,11 +293,11 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     {% endif %}
     <div class="eco-row total">
       <span>PRECIO FINAL</span>
-      <span>${{ '{:,.0f}'.format(p.total or 0).replace(',','.') }}</span>
+      <span>${{ '{:,.0f}'.format(total_final).replace(',','.') }}</span>
     </div>
     <div class="eco-row card">
       <span>Opción pago con tarjeta de crédito (+7%)</span>
-      <span>${{ '{:,.0f}'.format((p.total or 0) * 1.07).replace(',','.') }}</span>
+      <span>${{ '{:,.0f}'.format(total_final * 1.07).replace(',','.') }}</span>
     </div>
   </div>
 </div>
