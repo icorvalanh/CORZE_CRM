@@ -1349,7 +1349,7 @@ def google_oauth_start():
         'scope':         GOOGLE_SCOPES,
         'access_type':   'offline',
         'prompt':        'consent',
-        'login_hint':    'contacto@corze.cl',
+        'login_hint':    'corzechile@gmail.com',
     }
     url = GOOGLE_AUTH_URL + '?' + urlencode(params)
     return redirect(url)
