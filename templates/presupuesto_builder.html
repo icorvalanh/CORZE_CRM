@@ -856,12 +856,20 @@ function recalcular() {
   const inclIva     = document.getElementById('fIva').checked;
   const manualBase  = getTotalManual();
 
-  // Descuento sobre total manual si está activo, sino sobre precioLista
-  const baseDesc  = manualBase > 0 ? manualBase : precioLista;
-  const descMonto = baseDesc * descPct / 100;
-  const subNeto   = baseDesc - descMonto;
-  const iva       = inclIva ? subNeto * 0.19 : 0;
-  const total     = subNeto + iva;
+  // Cuando hay total manual, el manual ES el precio final (IVA no se suma encima)
+  // El descuento se aplica sobre el manual o sobre precioLista según corresponda
+  let descMonto, subNeto, iva, total;
+  if (manualBase > 0) {
+    descMonto = manualBase * descPct / 100;
+    total     = manualBase - descMonto;
+    iva       = 0;
+    subNeto   = total;
+  } else {
+    descMonto = precioLista * descPct / 100;
+    subNeto   = precioLista - descMonto;
+    iva       = inclIva ? subNeto * 0.19 : 0;
+    total     = subNeto + iva;
+  }
 
   // Total calculado puro (sin manual) — para referencia en panel
   const totalAutoCalc = (() => {
@@ -889,7 +897,7 @@ function recalcular() {
 
   // KPIs solares (debounced, backend)
   clearTimeout(calcTimer);
-  calcTimer = setTimeout(() => actualizarKpisSolares(kWp, totalFinal), 700);
+  calcTimer = setTimeout(() => actualizarKpisSolares(kWp, total), 700);
 }
 
 // ── Solar KPIs desde backend ──────────────────────────────────────────────────
@@ -980,14 +988,21 @@ async function guardar(estadoOverride) {
   const margenPct   = parseFloat(document.getElementById('fMargen').value)||0;
   const margen      = subDirectos * margenPct / 100;
   const precioLista = subDirectos + margen;
-  const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
-  const inclIva     = document.getElementById('fIva').checked;
-  const manualBase  = getTotalManual();
-  const baseDesc    = manualBase > 0 ? manualBase : precioLista;
-  const descMonto   = baseDesc * descPct / 100;
-  const subNeto     = baseDesc - descMonto;
-  const iva         = inclIva ? subNeto*0.19 : 0;
-  const total       = subNeto + iva;
+  const descPct    = parseFloat(document.getElementById('fDescuento').value)||0;
+  const inclIva    = document.getElementById('fIva').checked;
+  const manualBase = getTotalManual();
+  let descMonto, subNeto, iva, total;
+  if (manualBase > 0) {
+    descMonto = manualBase * descPct / 100;
+    total     = manualBase - descMonto;
+    iva       = 0;
+    subNeto   = total;
+  } else {
+    descMonto = precioLista * descPct / 100;
+    subNeto   = precioLista - descMonto;
+    iva       = inclIva ? subNeto*0.19 : 0;
+    total     = subNeto + iva;
+  }
 
   // Solar data
   const consumos = {};
