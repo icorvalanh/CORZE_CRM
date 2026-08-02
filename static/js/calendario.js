@@ -12,6 +12,7 @@ const TIPO_COLORS = {
   reunion: 'ev-reunion',
   llamada: 'ev-llamada',
   otro:    'ev-otro',
+  gcal:    'ev-gcal',
 };
 const TIPO_LABELS = {
   visita:  '🤝 Visita',
@@ -19,6 +20,7 @@ const TIPO_LABELS = {
   reunion: '👥 Reunión',
   llamada: '📞 Llamada',
   otro:    '📌 Evento',
+  gcal:    '📅 Google',
 };
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -29,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setDefaultFecha();
   checkGcalStatus();
   cargarEventos();
+  // Auto-refresh cada 60 segundos para sincronizar con Google Calendar
+  setInterval(cargarEventos, 60000);
 });
 
 // ── Google Calendar status ────────────────────────────────────────────────────

@@ -1677,6 +1677,7 @@ def api_calendario_list():
     try:
         mes  = request.args.get('mes', '')
         evs  = db.get_eventos_calendario(mes=mes)
+        # Tareas como eventos
         try:
             tareas = db.get_all_tareas(estado='pendiente')
             for t in tareas:
@@ -1695,6 +1696,52 @@ def api_calendario_list():
                 })
         except Exception as te:
             app.logger.warning(f'api_calendario tareas error: {te}')
+        # Eventos de Google Calendar
+        try:
+            if session.get('google_access_token') or session.get('google_refresh_token'):
+                # Rango del mes solicitado
+                if mes:
+                    year, month = int(mes[:4]), int(mes[5:7])
+                else:
+                    from datetime import date
+                    today = date.today()
+                    year, month = today.year, today.month
+                from datetime import datetime as _dt
+                import calendar as _cal
+                last_day = _cal.monthrange(year, month)[1]
+                time_min = f'{year}-{month:02d}-01T00:00:00-04:00'
+                time_max = f'{year}-{month:02d}-{last_day}T23:59:59-04:00'
+                resp, status = _google_get(GOOGLE_CAL_URL, params={
+                    'timeMin':      time_min,
+                    'timeMax':      time_max,
+                    'maxResults':   100,
+                    'orderBy':      'startTime',
+                    'singleEvents': True,
+                })
+                if resp and status == 200:
+                    gcal_ids = {e.get('gcal_id') for e in evs if e.get('gcal_id')}
+                    for item in resp.json().get('items', []):
+                        if item.get('id') in gcal_ids:
+                            continue  # ya importado
+                        start = item.get('start', {})
+                        fecha_str = start.get('dateTime', start.get('date', ''))[:10]
+                        hora_ini  = start.get('dateTime', '')[11:16] if 'T' in start.get('dateTime','') else ''
+                        end       = item.get('end', {})
+                        hora_fin  = end.get('dateTime', '')  [11:16] if 'T' in end.get('dateTime','')   else ''
+                        evs.append({
+                            'id':          'gcal_' + item['id'],
+                            'titulo':      item.get('summary', '(Sin título)'),
+                            'fecha':       fecha_str,
+                            'hora_inicio': hora_ini,
+                            'hora_fin':    hora_fin,
+                            'descripcion': item.get('description', ''),
+                            'tipo':        'gcal',
+                            '_source':     'google',
+                            'gcal_id':     item['id'],
+                            'gcal_link':   item.get('htmlLink', ''),
+                        })
+        except Exception as ge:
+            app.logger.warning(f'api_calendario gcal error: {ge}')
         return jsonify(evs)
     except Exception as e:
         app.logger.error(f'api_calendario error: {e}')
@@ -1706,6 +1753,25 @@ def api_calendario_add():
     data = request.get_json()
     data['creado_por'] = session.get('usuario', '')
     ok, err = db.add_evento_calendario(data)
+    if ok:
+        # Sincronizar a Google Calendar si está conectado
+        try:
+            if session.get('google_access_token') or session.get('google_refresh_token'):
+                fecha    = data.get('fecha', '')
+                hora_ini = data.get('hora_inicio', '09:00') or '09:00'
+                hora_fin = data.get('hora_fin',    '10:00') or '10:00'
+                evento_g = {
+                    'summary':     data.get('titulo', 'Evento Corze'),
+                    'description': data.get('descripcion', ''),
+                    'start': {'dateTime': f'{fecha}T{hora_ini}:00', 'timeZone': 'America/Santiago'},
+                    'end':   {'dateTime': f'{fecha}T{hora_fin}:00', 'timeZone': 'America/Santiago'},
+                }
+                gresp, gstatus = _google_post(GOOGLE_CAL_URL, evento_g)
+                if gresp and gstatus in (200, 201):
+                    gcal_id = gresp.json().get('id', '')
+                    db.db.collection('calendario').document(err).update({'gcal_id': gcal_id})
+        except Exception as ge:
+            app.logger.warning(f'gcal sync on add error: {ge}')
     return jsonify({'ok': ok, 'id': err if ok else None, 'error': None if ok else err})
 
 @app.route('/api/calendario/<doc_id>', methods=['PUT'])
