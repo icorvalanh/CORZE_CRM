@@ -1611,7 +1611,8 @@ class FirebaseDB:
             presupuestos = self.get_all_presupuestos()
             ingresos_mes_map: Dict[str, float] = {}
             for p in presupuestos:
-                total = p.get('total', 0) or 0
+                total_manual = p.get('total_manual', 0) or 0
+                total = total_manual if total_manual > 0 else (p.get('total', 0) or 0)
                 estado = p.get('estado', '')
                 created = str(p.get('created_at', ''))[:7]
                 if created == mes:
