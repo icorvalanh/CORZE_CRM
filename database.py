@@ -1248,7 +1248,9 @@ class FirebaseDB:
                     q in str(r.get('descripcion', '')).lower()]
             return docs
         except Exception as e:
+            import traceback
             print(f'Error get_all_productos: {e}')
+            traceback.print_exc()
             return []
 
     def get_producto_by_id(self, doc_id) -> dict:

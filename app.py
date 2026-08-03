@@ -38,24 +38,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'corze-secret-2024')
 app.config['SESSION_PERMANENT'] = False
 db = FirebaseDB()
 
-# ── Migración de precios ───────────────────────────────────────────────────────
-def _fix_product_prices():
-    """Corrige precios incorrectos en productos_solar."""
-    FIXES = {
-        'ACC-004': 500,   # Groundclip 30x50 mm2 (estaba en 690.000)
-    }
-    try:
-        col = db.db.collection('productos_solar')
-        for doc in col.stream():
-            d = doc.to_dict() or {}
-            codigo = d.get('codigo', '')
-            if codigo in FIXES and d.get('precio_venta') != FIXES[codigo]:
-                col.document(doc.id).update({'precio_venta': FIXES[codigo]})
-                print(f'[fix] {codigo} precio_venta → {FIXES[codigo]}')
-    except Exception as e:
-        print(f'[fix] Error en _fix_product_prices: {e}')
-
-_fix_product_prices()
 
 def login_required(f):
     @wraps(f)
@@ -2801,6 +2783,7 @@ def api_productos_list():
     q           = request.args.get('q', '')
     solo_activos = request.args.get('solo_activos', 'true').lower() != 'false'
     rows = db.get_all_productos(categoria=categoria, query=q, solo_activos=solo_activos)
+    print(f'[api/productos] total={len(rows)} solo_activos={solo_activos} cat={categoria!r}')
     return jsonify(rows)
 
 @app.route('/api/productos/add', methods=['POST'])
