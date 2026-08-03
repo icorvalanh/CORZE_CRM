@@ -884,14 +884,7 @@ function recalcular() {
   document.getElementById('rDiseno').textContent     = fmt(disenoTram);
   document.getElementById('rSubDirectos').textContent= fmt(subDirectos);
   document.getElementById('rMargen').textContent     = fmt(margen);
-  // Cuando hay manual: mostrar precio manual como base del desglose
-  if (manualBase > 0) {
-    document.getElementById('lblPrecioLista').textContent = 'Precio manual';
-    document.getElementById('rPrecioLista').textContent   = fmt(manualBase);
-  } else {
-    document.getElementById('lblPrecioLista').textContent = 'Precio lista';
-    document.getElementById('rPrecioLista').textContent   = fmt(precioLista);
-  }
+  document.getElementById('rPrecioLista').textContent   = fmt(precioLista);
   document.getElementById('rDescuento').textContent  = fmt(descMonto);
   document.getElementById('rSubNeto').textContent    = fmt(subNeto);
   document.getElementById('rIva').textContent        = fmt(iva);
