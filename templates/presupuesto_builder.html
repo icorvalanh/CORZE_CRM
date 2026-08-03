@@ -205,8 +205,11 @@
 
       <!-- Paneles -->
       <div class="equip-lbl">PANELES SOLARES</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:4px">
+        <input type="text" class="equip-select" id="busPanel" placeholder="🔍 Buscar panel..." oninput="filtrarSelect('selPanel',this.value)" style="font-size:11px" autocomplete="off">
+      </div>
       <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
-        <select class="equip-select" id="selPanel" onchange="onPanelChange()">
+        <select class="equip-select" id="selPanel" onchange="onPanelChange();document.getElementById('busPanel').value=''">
           <option value="">— Seleccionar panel —</option>
         </select>
         <input type="number" class="equip-qty" id="qPanel" min="0" value="0" oninput="recalcular()" placeholder="N°">
@@ -222,8 +225,11 @@
 
       <!-- Inversor -->
       <div class="equip-lbl">INVERSOR</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:4px">
+        <input type="text" class="equip-select" id="busInversor" placeholder="🔍 Buscar inversor..." oninput="filtrarSelect('selInversor',this.value)" style="font-size:11px" autocomplete="off">
+      </div>
       <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
-        <select class="equip-select" id="selInversor" onchange="onInversorChange()">
+        <select class="equip-select" id="selInversor" onchange="onInversorChange();document.getElementById('busInversor').value=''">
           <option value="">— Seleccionar inversor —</option>
         </select>
         <input type="number" class="equip-qty" id="qInversor" min="0" value="0" oninput="recalcular()" placeholder="N°">
@@ -239,8 +245,11 @@
 
       <!-- Batería -->
       <div class="equip-lbl">BATERÍA (opcional)</div>
+      <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:4px">
+        <input type="text" class="equip-select" id="busBateria" placeholder="🔍 Buscar batería..." oninput="filtrarSelect('selBateria',this.value)" style="font-size:11px" autocomplete="off">
+      </div>
       <div style="display:grid;grid-template-columns:1fr 64px 96px 120px;gap:6px;align-items:center;margin-bottom:10px">
-        <select class="equip-select" id="selBateria" onchange="onBateriaChange()">
+        <select class="equip-select" id="selBateria" onchange="onBateriaChange();document.getElementById('busBateria').value=''">
           <option value="">— Sin batería —</option>
         </select>
         <input type="number" class="equip-qty" id="qBateria" min="0" value="0" oninput="recalcular()" placeholder="N°">
@@ -256,6 +265,9 @@
 
       <!-- Materiales, montaje y otros (multi-item) -->
       <div class="equip-lbl">MONTAJE, MATERIALES Y ACCESORIOS</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+        <input type="text" class="equip-select" id="busMaterial" placeholder="🔍 Buscar producto..." oninput="filtrarSelect('selMaterial',this.value)" style="flex:1;font-size:11px" autocomplete="off">
+      </div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <select class="equip-select" id="selMaterial" style="flex:1">
           <option value="">— Seleccionar producto —</option>
@@ -464,6 +476,15 @@
               <option value="rechazado">Rechazado</option>
             </select>
           </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Etapa Pipeline</label>
+            <select class="form-input" id="fEtapaPipeline" onchange="guardar()">
+              <option value="">— Sin asignar —</option>
+              {% for etapa in etapas_pipeline %}
+              <option value="{{ etapa }}">{{ etapa }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -628,6 +649,22 @@ async function cargarProductos() {
     prods.forEach(p => grp.appendChild(new Option(p.nombre + (p.codigo ? ' ('+p.codigo+')' : ''), p.id)));
     selM.appendChild(grp);
   });
+}
+
+// ── Buscador en selects de productos ─────────────────────────────────────────
+function filtrarSelect(selectId, texto) {
+  const sel = document.getElementById(selectId);
+  const q = texto.toLowerCase().trim();
+  for (const opt of sel.options) {
+    if (!opt.value) { opt.style.display = ''; continue; }
+    opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
+  }
+  // Si hay un solo resultado visible (distinto al placeholder), seleccionarlo
+  const visibles = [...sel.options].filter(o => o.value && o.style.display !== 'none');
+  if (visibles.length === 1) {
+    sel.value = visibles[0].value;
+    sel.dispatchEvent(new Event('change'));
+  }
 }
 
 // ── Equipment changes ─────────────────────────────────────────────────────────
@@ -1060,6 +1097,7 @@ async function guardar(estadoOverride) {
     trabajador_asignado:  document.getElementById('fTrabajador').value,
     validez_dias:         parseInt(document.getElementById('fValidez').value)||10,
     estado:               estadoOverride || document.getElementById('fEstado').value,
+    etapa_pipeline:       document.getElementById('fEtapaPipeline').value,
   };
 
   const url = PRESUPUESTO_ID ? `/api/presupuestos/${PRESUPUESTO_ID}/edit` : '/api/presupuestos/add';
@@ -1086,6 +1124,7 @@ async function cargarPresupuesto(p) {
   document.getElementById('fTrabajador').value      = p.trabajador_asignado||'';
   document.getElementById('fValidez').value         = p.validez_dias      ||10;
   document.getElementById('fEstado').value          = p.estado            ||'borrador';
+  document.getElementById('fEtapaPipeline').value   = p.etapa_pipeline    ||'';
   if (p.margen_comercial_pct!=null) document.getElementById('fMargen').value    = p.margen_comercial_pct;
   if (p.descuento_general_pct)      document.getElementById('fDescuento').value = p.descuento_general_pct;
   if (p.incluye_iva)                document.getElementById('fIva').checked     = true;

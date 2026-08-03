@@ -3094,7 +3094,8 @@ def presupuestos():
 def presupuesto_nuevo():
     trabajadores = db.get_all_trabajadores(solo_activos=True)
     return render_template('presupuesto_builder.html', page='presupuestos',
-                           presupuesto=None, trabajadores=trabajadores)
+                           presupuesto=None, trabajadores=trabajadores,
+                           etapas_pipeline=ETAPAS_PIPELINE)
 
 @app.route('/admin/presupuestos/<doc_id>')
 @login_required
@@ -3104,7 +3105,8 @@ def presupuesto_ver(doc_id):
         return redirect(url_for('presupuestos'))
     trabajadores = db.get_all_trabajadores(solo_activos=True)
     return render_template('presupuesto_builder.html', page='presupuestos',
-                           presupuesto=p, trabajadores=trabajadores)
+                           presupuesto=p, trabajadores=trabajadores,
+                           etapas_pipeline=ETAPAS_PIPELINE)
 
 @app.route('/api/presupuestos/add', methods=['POST'])
 @login_required
