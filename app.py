@@ -3122,6 +3122,12 @@ def api_presupuestos_edit(doc_id):
     data = request.get_json()
     data['editado_por'] = session.get('usuario', '')
     ok, err = db.update_presupuesto(doc_id, data)
+    # Propagar etapa al lead vinculado
+    if ok:
+        nueva_etapa = data.get('etapa_pipeline', '').strip()
+        lead_id = data.get('lead_id') or (db.get_presupuesto_by_id(doc_id) or {}).get('lead_id')
+        if nueva_etapa and lead_id:
+            db.update_lead(lead_id, {'etapa': nueva_etapa})
     return jsonify({'ok': ok, 'error': err})
 
 @app.route('/api/presupuestos/<doc_id>/delete', methods=['POST'])
