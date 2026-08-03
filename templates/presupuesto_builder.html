@@ -892,9 +892,31 @@ function recalcular() {
       document.getElementById('dCoberturaBarWrap').style.display = 'none';
       document.getElementById('dCoberturaLeyenda').style.display = 'none';
     }
+    // ── Gráfico mensual client-side (instantáneo) ───────────────────────────
+    const sumFact = Object.values(FACT_EST).reduce((a,b)=>a+b,0);
+    const mesesGen = MESES.map(m => {
+      const gen = genAnu * (FACT_EST[m]||1) / sumFact;
+      const cons = parseFloat(document.getElementById('cons_'+m).value)||0;
+      return {mes:m, gen:Math.round(gen), cons:Math.round(cons)};
+    });
+    const mxChart = Math.max(...mesesGen.map(m=>Math.max(m.gen,m.cons)));
+    document.getElementById('chartBarras2').innerHTML = mesesGen.map(m=>`
+      <div class="chart-bar-row">
+        <span class="mes-lbl">${m.mes}</span>
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+          ${m.cons>0?`<div class="bar" style="width:${mxChart>0?Math.round(m.cons/mxChart*160):0}px;background:#F5A623"></div>`:''}
+          <div class="bar" style="width:${mxChart>0?Math.round(m.gen/mxChart*160):0}px;background:#2ECC71"></div>
+        </div>
+        <div style="text-align:right;min-width:64px">
+          ${m.cons>0?`<div style="font-size:9px;color:#F5A623">${m.cons.toLocaleString('es-CL')} kWh</div>`:''}
+          <div style="font-size:9px;color:#2ECC71">${m.gen.toLocaleString('es-CL')} kWh</div>
+        </div>
+      </div>`).join('');
+    document.getElementById('chartSolarCard').style.display = '';
   } else {
     document.getElementById('genGrid').style.display = 'none';
     document.getElementById('dCoberturaBarWrap').style.display = 'none';
+    document.getElementById('chartSolarCard').style.display = 'none';
   }
 
   // Extras
