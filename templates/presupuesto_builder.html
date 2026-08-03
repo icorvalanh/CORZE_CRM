@@ -429,7 +429,7 @@
                       style="background:none;border:none;color:var(--gray3);cursor:pointer;font-size:15px;padding:0 4px"
                       title="Quitar override">✕</button>
             </div>
-            <div style="font-size:10px;color:var(--gray3)">Calculado: <span id="rTotalCalc">$0</span></div>
+            <div style="font-size:12px;color:var(--gray2);font-weight:600">Precio original: <span id="rTotalCalc" style="color:var(--gray1)">$0</span></div>
           </div>
         </div>
         <div class="price-row" style="font-size:11px;color:var(--gray3)">
@@ -869,7 +869,7 @@ function recalcular() {
     total = total_calc;
   }
 
-  // Panel derecho — desglose siempre muestra la cadena calculada
+  // Panel derecho
   document.getElementById('rPaneles').textContent      = subPaneles>0  ? fmt(subPaneles)  : '—';
   document.getElementById('rInversor').textContent     = subInversor>0 ? fmt(subInversor) : '—';
   document.getElementById('rBateria').textContent      = subBateria>0  ? fmt(subBateria)  : '—';
@@ -882,10 +882,10 @@ function recalcular() {
   document.getElementById('rPrecioLista').textContent  = fmt(precioLista);
   document.getElementById('rDescuento').textContent    = fmt(descMonto_calc);
   document.getElementById('rSubNeto').textContent      = fmt(subNeto_calc);
-  document.getElementById('rIva').textContent          = fmt(iva_calc);
-  // rTotalCalc: siempre el total calculado original (referencia)
+  // IVA: $0 cuando hay manual (el precio manual ya es el final, sin IVA encima)
+  document.getElementById('rIva').textContent          = fmt(manualBase > 0 ? 0 : iva_calc);
+  // "Precio original" = total calculado completo (referencia cuando hay manual)
   document.getElementById('rTotalCalc').textContent    = fmt(total_calc);
-  // rTotal: manual-based (con descuento sobre manual) o calculado
   document.getElementById('rTotal').textContent        = fmt(total);
   document.getElementById('rTotalTarjeta').textContent = fmt(total * 1.07);
 
