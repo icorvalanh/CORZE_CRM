@@ -854,42 +854,39 @@ function recalcular() {
   const precioLista = subDirectos + margen;
   const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
   const inclIva     = document.getElementById('fIva').checked;
-  const manualBase  = getTotalManual();
+  // Cadena calculada siempre — el desglose muestra esto sin importar el manual
+  const descMonto_calc = precioLista * descPct / 100;
+  const subNeto_calc   = precioLista - descMonto_calc;
+  const iva_calc       = inclIva ? subNeto_calc * 0.19 : 0;
+  const total_calc     = subNeto_calc + iva_calc;
 
-  // Cuando hay total manual, el manual ES el precio final (IVA no se suma encima)
-  // El descuento se aplica sobre el manual o sobre precioLista según corresponda
-  let descMonto, subNeto, iva, total;
+  // Total final: si hay precio manual, el descuento se aplica sobre el manual
+  const manualBase = getTotalManual();
+  let total;
   if (manualBase > 0) {
-    descMonto = manualBase * descPct / 100;
-    total     = manualBase - descMonto;
-    iva       = 0;
-    subNeto   = total;
+    total = manualBase - (manualBase * descPct / 100);
   } else {
-    descMonto = precioLista * descPct / 100;
-    subNeto   = precioLista - descMonto;
-    iva       = inclIva ? subNeto * 0.19 : 0;
-    total     = subNeto + iva;
+    total = total_calc;
   }
 
-  // Calculado puro: precio lista + IVA, sin override manual — siempre el original
-  const totalAutoCalc = inclIva ? precioLista * 1.19 : precioLista;
-
-  // Panel derecho
-  document.getElementById('rPaneles').textContent    = subPaneles>0  ? fmt(subPaneles)  : '—';
-  document.getElementById('rInversor').textContent   = subInversor>0 ? fmt(subInversor) : '—';
-  document.getElementById('rBateria').textContent    = subBateria>0  ? fmt(subBateria)  : '—';
-  document.getElementById('rMateriales').textContent = subMaterieles>0 ? fmt(subMaterieles) : '—';
-  document.getElementById('rSubEquipos').textContent = fmt(subEquipos);
-  document.getElementById('rCostosAdic').textContent = fmt(subAdic);
-  document.getElementById('rDiseno').textContent     = fmt(disenoTram);
-  document.getElementById('rSubDirectos').textContent= fmt(subDirectos);
-  document.getElementById('rMargen').textContent     = fmt(margen);
-  document.getElementById('rPrecioLista').textContent   = fmt(precioLista);
-  document.getElementById('rDescuento').textContent  = fmt(descMonto);
-  document.getElementById('rSubNeto').textContent    = fmt(subNeto);
-  document.getElementById('rIva').textContent        = fmt(iva);
-  document.getElementById('rTotalCalc').textContent  = fmt(totalAutoCalc);
-  document.getElementById('rTotal').textContent      = fmt(total);
+  // Panel derecho — desglose siempre muestra la cadena calculada
+  document.getElementById('rPaneles').textContent      = subPaneles>0  ? fmt(subPaneles)  : '—';
+  document.getElementById('rInversor').textContent     = subInversor>0 ? fmt(subInversor) : '—';
+  document.getElementById('rBateria').textContent      = subBateria>0  ? fmt(subBateria)  : '—';
+  document.getElementById('rMateriales').textContent   = subMaterieles>0 ? fmt(subMaterieles) : '—';
+  document.getElementById('rSubEquipos').textContent   = fmt(subEquipos);
+  document.getElementById('rCostosAdic').textContent   = fmt(subAdic);
+  document.getElementById('rDiseno').textContent       = fmt(disenoTram);
+  document.getElementById('rSubDirectos').textContent  = fmt(subDirectos);
+  document.getElementById('rMargen').textContent       = fmt(margen);
+  document.getElementById('rPrecioLista').textContent  = fmt(precioLista);
+  document.getElementById('rDescuento').textContent    = fmt(descMonto_calc);
+  document.getElementById('rSubNeto').textContent      = fmt(subNeto_calc);
+  document.getElementById('rIva').textContent          = fmt(iva_calc);
+  // rTotalCalc: siempre el total calculado original (referencia)
+  document.getElementById('rTotalCalc').textContent    = fmt(total_calc);
+  // rTotal: manual-based (con descuento sobre manual) o calculado
+  document.getElementById('rTotal').textContent        = fmt(total);
   document.getElementById('rTotalTarjeta').textContent = fmt(total * 1.07);
 
   // KPIs solares (debounced, backend)
