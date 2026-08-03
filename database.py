@@ -1629,8 +1629,8 @@ class FirebaseDB:
         }
         try:
             mes = _cl().strftime('%Y-%m')
-            etapas_ganadas = {'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado', 'Post Venta'}
-            etapas_activas = set(ETAPAS_PIPELINE) - {'Proyecto Finalizado', 'Post Venta'}
+            etapas_ganadas = {'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2', 'Cerrado'}
+            etapas_activas = set(ETAPAS_PIPELINE) - {'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2', 'Cerrado', 'Cliente Perdido'}
 
             leads = self.get_all_leads()
             etapa_count: Dict[str, int] = {e: 0 for e in ETAPAS_PIPELINE}
