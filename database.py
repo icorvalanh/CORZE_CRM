@@ -1,11 +1,29 @@
 # database.py — VTA Web v2.1 · Inventario unificado
 
-import os, json
+import os, json, time
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
 
 _TZ = timezone(timedelta(hours=-4))
 def _cl(): return datetime.now(_TZ).replace(tzinfo=None)
+
+# Caché en memoria para reducir lecturas Firestore (reset cada 5 min)
+_CACHE: Dict[str, Any] = {}
+_CACHE_TTL = 300  # segundos
+
+def _cache_get(key: str):
+    entry = _CACHE.get(key)
+    if entry and time.time() - entry['ts'] < _CACHE_TTL:
+        return entry['val']
+    return None
+
+def _cache_set(key: str, val):
+    _CACHE[key] = {'val': val, 'ts': time.time()}
+
+def _cache_invalidate(prefix: str = ''):
+    keys = [k for k in list(_CACHE.keys()) if not prefix or k.startswith(prefix)]
+    for k in keys:
+        _CACHE.pop(k, None)
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -1225,14 +1243,20 @@ class FirebaseDB:
             data['created_at'] = self._now()
             data['updated_at'] = self._now()
             ref = self.db.collection('productos_solar').add(data)
+            _cache_invalidate('productos_solar')
             return True, ref[1].id
         except Exception as e:
             return False, str(e)
 
     def get_all_productos(self, categoria='', query='', solo_activos=True) -> list:
         try:
-            docs = [self._doc(d) for d in self.db.collection('productos_solar').stream()]
-            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+            cached = _cache_get('productos_solar')
+            if cached is None:
+                docs = [self._doc(d) for d in self.db.collection('productos_solar').stream()]
+                docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+                _cache_set('productos_solar', docs)
+            else:
+                docs = cached
             if solo_activos:
                 docs = [r for r in docs if r.get('activo', True)]
             if categoria:
@@ -1264,6 +1288,7 @@ class FirebaseDB:
             data.pop('id', None)
             data['updated_at'] = self._now()
             self.db.collection('productos_solar').document(doc_id).update(data)
+            _cache_invalidate('productos_solar')
             return True, ''
         except Exception as e:
             return False, str(e)
@@ -1271,6 +1296,7 @@ class FirebaseDB:
     def delete_producto(self, doc_id) -> bool:
         try:
             self.db.collection('productos_solar').document(doc_id).delete()
+            _cache_invalidate('productos_solar')
             return True
         except:
             return False
@@ -1315,14 +1341,20 @@ class FirebaseDB:
             data['created_at'] = self._now()
             data['updated_at'] = self._now()
             ref = self.db.collection('presupuestos').add(data)
+            _cache_invalidate('presupuestos')
             return True, ref[1].id
         except Exception as e:
             return False, str(e)
 
     def get_all_presupuestos(self, estado='', query='') -> list:
         try:
-            docs = [self._doc(d) for d in self.db.collection('presupuestos').stream()]
-            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+            cached = _cache_get('presupuestos')
+            if cached is None:
+                docs = [self._doc(d) for d in self.db.collection('presupuestos').stream()]
+                docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+                _cache_set('presupuestos', docs)
+            else:
+                docs = cached
             if estado:
                 docs = [r for r in docs if r.get('estado') == estado]
             if query:
@@ -1349,6 +1381,7 @@ class FirebaseDB:
             data.pop('id', None)
             data['updated_at'] = self._now()
             self.db.collection('presupuestos').document(doc_id).update(data)
+            _cache_invalidate('presupuestos')
             return True, ''
         except Exception as e:
             return False, str(e)
@@ -1356,6 +1389,7 @@ class FirebaseDB:
     def delete_presupuesto(self, doc_id) -> bool:
         try:
             self.db.collection('presupuestos').document(doc_id).delete()
+            _cache_invalidate('presupuestos')
             return True
         except:
             return False
@@ -1378,14 +1412,20 @@ class FirebaseDB:
                 'detalle': f"Origen: {data.get('origen', 'manual')}",
             }]
             ref = self.db.collection('leads').add(data)
+            _cache_invalidate('leads')
             return True, ref[1].id
         except Exception as e:
             return False, str(e)
 
     def get_all_leads(self, etapa='', asignado='', query='') -> list:
         try:
-            docs = [self._doc(d) for d in self.db.collection('leads').stream()]
-            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+            cached = _cache_get('leads')
+            if cached is None:
+                docs = [self._doc(d) for d in self.db.collection('leads').stream()]
+                docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+                _cache_set('leads', docs)
+            else:
+                docs = cached
             if etapa:
                 docs = [r for r in docs if r.get('etapa') == etapa]
             if asignado:
@@ -1424,6 +1464,7 @@ class FirebaseDB:
             data.pop('id', None)
             data['updated_at'] = self._now()
             self.db.collection('leads').document(doc_id).update(data)
+            _cache_invalidate('leads')
             return True, ''
         except Exception as e:
             return False, str(e)
@@ -1431,6 +1472,7 @@ class FirebaseDB:
     def delete_lead(self, doc_id) -> bool:
         try:
             self.db.collection('leads').document(doc_id).delete()
+            _cache_invalidate('leads')
             return True
         except:
             return False
@@ -1521,14 +1563,20 @@ class FirebaseDB:
             data['created_at'] = self._now()
             data['updated_at'] = self._now()
             ref = self.db.collection('trabajadores').add(data)
+            _cache_invalidate('trabajadores')
             return True, ref[1].id
         except Exception as e:
             return False, str(e)
 
     def get_all_trabajadores(self, solo_activos=True) -> list:
         try:
-            docs = [self._doc(d) for d in self.db.collection('trabajadores').stream()]
-            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+            cached = _cache_get('trabajadores')
+            if cached is None:
+                docs = [self._doc(d) for d in self.db.collection('trabajadores').stream()]
+                docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
+                _cache_set('trabajadores', docs)
+            else:
+                docs = cached
             if solo_activos:
                 docs = [r for r in docs if r.get('activo', True)]
             return docs
@@ -1548,6 +1596,7 @@ class FirebaseDB:
             data.pop('id', None)
             data['updated_at'] = self._now()
             self.db.collection('trabajadores').document(doc_id).update(data)
+            _cache_invalidate('trabajadores')
             return True, ''
         except Exception as e:
             return False, str(e)
@@ -1555,6 +1604,7 @@ class FirebaseDB:
     def delete_trabajador(self, doc_id) -> bool:
         try:
             self.db.collection('trabajadores').document(doc_id).delete()
+            _cache_invalidate('trabajadores')
             return True
         except:
             return False
