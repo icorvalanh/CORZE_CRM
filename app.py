@@ -3539,20 +3539,21 @@ def api_calcular_cotizacion():
 
 ETAPAS_PIPELINE = [
     'Nuevo Lead',
-    'Intento Llamado 1°',
-    'Intento Llamado 2°',
+    'Intento Llamado 1',
+    'Intento Llamado 2',
     'Contactado',
     'Esperando Cuenta Luz',
     'Visita Técnica Agendada',
-    'Propuesta Enviada',
+    'Presupuesto Sin Validar',
+    'Presupuesto Enviado',
     'En Negociación',
-    'Esperando Documentación',
+    'Aprobada',
     'Contrato Firmado',
     'En Instalación',
     'Proyecto Finalizado',
-    'Post Venta',
+    'Post Venta 1',
+    'Post Venta 2',
     'Cerrado',
-    'Firmado',
     'Cliente Perdido',
 ]
 

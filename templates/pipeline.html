@@ -85,20 +85,21 @@
 <div class="kanban-wrap" id="kanbanWrap">
   {% set col_class = {
     'Nuevo Lead':'col-nuevo',
-    'Intento Llamado 1°':'col-intento1',
-    'Intento Llamado 2°':'col-intento2',
+    'Intento Llamado 1':'col-intento1',
+    'Intento Llamado 2':'col-intento2',
     'Contactado':'col-contactado',
     'Esperando Cuenta Luz':'col-cuentaluz',
     'Visita Técnica Agendada':'col-visita',
-    'Propuesta Enviada':'col-propuesta',
+    'Presupuesto Sin Validar':'col-propuesta',
+    'Presupuesto Enviado':'col-negociacion',
     'En Negociación':'col-negociacion',
-    'Esperando Documentación':'col-documentacion',
+    'Aprobada':'col-contrato',
     'Contrato Firmado':'col-contrato',
     'En Instalación':'col-instalacion',
     'Proyecto Finalizado':'col-finalizado',
-    'Post Venta':'col-postventa',
+    'Post Venta 1':'col-postventa',
+    'Post Venta 2':'col-postventa',
     'Cerrado':'col-cerrado',
-    'Firmado':'col-firmado',
     'Cliente Perdido':'col-perdido'
   } %}
   {% for etapa in etapas %}
@@ -968,11 +969,11 @@ let timerInt     = null;
 let timerSecs    = 0;
 let callStarted  = false;
 
-const ETAPAS_LLAMADAS = ['Nuevo Lead', 'Intento Llamado 1°', 'Intento Llamado 2°'];
+const ETAPAS_LLAMADAS = ['Nuevo Lead', 'Intento Llamado 1', 'Intento Llamado 2'];
 
 const ETAPAS_QUICK = [
-  { label: '📵 No contesta 1°',  etapa: 'Intento Llamado 1°',     color: '#5DADE2' },
-  { label: '📵 No contesta 2°',  etapa: 'Intento Llamado 2°',     color: '#A569BD' },
+  { label: '📵 No contesta 1',   etapa: 'Intento Llamado 1',      color: '#5DADE2' },
+  { label: '📵 No contesta 2',   etapa: 'Intento Llamado 2',      color: '#A569BD' },
   { label: '✅ Contactado',       etapa: 'Contactado',             color: '#9B59B6' },
   { label: '📄 Pedir cuenta luz', etapa: 'Esperando Cuenta Luz',  color: '#F0B27A' },
   { label: '🏠 Agendar visita',   etapa: 'Visita Técnica Agendada', color: '#F39C12' },
@@ -980,20 +981,23 @@ const ETAPAS_QUICK = [
 ];
 
 const ETAPA_COLORS = {
-  'Nuevo Lead':              '#3498DB',
-  'Intento Llamado 1°':      '#5DADE2',
-  'Intento Llamado 2°':      '#A569BD',
-  'Contactado':              '#9B59B6',
-  'Esperando Cuenta Luz':    '#F0B27A',
-  'Visita Técnica Agendada': '#F39C12',
-  'Propuesta Enviada':       '#E67E22',
-  'En Negociación':          '#E74C3C',
-  'Contrato Firmado':        '#27AE60',
-  'En Instalación':          '#1ABC9C',
-  'Proyecto Finalizado':     '#2ECC71',
-  'Cerrado':                 '#1ABC9C',
-  'Firmado':                 '#8E44AD',
-  'Cliente Perdido':         '#E74C3C',
+  'Nuevo Lead':                '#3498DB',
+  'Intento Llamado 1':         '#5DADE2',
+  'Intento Llamado 2':         '#A569BD',
+  'Contactado':                '#9B59B6',
+  'Esperando Cuenta Luz':      '#F0B27A',
+  'Visita Técnica Agendada':   '#F39C12',
+  'Presupuesto Sin Validar':   '#E67E22',
+  'Presupuesto Enviado':       '#E67E22',
+  'En Negociación':            '#E74C3C',
+  'Aprobada':                  '#27AE60',
+  'Contrato Firmado':          '#27AE60',
+  'En Instalación':            '#1ABC9C',
+  'Proyecto Finalizado':       '#2ECC71',
+  'Post Venta 1':              '#8E44AD',
+  'Post Venta 2':              '#8E44AD',
+  'Cerrado':                   '#1ABC9C',
+  'Cliente Perdido':           '#E74C3C',
 };
 
 function setCallFilter(f, btn) {
