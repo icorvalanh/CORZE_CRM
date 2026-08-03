@@ -41,7 +41,7 @@ class FirebaseDB:
         except: return 0
 
     def _doc(self, doc) -> dict:
-        d = doc.to_dict(); d['id'] = doc.id; return d
+        d = doc.to_dict() or {}; d['id'] = doc.id; return d
 
     def _log(self, doc_id, accion, usuario, detalle=''):
         try:
@@ -1231,9 +1231,8 @@ class FirebaseDB:
 
     def get_all_productos(self, categoria='', query='', solo_activos=True) -> list:
         try:
-            col = self.db.collection('productos_solar').order_by(
-                'created_at', direction=firestore.Query.DESCENDING)
-            docs = [self._doc(d) for d in col.stream()]
+            docs = [self._doc(d) for d in self.db.collection('productos_solar').stream()]
+            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
             if solo_activos:
                 docs = [r for r in docs if r.get('activo', True)]
             if categoria:
@@ -1322,9 +1321,8 @@ class FirebaseDB:
 
     def get_all_presupuestos(self, estado='', query='') -> list:
         try:
-            col = self.db.collection('presupuestos').order_by(
-                'created_at', direction=firestore.Query.DESCENDING)
-            docs = [self._doc(d) for d in col.stream()]
+            docs = [self._doc(d) for d in self.db.collection('presupuestos').stream()]
+            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
             if estado:
                 docs = [r for r in docs if r.get('estado') == estado]
             if query:
@@ -1386,9 +1384,8 @@ class FirebaseDB:
 
     def get_all_leads(self, etapa='', asignado='', query='') -> list:
         try:
-            col = self.db.collection('leads').order_by(
-                'created_at', direction=firestore.Query.DESCENDING)
-            docs = [self._doc(d) for d in col.stream()]
+            docs = [self._doc(d) for d in self.db.collection('leads').stream()]
+            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
             if etapa:
                 docs = [r for r in docs if r.get('etapa') == etapa]
             if asignado:
@@ -1530,9 +1527,8 @@ class FirebaseDB:
 
     def get_all_trabajadores(self, solo_activos=True) -> list:
         try:
-            col = self.db.collection('trabajadores').order_by(
-                'created_at', direction=firestore.Query.DESCENDING)
-            docs = [self._doc(d) for d in col.stream()]
+            docs = [self._doc(d) for d in self.db.collection('trabajadores').stream()]
+            docs.sort(key=lambda r: str(r.get('created_at', '')), reverse=True)
             if solo_activos:
                 docs = [r for r in docs if r.get('activo', True)]
             return docs
