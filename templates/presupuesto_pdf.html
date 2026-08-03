@@ -288,10 +288,11 @@ table.roi tbody tr.pb td:last-child { color:#27AE60; font-weight:800; }
     {% set precio_pago    = p.total or 0 %}
 
     {% if tiene_manual and tiene_descuento %}
-      {# Precio manual como base, descuento visible, precio final a pago #}
+      {# Precio original calculado → descuento (sobre original) → precio final = manual #}
+      {% set precio_original_total = (p.subtotal_bruto or 0) * (1.19 if p.incluye_iva else 1.0) %}
       <div class="eco-row" style="font-weight:600">
-        <span>Precio total</span>
-        <span>${{ '{:,.0f}'.format(p.total_manual).replace(',','.') }}</span>
+        <span>Precio antes del descuento</span>
+        <span>${{ '{:,.0f}'.format(precio_original_total).replace(',','.') }}</span>
       </div>
       <div class="eco-row disc">
         <span>Descuento aplicado ({{ p.descuento_general_pct }}%)</span>

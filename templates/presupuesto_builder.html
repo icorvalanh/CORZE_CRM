@@ -854,22 +854,18 @@ function recalcular() {
   const precioLista = subDirectos + margen;
   const descPct     = parseFloat(document.getElementById('fDescuento').value)||0;
   const inclIva     = document.getElementById('fIva').checked;
-  // Cadena calculada siempre — el desglose muestra esto sin importar el manual
+  // Cadena calculada completa (siempre)
   const descMonto_calc = precioLista * descPct / 100;
   const subNeto_calc   = precioLista - descMonto_calc;
   const iva_calc       = inclIva ? subNeto_calc * 0.19 : 0;
   const total_calc     = subNeto_calc + iva_calc;
 
-  // Total final: si hay precio manual, el descuento se aplica sobre el manual
-  const manualBase = getTotalManual();
-  let total;
-  if (manualBase > 0) {
-    total = manualBase - (manualBase * descPct / 100);
-  } else {
-    total = total_calc;
-  }
+  // Precio original = calculado SIN descuento (base para mostrar ahorro)
+  const totalOriginal = inclIva ? precioLista * 1.19 : precioLista;
 
-  // Panel derecho
+  const manualBase = getTotalManual();
+
+  // Panel derecho — breakdown siempre muestra valores calculados
   document.getElementById('rPaneles').textContent      = subPaneles>0  ? fmt(subPaneles)  : '—';
   document.getElementById('rInversor').textContent     = subInversor>0 ? fmt(subInversor) : '—';
   document.getElementById('rBateria').textContent      = subBateria>0  ? fmt(subBateria)  : '—';
@@ -880,14 +876,24 @@ function recalcular() {
   document.getElementById('rSubDirectos').textContent  = fmt(subDirectos);
   document.getElementById('rMargen').textContent       = fmt(margen);
   document.getElementById('rPrecioLista').textContent  = fmt(precioLista);
-  document.getElementById('rDescuento').textContent    = fmt(descMonto_calc);
-  document.getElementById('rSubNeto').textContent      = fmt(subNeto_calc);
-  // IVA: $0 cuando hay manual (el precio manual ya es el final, sin IVA encima)
-  document.getElementById('rIva').textContent          = fmt(manualBase > 0 ? 0 : iva_calc);
-  // "Precio original" = total calculado completo (referencia cuando hay manual)
-  document.getElementById('rTotalCalc').textContent    = fmt(total_calc);
-  document.getElementById('rTotal').textContent        = fmt(total);
-  document.getElementById('rTotalTarjeta').textContent = fmt(total * 1.07);
+
+  if (manualBase > 0) {
+    // Con manual: descuento informativo sobre precio original calculado
+    document.getElementById('rDescuento').textContent    = fmt(totalOriginal * descPct / 100);
+    document.getElementById('rSubNeto').textContent      = fmt(subNeto_calc);
+    document.getElementById('rIva').textContent          = fmt(0);
+    document.getElementById('rTotalCalc').textContent    = fmt(totalOriginal);
+    document.getElementById('rTotal').textContent        = fmt(manualBase);
+    document.getElementById('rTotalTarjeta').textContent = fmt(manualBase * 1.07);
+  } else {
+    // Sin manual: cadena calculada normal
+    document.getElementById('rDescuento').textContent    = fmt(descMonto_calc);
+    document.getElementById('rSubNeto').textContent      = fmt(subNeto_calc);
+    document.getElementById('rIva').textContent          = fmt(iva_calc);
+    document.getElementById('rTotalCalc').textContent    = fmt(total_calc);
+    document.getElementById('rTotal').textContent        = fmt(total_calc);
+    document.getElementById('rTotalTarjeta').textContent = fmt(total_calc * 1.07);
+  }
 
   // KPIs solares (debounced, backend)
   clearTimeout(calcTimer);
@@ -984,13 +990,15 @@ async function guardar(estadoOverride) {
   const precioLista = subDirectos + margen;
   const descPct    = parseFloat(document.getElementById('fDescuento').value)||0;
   const inclIva    = document.getElementById('fIva').checked;
+  const totalOriginalGuardar = inclIva ? precioLista * 1.19 : precioLista;
   const manualBase = getTotalManual();
   let descMonto, subNeto, iva, total;
   if (manualBase > 0) {
-    descMonto = manualBase * descPct / 100;
-    total     = manualBase - descMonto;
+    // Descuento informativo sobre precio original calculado; precio final = manual
+    descMonto = totalOriginalGuardar * descPct / 100;
+    total     = manualBase;
     iva       = 0;
-    subNeto   = total;
+    subNeto   = precioLista - (precioLista * descPct / 100);
   } else {
     descMonto = precioLista * descPct / 100;
     subNeto   = precioLista - descMonto;
