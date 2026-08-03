@@ -318,9 +318,15 @@
           <div class="gval" id="dGenAnual">—</div>
           <div class="glbl">Gen. anual (kWh)</div>
         </div>
-        <div class="gen-box" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:10px 16px">
-          <span style="font-size:12px;color:var(--gray2)">Cobertura estimada del consumo</span>
-          <span style="font-size:18px;font-weight:800;color:#2ECC71" id="dCobertura">—</span>
+        <div class="gen-box" style="grid-column:1/-1;padding:10px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;color:var(--gray2)">Cobertura estimada del consumo</span>
+            <span style="font-size:18px;font-weight:800;color:#2ECC71" id="dCobertura">—</span>
+          </div>
+          <div id="dCoberturaBarWrap" style="display:none;background:var(--border1);border-radius:4px;height:8px;overflow:hidden">
+            <div id="dCoberturaBar" style="height:100%;border-radius:4px;background:linear-gradient(90deg,#27AE60,#2ECC71);transition:width .4s;width:0%"></div>
+          </div>
+          <div id="dCoberturaLeyenda" style="display:none;font-size:10px;color:var(--gray3);margin-top:4px;text-align:right"></div>
         </div>
       </div>
     </div>
@@ -861,9 +867,24 @@ function recalcular() {
     document.getElementById('dKwp').textContent      = kWp.toFixed(2);
     document.getElementById('dGenMensual').textContent = Math.round(genMes)+'';
     document.getElementById('dGenAnual').textContent   = Math.round(genAnu)+'';
+    const cobPct = Math.min(Math.round(cob), 200);
     document.getElementById('dCobertura').textContent  = Math.round(cob)+'%';
+    // Barra de cobertura
+    if (totalCons > 0) {
+      const barW = Math.min(cob, 100);
+      const barColor = cob >= 100 ? 'linear-gradient(90deg,#1ABC9C,#2ECC71)' : cob >= 70 ? 'linear-gradient(90deg,#27AE60,#2ECC71)' : 'linear-gradient(90deg,#E67E22,#F5A623)';
+      document.getElementById('dCoberturaBar').style.width = barW+'%';
+      document.getElementById('dCoberturaBar').style.background = barColor;
+      document.getElementById('dCoberturaBarWrap').style.display = '';
+      document.getElementById('dCoberturaLeyenda').style.display = '';
+      document.getElementById('dCoberturaLeyenda').textContent = `Gen. ${Math.round(genAnu).toLocaleString('es-CL')} kWh/año · Consumo ${Math.round(totalCons).toLocaleString('es-CL')} kWh/año`;
+    } else {
+      document.getElementById('dCoberturaBarWrap').style.display = 'none';
+      document.getElementById('dCoberturaLeyenda').style.display = 'none';
+    }
   } else {
     document.getElementById('genGrid').style.display = 'none';
+    document.getElementById('dCoberturaBarWrap').style.display = 'none';
   }
 
   // Extras
@@ -966,6 +987,16 @@ async function actualizarKpisSolares(kWp, totalProyecto) {
     document.getElementById('kAhorro25').textContent  = fmtK(d.ahorro_25);
     document.getElementById('kRoi').textContent       = (d.roi_25||0)+'%';
     document.getElementById('kCo2').textContent       = (d.co2_anual_ton||0)+' ton/año';
+    // Actualizar barra de cobertura con dato preciso de API
+    if (d.cobertura_pct != null) {
+      const apiCob = d.cobertura_pct;
+      document.getElementById('dCobertura').textContent = Math.round(apiCob)+'%';
+      const barW = Math.min(apiCob, 100);
+      const barColor = apiCob >= 100 ? 'linear-gradient(90deg,#1ABC9C,#2ECC71)' : apiCob >= 70 ? 'linear-gradient(90deg,#27AE60,#2ECC71)' : 'linear-gradient(90deg,#E67E22,#F5A623)';
+      document.getElementById('dCoberturaBar').style.width = barW+'%';
+      document.getElementById('dCoberturaBar').style.background = barColor;
+      document.getElementById('dCoberturaBarWrap').style.display = '';
+    }
     if (d.gen_por_mes?.some(m=>m.consumo>0||m.generacion>0)) {
       const mx = Math.max(...d.gen_por_mes.map(m=>Math.max(m.consumo||0,m.generacion||0)));
       document.getElementById('chartBarras').innerHTML = d.gen_por_mes.map(m=>`
