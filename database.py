@@ -1613,7 +1613,7 @@ class FirebaseDB:
             for p in presupuestos:
                 total_manual = p.get('total_manual', 0) or 0
                 total = total_manual if total_manual > 0 else (p.get('total', 0) or 0)
-                estado = p.get('estado', '')
+                estado = (p.get('estado', '') or '').lower()
                 created = str(p.get('created_at', ''))[:7]
                 if created == mes:
                     s['presupuestos_mes'] += 1
