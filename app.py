@@ -3103,6 +3103,12 @@ def presupuesto_ver(doc_id):
     p = db.get_presupuesto_by_id(doc_id)
     if not p:
         return redirect(url_for('presupuestos'))
+    # Sincronizar etapa desde el lead vinculado (fuente de verdad)
+    lead_id = p.get('lead_id')
+    if lead_id:
+        lead = db.get_lead_by_id(lead_id)
+        if lead and lead.get('etapa'):
+            p['etapa_pipeline'] = lead['etapa']
     trabajadores = db.get_all_trabajadores(solo_activos=True)
     return render_template('presupuesto_builder.html', page='presupuestos',
                            presupuesto=p, trabajadores=trabajadores,
@@ -3664,6 +3670,14 @@ def api_leads_mover_etapa(doc_id):
         db.add_historial_lead(doc_id, 'Cambio de etapa',
                               session.get('usuario', ''),
                               f'{etapa_anterior} → {nueva_etapa}')
+        # Propagar etapa a todos los presupuestos vinculados a este lead
+        try:
+            presupuestos = db.get_all_presupuestos()
+            for p in presupuestos:
+                if p.get('lead_id') == doc_id:
+                    db.update_presupuesto(p['id'], {'etapa_pipeline': nueva_etapa})
+        except Exception as e:
+            print(f'[mover-etapa] error actualizando presupuestos: {e}')
     return jsonify({'ok': ok, 'error': err})
 
 @app.route('/api/leads/<doc_id>/notas', methods=['POST'])
