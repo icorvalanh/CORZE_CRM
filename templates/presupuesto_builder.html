@@ -380,7 +380,7 @@
           </div>
         </div>
         <div class="price-row sub-item"><span class="lbl">Margen $</span><span class="val" id="rMargen">$0</span></div>
-        <div class="price-row bold"><span class="lbl">Precio lista</span><span class="val" id="rPrecioLista">$0</span></div>
+        <div class="price-row bold"><span class="lbl" id="lblPrecioLista">Precio lista</span><span class="val" id="rPrecioLista">$0</span></div>
       </div>
 
       <!-- Descuento -->
@@ -871,11 +871,8 @@ function recalcular() {
     total     = subNeto + iva;
   }
 
-  // Total calculado puro (sin manual) — para referencia en panel
-  const totalAutoCalc = (() => {
-    const sn = precioLista * (1 - descPct / 100);
-    return inclIva ? sn * 1.19 : sn;
-  })();
+  // Calculado puro: precio lista + IVA, sin override manual — siempre el original
+  const totalAutoCalc = inclIva ? precioLista * 1.19 : precioLista;
 
   // Panel derecho
   document.getElementById('rPaneles').textContent    = subPaneles>0  ? fmt(subPaneles)  : '—';
@@ -887,7 +884,14 @@ function recalcular() {
   document.getElementById('rDiseno').textContent     = fmt(disenoTram);
   document.getElementById('rSubDirectos').textContent= fmt(subDirectos);
   document.getElementById('rMargen').textContent     = fmt(margen);
-  document.getElementById('rPrecioLista').textContent= fmt(precioLista);
+  // Cuando hay manual: mostrar precio manual como base del desglose
+  if (manualBase > 0) {
+    document.getElementById('lblPrecioLista').textContent = 'Precio manual';
+    document.getElementById('rPrecioLista').textContent   = fmt(manualBase);
+  } else {
+    document.getElementById('lblPrecioLista').textContent = 'Precio lista';
+    document.getElementById('rPrecioLista').textContent   = fmt(precioLista);
+  }
   document.getElementById('rDescuento').textContent  = fmt(descMonto);
   document.getElementById('rSubNeto').textContent    = fmt(subNeto);
   document.getElementById('rIva').textContent        = fmt(iva);
