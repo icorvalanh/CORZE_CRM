@@ -3270,13 +3270,13 @@ def _categorizar_items(items: list) -> dict:
             it = dict(it)
             it['_spec'] = f"{m.group(1)} W c/u" if m else ''
             paneles.append(it)
-        elif any(k in n for k in ['inversor','inverter','solis','growatt','huawei',
+        elif (cat == 'inversor') or any(k in n for k in ['inversor','inverter','solis','growatt','huawei',
                                    'fronius','solaredge','deye','goodwe','[inv']):
             kw_m = _re.search(r'(\d+(?:[.,]\d+)?)\s*k[Ww]', it.get('nombre',''))
             it = dict(it)
             it['_spec'] = f"{kw_m.group(1)} kW" if kw_m else ''
             inversores.append(it)
-        elif any(k in n for k in ['bater','battery','pylontech','byd','dyness','[bat']):
+        elif (cat in ('batería', 'bateria', 'battery')) or any(k in n for k in ['bater','battery','pylontech','byd','dyness','[bat']):
             baterias.append(it)
         else:
             otros.append(it)
