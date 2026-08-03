@@ -331,6 +331,16 @@
       </div>
     </div>
 
+    <!-- Gráfico Consumo vs Generación mensual -->
+    <div class="builder-card" id="chartSolarCard" style="display:none">
+      <div class="section-title">📊 Generación vs Consumo mensual</div>
+      <div style="display:flex;gap:14px;margin-bottom:10px;font-size:11px">
+        <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F5A623"></span>Consumo cliente</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2ECC71"></span>Generación paneles</span>
+      </div>
+      <div id="chartBarras2"></div>
+    </div>
+
     <!-- 4. Costos Adicionales -->
     <div class="builder-card">
       <div class="section-title">
@@ -960,7 +970,11 @@ function recalcular() {
 
 // ── Solar KPIs desde backend ──────────────────────────────────────────────────
 async function actualizarKpisSolares(kWp, totalProyecto) {
-  if (kWp <= 0) { document.getElementById('solarKpisCard').style.display='none'; return; }
+  if (kWp <= 0) {
+    document.getElementById('solarKpisCard').style.display='none';
+    document.getElementById('chartSolarCard').style.display='none';
+    return;
+  }
   const consumos = {};
   MESES.forEach(m => { const v=parseFloat(document.getElementById('cons_'+m).value)||0; if(v>0) consumos[m]=v; });
   try {
@@ -997,17 +1011,26 @@ async function actualizarKpisSolares(kWp, totalProyecto) {
       document.getElementById('dCoberturaBar').style.background = barColor;
       document.getElementById('dCoberturaBarWrap').style.display = '';
     }
-    if (d.gen_por_mes?.some(m=>m.consumo>0||m.generacion>0)) {
+    if (d.gen_por_mes?.some(m=>m.generacion>0)) {
       const mx = Math.max(...d.gen_por_mes.map(m=>Math.max(m.consumo||0,m.generacion||0)));
-      document.getElementById('chartBarras').innerHTML = d.gen_por_mes.map(m=>`
+      const renderRow = m => `
         <div class="chart-bar-row">
           <span class="mes-lbl">${m.mes}</span>
           <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-            ${m.consumo>0?`<div class="bar" style="width:${mx>0?(m.consumo/mx*120):0}px;background:#F5A623"></div>`:''}
-            <div class="bar" style="width:${mx>0?(m.generacion/mx*120):0}px;background:#2ECC71"></div>
+            ${m.consumo>0?`<div class="bar" style="width:${mx>0?Math.round(m.consumo/mx*160):0}px;background:#F5A623"></div>`:''}
+            <div class="bar" style="width:${mx>0?Math.round(m.generacion/mx*160):0}px;background:#2ECC71"></div>
           </div>
-          <span style="font-size:9px;color:var(--gray3);width:48px;text-align:right">${Math.round(m.generacion||0)} kWh</span>
-        </div>`).join('');
+          <div style="text-align:right;min-width:64px">
+            ${m.consumo>0?`<div style="font-size:9px;color:#F5A623">${Math.round(m.consumo)} kWh</div>`:''}
+            <div style="font-size:9px;color:#2ECC71">${Math.round(m.generacion)} kWh</div>
+          </div>
+        </div>`;
+      const html = d.gen_por_mes.map(renderRow).join('');
+      // Chart en columna izquierda (principal)
+      document.getElementById('chartBarras2').innerHTML = html;
+      document.getElementById('chartSolarCard').style.display = '';
+      // Chart en columna derecha (KPIs) - mantener por compatibilidad
+      document.getElementById('chartBarras').innerHTML = html;
       document.getElementById('chartSolar').style.display = '';
     }
   } catch(e) { console.error('KPIs solares error:', e); }
