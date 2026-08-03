@@ -38,6 +38,34 @@ app.secret_key = os.environ.get('SECRET_KEY', 'corze-secret-2024')
 app.config['SESSION_PERMANENT'] = False
 db = FirebaseDB()
 
+# ── Migración única: renombra etapas antiguas del pipeline ────────────────────
+_ETAPA_MIGRATION = {
+    'Intento Llamado 1°':      'Intento Llamado 1',
+    'Intento Llamado 2°':      'Intento Llamado 2',
+    'Propuesta Enviada':        'Presupuesto Enviado',
+    'Esperando Documentación':  'En Negociación',
+    'Post Venta':               'Post Venta 1',
+    'Firmado':                  'Contrato Firmado',
+}
+
+def _migrate_etapas():
+    try:
+        leads = db.get_all_leads(etapa='')
+        count = 0
+        for lead in leads:
+            old = lead.get('etapa', '')
+            new = _ETAPA_MIGRATION.get(old)
+            if new:
+                db.update_lead(lead['id'], {'etapa': new})
+                count += 1
+        if count:
+            print(f'[migrate_etapas] {count} leads migrados')
+    except Exception as e:
+        print(f'[migrate_etapas] error: {e}')
+
+threading.Thread(target=_migrate_etapas, daemon=True).start()
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def login_required(f):
     @wraps(f)
