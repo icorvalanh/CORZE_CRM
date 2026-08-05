@@ -49,7 +49,7 @@ ETAPAS_PIPELINE = [
     "Contactado",
     "Esperando Cuenta Luz",
     "Visita Técnica Agendada",
-    "Presupuesto Sin Validar",
+    "Presupuesto Pendiente",
     "Presupuesto Enviado",
     "En Negociación",
     "Aprobada",

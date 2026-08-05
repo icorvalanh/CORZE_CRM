@@ -46,6 +46,7 @@ _ETAPA_MIGRATION = {
     'Esperando Documentación':  'En Negociación',
     'Post Venta':               'Post Venta 1',
     'Firmado':                  'Contrato Firmado',
+    'Presupuesto Sin Validar':  'Presupuesto Pendiente',
 }
 
 def _migrate_etapas():
@@ -3586,7 +3587,7 @@ ETAPAS_PIPELINE = [
     'Contactado',
     'Esperando Cuenta Luz',
     'Visita Técnica Agendada',
-    'Presupuesto Sin Validar',
+    'Presupuesto Pendiente',
     'Presupuesto Enviado',
     'En Negociación',
     'Aprobada',
