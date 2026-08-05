@@ -46,6 +46,7 @@ ETAPAS_PIPELINE = [
     "Nuevo Lead",
     "Intento Llamado 1",
     "Intento Llamado 2",
+    "No Contesta",
     "Contactado",
     "Esperando Cuenta Luz",
     "Visita Técnica Agendada",
