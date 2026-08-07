@@ -25,6 +25,12 @@
       <option value="{{ cat }}">{{ cat }}</option>
       {% endfor %}
     </select>
+    <select id="filtProveedor" class="filter-select" onchange="filtrar()">
+      <option value="">Todos los proveedores</option>
+      <option value="[RBR ENERGY]">[RBR ENERGY]</option>
+      <option value="[NATURA ENERGY]">[NATURA ENERGY]</option>
+      <option value="[EMAT]">[EMAT]</option>
+    </select>
     <label style="display:flex;align-items:center;gap:6px;color:var(--gray2);font-size:12px;cursor:pointer">
       <input type="checkbox" id="filtSoloActivos" checked onchange="filtrar()"> Solo activos
     </label>
@@ -42,15 +48,16 @@
         <th>Nombre</th>
         <th>Categoría</th>
         <th>Marca</th>
+        <th>Proveedor</th>
+        <th>P. Costo</th>
         <th>P. Venta</th>
         <th>Stock</th>
-        <th>Unidad</th>
         <th>Estado</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody id="tablaBody">
-      <tr><td colspan="9" style="text-align:center;color:var(--gray2);padding:32px">Cargando...</td></tr>
+      <tr><td colspan="10" style="text-align:center;color:var(--gray2);padding:32px">Cargando...</td></tr>
     </tbody>
   </table>
 </div>
@@ -86,6 +93,11 @@
     <div class="form-group">
       <label class="form-label">Marca</label>
       <input class="form-input" id="fMarca" placeholder="Ej: JA Solar">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Proveedor</label>
+      <input class="form-input" id="fProveedor" placeholder="Ej: [RBR ENERGY]">
     </div>
 
     <div class="form-group">
@@ -164,8 +176,9 @@ const fmt = n => '$' + Number(n||0).toLocaleString('es-CL');
 async function cargarProductos() {
   const soloA = document.getElementById('filtSoloActivos').checked;
   const cat   = document.getElementById('filtCategoria').value;
+  const prov  = document.getElementById('filtProveedor').value;
   const q     = document.getElementById('searchInput').value;
-  const url   = `/api/productos?q=${encodeURIComponent(q)}&categoria=${encodeURIComponent(cat)}&solo_activos=${soloA}`;
+  const url   = `/api/productos?q=${encodeURIComponent(q)}&categoria=${encodeURIComponent(cat)}&proveedor=${encodeURIComponent(prov)}&solo_activos=${soloA}`;
   try {
     const r = await fetch(url);
     productos = await r.json();
@@ -179,26 +192,30 @@ function renderTabla() {
   const tb = document.getElementById('tablaBody');
   document.getElementById('countLabel').textContent = `${productos.length} producto(s)`;
   if (!productos.length) {
-    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray2);padding:32px">Sin resultados</td></tr>';
+    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--gray2);padding:32px">Sin resultados</td></tr>';
     return;
   }
   tb.innerHTML = productos.map(p => {
     const stock = parseInt(p.stock_actual || 0);
     const min   = parseInt(p.stock_minimo || 0);
     let stockBadge, stockColor;
-    if (stock <= 0)      { stockBadge = 'Sin Stock'; stockColor = 'var(--red)'; }
-    else if (stock <= min) { stockBadge = 'Bajo';   stockColor = 'var(--yellow)'; }
-    else                 { stockBadge = 'OK';        stockColor = 'var(--green)'; }
+    if (stock <= 0)        { stockBadge = 'Sin Stock'; stockColor = 'var(--red)'; }
+    else if (stock <= min) { stockBadge = 'Bajo';      stockColor = 'var(--yellow)'; }
+    else                   { stockBadge = 'OK';        stockColor = 'var(--green)'; }
+    const provBadge = p.proveedor
+      ? `<span style="font-size:10px;font-weight:600;color:var(--blue);background:rgba(52,152,219,.12);padding:2px 6px;border-radius:4px">${p.proveedor}</span>`
+      : '—';
 
     return `<tr>
       <td><code style="color:var(--blue);font-size:11px">${p.codigo || '—'}</code></td>
       <td style="font-weight:500">${p.nombre}</td>
       <td><span class="badge" style="background:var(--card3)">${p.categoria || '—'}</span></td>
       <td>${p.marca || '—'}</td>
+      <td>${provBadge}</td>
+      <td style="color:var(--gray2)">${fmt(p.precio_costo)}</td>
       <td style="font-weight:600;color:var(--green)">${fmt(p.precio_venta)}</td>
       <td><span style="color:${stockColor};font-weight:700">${stock}</span>
           <span style="font-size:10px;color:${stockColor}"> ${stockBadge}</span></td>
-      <td>${p.unidad || 'unidad'}</td>
       <td><span class="badge" style="background:${p.activo ? '#1A3A1A' : '#3A1A1A'};color:${p.activo ? 'var(--green)' : 'var(--red)'}">
         ${p.activo ? 'Activo' : 'Inactivo'}
       </span></td>
@@ -217,6 +234,7 @@ function abrirModalProducto(p = null) {
   document.getElementById('fCodigo').value     = p?.codigo     || '';
   document.getElementById('fCategoria').value  = p?.categoria  || 'Panel Solar';
   document.getElementById('fMarca').value      = p?.marca      || '';
+  document.getElementById('fProveedor').value  = p?.proveedor  || '';
   document.getElementById('fModelo').value     = p?.modelo     || '';
   document.getElementById('fPotencia').value   = p?.potencia_w || '';
   document.getElementById('fUnidad').value     = p?.unidad     || 'unidad';
@@ -251,6 +269,7 @@ async function guardarProducto() {
     codigo:       document.getElementById('fCodigo').value.trim(),
     categoria:    document.getElementById('fCategoria').value,
     marca:        document.getElementById('fMarca').value.trim(),
+    proveedor:    document.getElementById('fProveedor').value.trim(),
     modelo:       document.getElementById('fModelo').value.trim(),
     potencia_w:   parseInt(document.getElementById('fPotencia').value) || 0,
     unidad:       document.getElementById('fUnidad').value,

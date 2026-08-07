@@ -2808,11 +2808,12 @@ def inventario_solar():
 @app.route('/api/productos', methods=['GET'])
 @login_required
 def api_productos_list():
-    categoria   = request.args.get('categoria', '')
-    q           = request.args.get('q', '')
+    categoria    = request.args.get('categoria', '')
+    q            = request.args.get('q', '')
+    proveedor    = request.args.get('proveedor', '')
     solo_activos = request.args.get('solo_activos', 'true').lower() != 'false'
-    rows = db.get_all_productos(categoria=categoria, query=q, solo_activos=solo_activos)
-    print(f'[api/productos] total={len(rows)} solo_activos={solo_activos} cat={categoria!r}')
+    rows = db.get_all_productos(categoria=categoria, query=q, solo_activos=solo_activos, proveedor=proveedor)
+    print(f'[api/productos] total={len(rows)} solo_activos={solo_activos} cat={categoria!r} prov={proveedor!r}')
     return jsonify(rows)
 
 @app.route('/api/productos/add', methods=['POST'])
@@ -2841,6 +2842,128 @@ def api_productos_edit(doc_id):
 def api_productos_delete(doc_id):
     ok = db.delete_producto(doc_id)
     return jsonify({'ok': ok})
+
+@app.route('/admin/cargar-proveedores', methods=['GET'])
+@login_required
+def admin_cargar_proveedores():
+    """Ruta de uso único para cargar productos desde PDFs de proveedores."""
+    def _p(lista, descuento): return round(lista * (1 - descuento))
+
+    PRODUCTOS = [
+        # ── RBR ENERGY (20% descuento) ─────────────────────────────────────
+        {'nombre':'INVERSOR HIBRIDO HUAWEI SUN2000-10KTL-LC0','codigo':'INHI0006','categoria':'Inversor','marca':'Huawei','proveedor':'[RBR ENERGY]','precio_lista':980000,'precio_costo':_p(980000,.20),'potencia_w':10000},
+        {'nombre':'INVERSOR HIBRIDO HUAWEI SUN2000-6KTL-L1','codigo':'INHI0008','categoria':'Inversor','marca':'Huawei','proveedor':'[RBR ENERGY]','precio_lista':862500,'precio_costo':_p(862500,.20),'potencia_w':6000},
+        {'nombre':'HUAWEI BATERIA LUNA2000-5-E0','codigo':'BALI0010','categoria':'Batería','marca':'Huawei','proveedor':'[RBR ENERGY]','precio_lista':1880000,'precio_costo':_p(1880000,.20),'potencia_w':5000},
+        {'nombre':'HUAWEI ENERGY STORAGE POWER MODULE LUNA2000-5KW-C0','codigo':'ACIN0115','categoria':'Batería','marca':'Huawei','proveedor':'[RBR ENERGY]','precio_lista':912000,'precio_costo':_p(912000,.20),'potencia_w':5000},
+        {'nombre':'HUAWEI SMARTGUARD-63-S0 (MONOFASICO)','codigo':'ACIN0116','categoria':'Accesorio','marca':'Huawei','proveedor':'[RBR ENERGY]','precio_lista':725000,'precio_costo':_p(725000,.20),'potencia_w':0},
+        {'nombre':'PANEL SOLAR BIFACIAL CANADIAN TOPBIHIKU6 66TB-620 620Wp','codigo':'PAMO0014','categoria':'Panel Solar','marca':'Canadian Solar','proveedor':'[RBR ENERGY]','precio_lista':110900,'precio_costo':_p(110900,.20),'potencia_w':620},
+        {'nombre':'PERFIL RIEL R5 4700MM FIXA','codigo':'ESPE0007','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':42000,'precio_costo':_p(42000,.20),'potencia_w':0},
+        {'nombre':'UNION RIEL R5 (12 AUTO 1" INOX) FIXA','codigo':'ESPE0014','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':4689,'precio_costo':_p(4689,.20),'potencia_w':0},
+        {'nombre':'PATA TRASERA ST3H 50X45X2035MM FIXA','codigo':'ESPE0035','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':11998,'precio_costo':_p(11998,.20),'potencia_w':0},
+        {'nombre':'PATA DELANTERA ST3H 50X45X410MM FIXA','codigo':'ESPE0036','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':2650,'precio_costo':_p(2650,.20),'potencia_w':0},
+        {'nombre':'RACK DIAGONAL ST3H W 3850/1778/1805 MM FIXA','codigo':'ESPE0037','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':76694,'precio_costo':_p(76694,.20),'potencia_w':0},
+        {'nombre':'BASE DOBLE ST3H FIXA','codigo':'ESAN0047','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':8890,'precio_costo':_p(8890,.20),'potencia_w':0},
+        {'nombre':'TRABA TRASERA PISO 40X40X4002MM FIXA','codigo':'ESPE0038','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':18173,'precio_costo':_p(18173,.20),'potencia_w':0},
+        {'nombre':'GRAPA UNION RIEL R5-R60 A SOPORTE DIAGONAL FIXA','codigo':'ESAN0048','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':493,'precio_costo':_p(493,.20),'potencia_w':0},
+        {'nombre':'GRAPA INTERMEDIA R5-R60 30MM FIXA','codigo':'ESAN0063','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':513,'precio_costo':_p(513,.20),'potencia_w':0},
+        {'nombre':'GRAPA EXTREMO R5-R60 30MM FIXA','codigo':'ESAN0064','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':463,'precio_costo':_p(463,.20),'potencia_w':0},
+        {'nombre':'PERNO EXPANSION 1/2 X 4,25 FIXA','codigo':'ACFE0010','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':843,'precio_costo':_p(843,.20),'potencia_w':0},
+        {'nombre':'CONECTOR CABLE A TIERRA RIEL R5-R60 FIXA','codigo':'ESAN0061','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':537,'precio_costo':_p(537,.20),'potencia_w':0},
+        {'nombre':'PLETINA DENTADA PARA ATERRIZAR 2 PANELES R5 FIXA','codigo':'ESAN0065','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':119,'precio_costo':_p(119,.20),'potencia_w':0},
+        {'nombre':'PERFIL RIEL R60-B 4750MM FIXA','codigo':'ESPE0055','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':48029,'precio_costo':_p(48029,.20),'potencia_w':0},
+        {'nombre':'UNION RIEL R60-B 300MM (12 AUT 25MM) FIXA','codigo':'ESPE0056','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':3379,'precio_costo':_p(3379,.20),'potencia_w':0},
+        {'nombre':'CONECTOR TRASERO PARA HINCA TIPO V (2M10X90 G.REDONDA) FIXA','codigo':'ESAN0015','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':3335,'precio_costo':_p(3335,.20),'potencia_w':0},
+        {'nombre':'CONECTOR FRONTAL PARA HINCA TIPO U (2M8X20 + 1M10X90 G.REDONDA) FIXA','codigo':'ESAN0016','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':3039,'precio_costo':_p(3039,.20),'potencia_w':0},
+        {'nombre':'CONECTOR SUPERIOR PARA HINCA (2 M10X90 G.REDONDA, 1 G.CUADRADA) FIXA','codigo':'ESAN0068','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':6410,'precio_costo':_p(6410,.20),'potencia_w':0},
+        {'nombre':'HINCA TIPO U 3500MM 3MM 25°30°35° GALVANIZADA FIXA','codigo':'ESPE0058','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':66454,'precio_costo':_p(66454,.20),'potencia_w':0},
+        {'nombre':'RACK DIAGONAL PARA HINCA ST3H 3950/1795 MM 25°30°35° FIXA','codigo':'ESPE0057','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':82513,'precio_costo':_p(82513,.20),'potencia_w':0},
+        {'nombre':'PATA DIAGONAL TRASERA PARA HINCA ST3H AJUSTABLE 2751MM FIXA','codigo':'ESPE0067','categoria':'Estructura','marca':'FIXA','proveedor':'[RBR ENERGY]','precio_lista':23818,'precio_costo':_p(23818,.20),'potencia_w':0},
+        # ── NATURA ENERGY (15% descuento) ──────────────────────────────────
+        {'nombre':'Panel Solar JA Solar Bifacial 620W Monocristalino','codigo':'AD0738','categoria':'Panel Solar','marca':'JA Solar','proveedor':'[NATURA ENERGY]','precio_lista':89279,'precio_costo':_p(89279,.15),'potencia_w':620},
+        {'nombre':'Inversor Hibrido Solis S6-PLUS 9.9kW-48V','codigo':'2536881','categoria':'Inversor','marca':'Solis','proveedor':'[NATURA ENERGY]','precio_lista':1390600,'precio_costo':_p(1390600,.15),'potencia_w':9900},
+        {'nombre':'Inversor Hibrido Solis S6-PLUS 6kW-48V','codigo':'AD0660','categoria':'Inversor','marca':'Solis','proveedor':'[NATURA ENERGY]','precio_lista':1209279,'precio_costo':_p(1209279,.15),'potencia_w':6000},
+        {'nombre':'Batería de Litio Fidus Plus LV (51,2V) 15kWh Pylontech','codigo':'4535574','categoria':'Batería','marca':'Pylontech','proveedor':'[NATURA ENERGY]','precio_lista':1652400,'precio_costo':_p(1652400,.15),'potencia_w':15000},
+        {'nombre':'Pylontech Kit de Cables externos para Fidus-Plus 200A','codigo':'2535573','categoria':'Accesorio','marca':'Pylontech','proveedor':'[NATURA ENERGY]','precio_lista':57375,'precio_costo':_p(57375,.15),'potencia_w':0},
+        {'nombre':'Estructura Coplanar 4 Paneles Solares','codigo':'AD0664','categoria':'Estructura','marca':'','proveedor':'[NATURA ENERGY]','precio_lista':55707,'precio_costo':_p(55707,.15),'potencia_w':0},
+        {'nombre':'Estructura Biposte 2X7 1134X30MM','codigo':'4536757','categoria':'Estructura','marca':'','proveedor':'[NATURA ENERGY]','precio_lista':750570,'precio_costo':_p(750570,.15),'potencia_w':0},
+        {'nombre':'Estructura Monoposte 2X3 1134X30MM','codigo':'5536758','categoria':'Estructura','marca':'','proveedor':'[NATURA ENERGY]','precio_lista':567687,'precio_costo':_p(567687,.15),'potencia_w':0},
+        # ── EMAT (precio neto, sin descuento) ──────────────────────────────
+        {'nombre':'Trina Solar Panel Fotovoltaico Bifacial 700Wp','codigo':'A04209000L016','categoria':'Panel Solar','marca':'Trina Solar','proveedor':'[EMAT]','precio_lista':105720,'precio_costo':105720,'potencia_w':700},
+        {'nombre':'Huawei SUN2000-6K-LB0','codigo':'A02008010L026','categoria':'Inversor','marca':'Huawei','proveedor':'[EMAT]','precio_lista':653343,'precio_costo':653343,'potencia_w':6000},
+        {'nombre':'Huawei Inversor Híbrido 10KTL IP65 versión LC0','codigo':'A02008004L005','categoria':'Inversor','marca':'Huawei','proveedor':'[EMAT]','precio_lista':743632,'precio_costo':743632,'potencia_w':10000},
+        {'nombre':'Huawei SmartGuard-63A-S0','codigo':'A02008004L015','categoria':'Accesorio','marca':'Huawei','proveedor':'[EMAT]','precio_lista':578975,'precio_costo':578975,'potencia_w':0},
+        {'nombre':'Huawei DC/DC Converter LUNA2000 S1 (7kW)','codigo':'A02001001L010','categoria':'Accesorio','marca':'Huawei','proveedor':'[EMAT]','precio_lista':821187,'precio_costo':821187,'potencia_w':7000},
+        {'nombre':'Huawei Batería LUNA2000-7-E1 (Módulo 7kWh)','codigo':'A02001001L011','categoria':'Batería','marca':'Huawei','proveedor':'[EMAT]','precio_lista':2420919,'precio_costo':2420919,'potencia_w':7000},
+        {'nombre':'Riel Aluminio 5000mm (Biposte)','codigo':'A00306003L034','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':35833,'precio_costo':35833,'potencia_w':0},
+        {'nombre':'Conector de Rieles para Biposte','codigo':'A00306003L035','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':3133,'precio_costo':3133,'potencia_w':0},
+        {'nombre':'Set Pre-ensamblado Biposte','codigo':'B00306003L002','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':70850,'precio_costo':70850,'potencia_w':0},
+        {'nombre':'Poste Inclinado 1755mm (Biposte)','codigo':'A00306003L045','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':13538,'precio_costo':13538,'potencia_w':0},
+        {'nombre':'Poste Inclinado 1788mm (Biposte)','codigo':'A00306003L046','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':13612,'precio_costo':13612,'potencia_w':0},
+        {'nombre':'Pernos M10x80 (Biposte)','codigo':'A00306003L049','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':447,'precio_costo':447,'potencia_w':0},
+        {'nombre':'Fijador de Riel (Biposte)','codigo':'A00306003L036','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':551,'precio_costo':551,'potencia_w':0},
+        {'nombre':'Base a Piso Posterior (Biposte)','codigo':'A00306003L043','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':5149,'precio_costo':5149,'potencia_w':0},
+        {'nombre':'Ángulos Tensores 4086mm (Biposte)','codigo':'A00306003L047','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':16771,'precio_costo':16771,'potencia_w':0},
+        {'nombre':'Conector Ángulo Tensores (Biposte)','codigo':'A00306003L048','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':1015,'precio_costo':1015,'potencia_w':0},
+        {'nombre':'AS Kit Fijación Central Mid Clamp 35mm','codigo':'A00306004L020','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':632,'precio_costo':632,'potencia_w':0},
+        {'nombre':'AS Kit Fijación Lateral End Clamp 33mm','codigo':'A00306000L003','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':774,'precio_costo':774,'potencia_w':0},
+        {'nombre':'AS Groundclip Puesta a Tierra','codigo':'A00306004L018','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':143,'precio_costo':143,'potencia_w':0},
+        {'nombre':'AS Anclaje Puesta a Tierra Aluminio','codigo':'A00306004L041','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':729,'precio_costo':729,'potencia_w':0},
+        {'nombre':'RM29 Post 200x50x15x2.0-4000','codigo':'A00306003L020','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':37343,'precio_costo':37343,'potencia_w':0},
+        {'nombre':'RM47 Purlin','codigo':'A00306003L022','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':36588,'precio_costo':36588,'potencia_w':0},
+        {'nombre':'RM29 Post 200x50x15x3.0-2375','codigo':'A00306003L018','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':39708,'precio_costo':39708,'potencia_w':0},
+        {'nombre':'RM29 Diagonal Bracing 40x40x2.0-4400','codigo':'A00306003L024','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':10700,'precio_costo':10700,'potencia_w':0},
+        {'nombre':'RM29 Diagonal Bracing 40x40x2.0-2800','codigo':'A00306003L023','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':6472,'precio_costo':6472,'potencia_w':0},
+        {'nombre':'RM29 Diagonal Bracing 80x40x2.0-1225','codigo':'A00306003L021','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':5686,'precio_costo':5686,'potencia_w':0},
+        {'nombre':'RM29 Diagonal Bracing Connector 170x4.0','codigo':'A00306003L027','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':2279,'precio_costo':2279,'potencia_w':0},
+        {'nombre':'RM29 Connector 380x70x2.0','codigo':'A00306003L028','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':1028,'precio_costo':1028,'potencia_w':0},
+        {'nombre':'RM59 Mordaza A','codigo':'A00306003L025','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':838,'precio_costo':838,'potencia_w':0},
+        {'nombre':'RM59 Mordaza B','codigo':'A00306003L026','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':493,'precio_costo':493,'potencia_w':0},
+        {'nombre':'RM29 Bolt Perno Hexagonal Grado 5 Gal. 3/8-16x1.1/4','codigo':'A00306003L029','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':58,'precio_costo':58,'potencia_w':0},
+        {'nombre':'Bolt Perno Hexagonal Grado 5 Gal. 3/8-16x1.1/2','codigo':'A00306003L030','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':196,'precio_costo':196,'potencia_w':0},
+        {'nombre':'Nut Tuerca Hexagonal Grado 5 Gal. 3/8','codigo':'A00306003L031','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':37,'precio_costo':37,'potencia_w':0},
+        {'nombre':'RM29 Plain Washer Golilla Plana Ancha Gal. 3/8','codigo':'A00306003L032','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':24,'precio_costo':24,'potencia_w':0},
+        {'nombre':'Spring Washer Golilla Presión Gal. 3/8','codigo':'A00306003L033','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':12,'precio_costo':12,'potencia_w':0},
+        {'nombre':'AS Fijación Central Mid Clamp (Sin tuerca)','codigo':'A00306004L015','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':419,'precio_costo':419,'potencia_w':0},
+        {'nombre':'AS Fijación Lateral End Clamp 33mm (Sin tuerca)','codigo':'A00306003L055','categoria':'Estructura','marca':'EMAT','proveedor':'[EMAT]','precio_lista':416,'precio_costo':416,'potencia_w':0},
+    ]
+
+    try:
+        col = db.db.collection('productos_solar')
+        existentes = {d.to_dict().get('codigo','') for d in col.stream() if d.to_dict().get('codigo')}
+        ts = db._now()
+        subidos = saltados = 0
+        for prod in PRODUCTOS:
+            cod = prod.get('codigo','').strip()
+            if cod and cod in existentes:
+                saltados += 1
+                continue
+            doc = {
+                'nombre':       prod['nombre'],
+                'codigo':       prod.get('codigo',''),
+                'categoria':    prod.get('categoria','Otro'),
+                'marca':        prod.get('marca',''),
+                'proveedor':    prod.get('proveedor',''),
+                'precio_lista': prod.get('precio_lista',0),
+                'precio_costo': prod.get('precio_costo',0),
+                'precio_venta': 0,
+                'potencia_w':   prod.get('potencia_w',0),
+                'unidad':       'unidad',
+                'stock_actual': 0,
+                'stock_minimo': 0,
+                'activo':       True,
+                'descripcion':  '',
+                'created_at':   ts,
+                'updated_at':   ts,
+            }
+            col.add(doc)
+            subidos += 1
+        from database import _cache_invalidate
+        _cache_invalidate('productos_solar')
+        return f"<pre>✅ Carga completada: {subidos} subidos, {saltados} saltados (ya existían).\n\nPuedes cerrar esta página.</pre>"
+    except Exception as e:
+        import traceback
+        return f"<pre>ERROR: {e}\n\n{traceback.format_exc()}</pre>", 500
+
 
 @app.route('/api/productos/import-excel', methods=['POST'])
 @login_required

@@ -1248,7 +1248,7 @@ class FirebaseDB:
         except Exception as e:
             return False, str(e)
 
-    def get_all_productos(self, categoria='', query='', solo_activos=True) -> list:
+    def get_all_productos(self, categoria='', query='', solo_activos=True, proveedor='') -> list:
         try:
             cached = _cache_get('productos_solar')
             if cached is None:
@@ -1261,6 +1261,8 @@ class FirebaseDB:
                 docs = [r for r in docs if r.get('activo', True)]
             if categoria:
                 docs = [r for r in docs if r.get('categoria', '') == categoria]
+            if proveedor:
+                docs = [r for r in docs if r.get('proveedor', '') == proveedor]
             if query:
                 q = query.lower()
                 docs = [r for r in docs if
@@ -1268,6 +1270,7 @@ class FirebaseDB:
                     q in str(r.get('codigo', '')).lower() or
                     q in str(r.get('marca', '')).lower() or
                     q in str(r.get('modelo', '')).lower() or
+                    q in str(r.get('proveedor', '')).lower() or
                     q in str(r.get('descripcion', '')).lower()]
             return docs
         except Exception as e:
