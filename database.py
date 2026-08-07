@@ -612,6 +612,32 @@ class FirebaseDB:
             print(f'Error save_costos_fijos: {e}')
             return False
 
+    def get_google_tokens(self) -> dict:
+        try:
+            doc = self.db.collection('config').document('google_calendar').get()
+            return doc.to_dict() or {} if doc.exists else {}
+        except Exception:
+            return {}
+
+    def save_google_tokens(self, access_token: str, refresh_token: str) -> bool:
+        try:
+            self.db.collection('config').document('google_calendar').set({
+                'access_token':  access_token,
+                'refresh_token': refresh_token,
+            })
+            return True
+        except Exception as e:
+            print(f'Error save_google_tokens: {e}')
+            return False
+
+    def clear_google_tokens(self) -> bool:
+        try:
+            self.db.collection('config').document('google_calendar').delete()
+            return True
+        except Exception as e:
+            print(f'Error clear_google_tokens: {e}')
+            return False
+
     def get_wa_templates(self) -> list:
         try:
             doc = self.db.collection('config').document('wa_templates').get()

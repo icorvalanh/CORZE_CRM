@@ -1405,8 +1405,11 @@ def google_oauth_callback():
     if 'access_token' not in tokens:
         return f'Error obteniendo token: {tokens}', 400
 
-    session['google_access_token']  = tokens.get('access_token')
-    session['google_refresh_token'] = tokens.get('refresh_token', '')
+    access_token  = tokens.get('access_token')
+    refresh_token = tokens.get('refresh_token', '')
+    session['google_access_token']  = access_token
+    session['google_refresh_token'] = refresh_token
+    db.save_google_tokens(access_token, refresh_token)
     return redirect(url_for('calendario') + '?calendar=conectado')
 
 @app.route('/api/calendar/disconnect', methods=['POST'])
@@ -1414,10 +1417,20 @@ def google_oauth_callback():
 def api_calendar_disconnect():
     session.pop('google_access_token', None)
     session.pop('google_refresh_token', None)
+    db.clear_google_tokens()
     return jsonify({'ok': True})
 
+def _load_tokens_from_db():
+    """Carga tokens de Firestore a la sesión si la sesión no los tiene."""
+    if not session.get('google_access_token') and not session.get('google_refresh_token'):
+        stored = db.get_google_tokens()
+        if stored.get('access_token'):
+            session['google_access_token']  = stored['access_token']
+            session['google_refresh_token'] = stored.get('refresh_token', '')
+
 def _google_refresh_token():
-    """Renueva el access token usando el refresh token guardado en sesión."""
+    """Renueva el access token usando el refresh token guardado en Firestore/sesión."""
+    _load_tokens_from_db()
     refresh_token = session.get('google_refresh_token')
     if not refresh_token:
         return False
@@ -1431,6 +1444,7 @@ def _google_refresh_token():
         data = resp.json()
         if 'access_token' in data:
             session['google_access_token'] = data['access_token']
+            db.save_google_tokens(data['access_token'], refresh_token)
             return True
     except Exception as e:
         print(f'Error renovando token Google: {e}')
@@ -1438,6 +1452,7 @@ def _google_refresh_token():
 
 def _google_get(url, params=None):
     """GET a Google API renovando token si es necesario."""
+    _load_tokens_from_db()
     token = session.get('google_access_token')
     if not token:
         return None, 401
@@ -1449,6 +1464,7 @@ def _google_get(url, params=None):
 
 def _google_post(url, json_data):
     """POST a Google API renovando token si es necesario."""
+    _load_tokens_from_db()
     token = session.get('google_access_token')
     if not token:
         return None, 401
@@ -1463,8 +1479,8 @@ def _google_post(url, json_data):
 @app.route('/api/calendar/status')
 @login_required
 def api_calendar_status():
+    _load_tokens_from_db()
     connected = bool(session.get('google_access_token') or session.get('google_refresh_token'))
-    # Si hay refresh token pero no access token, renovar automáticamente
     if session.get('google_refresh_token') and not session.get('google_access_token'):
         connected = _google_refresh_token()
     return jsonify({'connected': connected})
