@@ -2981,6 +2981,81 @@ def admin_cargar_proveedores():
         return f"<pre>ERROR: {e}\n\n{traceback.format_exc()}</pre>", 500
 
 
+@app.route('/admin/cargar-tableros-rapel', methods=['GET'])
+@login_required
+def admin_cargar_tableros_rapel():
+    """Carga componentes de tableros AC/DC del Proyecto Rapel (BOM_Tableros_Rapel_CORZE_V2)."""
+
+    PRODUCTOS = [
+        # ── Protecciones AC: Disyuntores ───────────────────────────────────
+        {'nombre':'Disyuntor Termomagnético Bipolar AC 32A Curva C','codigo':'PROT-DT-32A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Corte General / Salida Inversor. Sistemas 5 kW (Pozos El Pescado, Don Dono, Corrales).','unidad':'unidad','potencia_w':0},
+        {'nombre':'Disyuntor Termomagnético Bipolar AC 40A Curva C','codigo':'PROT-DT-40A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Corte General / Salida Inversor. Sistema 6 kW (Galpón Máquinas).','unidad':'unidad','potencia_w':0},
+        {'nombre':'Disyuntor Termomagnético Bipolar AC 50A Curva C','codigo':'PROT-DT-50A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Corte General / Salida Inversor. Sistemas 8 kW (Pozos Pejerreyes, Tranque del Amor).','unidad':'unidad','potencia_w':0},
+        {'nombre':'Disyuntor Termomagnético Bipolar AC 63A Curva C','codigo':'PROT-DT-63A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Corte General / Salida Inversor. Sistema 9.9 kW (Casa Patronal).','unidad':'unidad','potencia_w':0},
+        # ── Protecciones AC: Diferenciales ────────────────────────────────
+        {'nombre':'Interruptor Diferencial Bipolar Tipo A 30mA Superinmunizado','codigo':'PROT-DIF-30MA','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Para inversores < 6 kW (5 kW). Directriz normativa anti-disparo intempestivo.','unidad':'unidad','potencia_w':0},
+        {'nombre':'Interruptor Diferencial Bipolar Tipo A 100mA Superinmunizado','codigo':'PROT-DIF-100MA','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Para inversores >= 6 kW (6 kW, 8 kW, 9.9 kW). Directriz normativa anti-disparo intempestivo.','unidad':'unidad','potencia_w':0},
+        # ── Protecciones DC: Fusibles/Termomagnéticos ─────────────────────
+        {'nombre':'Protección DC Fusible/Termomagnético 120A (1x Pylontech)','codigo':'PROT-DC-120A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Para 1 batería Pylontech Fidus 15 kWh. Sistemas 5 kW y 6 kW.','unidad':'unidad','potencia_w':0},
+        {'nombre':'Protección DC Fusible/Termomagnético 160A (2x Pylontech)','codigo':'PROT-DC-160A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Para 2 baterías Pylontech. Sistemas 8 kW (Pejerreyes, Tranque del Amor).','unidad':'unidad','potencia_w':0},
+        {'nombre':'Protección DC Fusible/Termomagnético 200A (1x Dyness 16kWh)','codigo':'PROT-DC-200A','categoria':'Protección','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Para batería Dyness PowerBrick SC 16 kWh. Sistema 9.9 kW Casa Patronal.','unidad':'unidad','potencia_w':0},
+        # ── Tablero: Selectores de Transferencia ──────────────────────────
+        {'nombre':'Selector Transferencia Manual 3 estados (1-0-2) 63A para generador','codigo':'TAB-SEL-63A','categoria':'Tablero','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Sistemas 5 kW, 6 kW y 8 kW.','unidad':'unidad','potencia_w':0},
+        {'nombre':'Selector Transferencia Manual 3 estados (1-0-2) 100A para generador','codigo':'TAB-SEL-100A','categoria':'Tablero','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Sistema 9.9 kW Casa Patronal.','unidad':'unidad','potencia_w':0},
+        # ── Tablero: Gabinetes, Kits y Señalética ─────────────────────────
+        {'nombre':'Luz Piloto LED 220V DIN + Portafusible + Fusible de vidrio 1A','codigo':'TAB-LUZ-DIN','categoria':'Tablero','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Kit señalización tablero. Común a todos los proyectos Rapel.','unidad':'kit','potencia_w':0},
+        {'nombre':'Extintor Automático a Riel DIN (Agente limpio/Polvo)','codigo':'TAB-EXT-DIN','categoria':'Tablero','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Protección contra incendio. Común a todos los proyectos Rapel.','unidad':'unidad','potencia_w':0},
+        {'nombre':'Gabinetes Estanco IP65 (1 AC + 1 DC Strings) + Prensas Estopas y Falsos Polos','codigo':'TAB-GAB-IP65','categoria':'Tablero','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Kit 2 gabinetes por sistema. Común a todos los proyectos Rapel.','unidad':'kit','potencia_w':0},
+        {'nombre':'Kit de Rótulos grabados norma SEC','codigo':'TAB-ROT-SEC','categoria':'Tablero','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Rótulos grabados: "P. GENERAL", "INV", "BAT", etc. Común a todos los proyectos Rapel.','unidad':'kit','potencia_w':0},
+        # ── Materiales: Terminales Punteras (Ferrules) ────────────────────
+        {'nombre':'Terminales Punteras (Ferrules) tipo pin 5mm²','codigo':'MAT-FER-5MM','categoria':'Material Eléctrico','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Cableado 5 mm². Pozo El Pescado.','unidad':'bolsa','potencia_w':0},
+        {'nombre':'Terminales Punteras (Ferrules) tipo pin 6mm²','codigo':'MAT-FER-6MM','categoria':'Material Eléctrico','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Cableado 6 mm². Pozos Don Dono y Corrales (5 kW).','unidad':'bolsa','potencia_w':0},
+        {'nombre':'Terminales Punteras (Ferrules) tipo pin 10mm²','codigo':'MAT-FER-10MM','categoria':'Material Eléctrico','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Cableado 10 mm². Sistemas 6 kW y 8 kW.','unidad':'bolsa','potencia_w':0},
+        {'nombre':'Terminales Punteras (Ferrules) tipo pin 16mm²','codigo':'MAT-FER-16MM','categoria':'Material Eléctrico','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Cableado 16 mm². Sistema 9.9 kW Casa Patronal.','unidad':'bolsa','potencia_w':0},
+        # ── Materiales: Cables ────────────────────────────────────────────
+        {'nombre':'Cordón flexible RV-K/H07RN-F 6mm² (inversor-tablero)','codigo':'CAB-CORD-6MM','categoria':'Cable','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Entre inversor y tablero. Sistemas 5 kW.','unidad':'rollo','potencia_w':0},
+        {'nombre':'Cordón flexible RV-K/H07RN-F 10mm² (inversor-tablero)','codigo':'CAB-CORD-10MM','categoria':'Cable','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Entre inversor y tablero. Sistemas 6 kW y 8 kW.','unidad':'rollo','potencia_w':0},
+        {'nombre':'Cordón flexible RV-K/H07RN-F 16mm² (inversor-tablero)','codigo':'CAB-CORD-16MM','categoria':'Cable','marca':'','proveedor':'[TABLEROS RAPEL]','descripcion':'Entre inversor y tablero. Sistema 9.9 kW Casa Patronal.','unidad':'rollo','potencia_w':0},
+    ]
+
+    try:
+        col = db.db.collection('productos_solar')
+        existentes = {d.to_dict().get('codigo','') for d in col.stream() if d.to_dict().get('codigo')}
+        ts = db._now()
+        subidos = saltados = 0
+        for prod in PRODUCTOS:
+            cod = prod.get('codigo','').strip()
+            if cod and cod in existentes:
+                saltados += 1
+                continue
+            doc = {
+                'nombre':       prod['nombre'],
+                'codigo':       prod.get('codigo',''),
+                'categoria':    prod.get('categoria','Otro'),
+                'marca':        prod.get('marca',''),
+                'proveedor':    prod.get('proveedor',''),
+                'descripcion':  prod.get('descripcion',''),
+                'precio_lista': 0,
+                'precio_costo': 0,
+                'precio_venta': 0,
+                'potencia_w':   0,
+                'unidad':       prod.get('unidad','unidad'),
+                'stock_actual': 0,
+                'stock_minimo': 0,
+                'activo':       True,
+                'created_at':   ts,
+                'updated_at':   ts,
+            }
+            col.add(doc)
+            subidos += 1
+        from database import _cache_invalidate
+        _cache_invalidate('productos_solar')
+        return f"<pre>✅ Tableros Rapel cargados: {subidos} nuevos, {saltados} ya existían.\n\nPuedes cerrar esta página.</pre>"
+    except Exception as e:
+        import traceback
+        return f"<pre>ERROR: {e}\n\n{traceback.format_exc()}</pre>", 500
+
+
 @app.route('/api/productos/import-excel', methods=['POST'])
 @login_required
 def api_productos_import_excel():
