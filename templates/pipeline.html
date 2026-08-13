@@ -62,8 +62,8 @@
 <div class="page-header" style="padding-bottom:8px">
   <div style="display:flex;align-items:center;gap:12px">
     <h1 class="page-title">👥 CRM / Pipeline</h1>
-    <input type="text" id="searchGlobal" class="search-input" placeholder="🔍 Buscar lead..."
-           oninput="filtrarLeads()" style="min-width:180px;font-size:12px">
+    <input type="text" id="searchGlobal" class="search-input" placeholder="🔍 Nombre, email, teléfono, empresa..."
+           oninput="filtrarLeads()" style="min-width:220px;font-size:12px">
     <select id="filtTrabajador" class="filter-select" onchange="filtrarLeads()">
       <option value="">Todos los asesores</option>
       {% for t in trabajadores %}
@@ -505,13 +505,26 @@ function recalcularContadores() {
 
 // ── Filtrar ───────────────────────────────────────────────────────────────
 function filtrarLeads() {
-  const q     = document.getElementById('searchGlobal').value.toLowerCase();
-  const asig  = document.getElementById('filtTrabajador').value.toLowerCase();
+  const q    = document.getElementById('searchGlobal').value.toLowerCase().trim();
+  const asig = document.getElementById('filtTrabajador').value.toLowerCase();
+  const qTel = q.replace(/[\s\-\+\.]/g, '');
+
   document.querySelectorAll('.lead-card').forEach(card => {
-    const text   = card.textContent.toLowerCase();
-    const lead   = leadsData.find(l => l.id === card.dataset.id);
+    const lead     = leadsData.find(l => l.id === card.dataset.id);
     const asigLead = (lead?.asignado_a || '').toLowerCase();
-    const matchQ = !q || text.includes(q);
+
+    let matchQ = !q;
+    if (!matchQ) {
+      const haystack = [
+        lead?.nombre, lead?.apellido, lead?.email, lead?.telefono,
+        lead?.empresa, lead?.ciudad, lead?.region, lead?.tipo_proyecto,
+        lead?.consumo_estimado, lead?.notas, lead?.origen, lead?.etapa,
+        card.textContent,
+      ].join(' ').toLowerCase();
+      const telLead = (lead?.telefono || '').replace(/[\s\-\+\.]/g, '');
+      matchQ = haystack.includes(q) || (qTel.length >= 4 && telLead.includes(qTel));
+    }
+
     const matchA = !asig || asigLead.includes(asig);
     card.style.display = (matchQ && matchA) ? '' : 'none';
   });
