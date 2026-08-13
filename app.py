@@ -4183,6 +4183,174 @@ def api_leads_importar_eml():
         return jsonify({'ok': False, 'error': f'Error interno: {exc}', 'trace': traceback.format_exc()[-400:]})
 
 
+@app.route('/api/leads/importar-eml-batch', methods=['POST'])
+@login_required
+def api_leads_importar_eml_batch():
+    """Importa múltiples EML ordenados por fecha. Devuelve resumen {creados, duplicados, errores}."""
+    import re as _re
+    import email as _eml
+    from email.header import decode_header as _dh
+    from email.utils import parsedate_to_datetime as _parse_dt
+
+    archivos = request.files.getlist('archivos')
+    if not archivos:
+        return jsonify({'ok': False, 'error': 'No se recibieron archivos (campo: archivos)'})
+
+    def _decode_header(val):
+        if not val:
+            return ''
+        try:
+            return ' '.join(
+                (p.decode(enc or 'utf-8') if isinstance(p, bytes) else p)
+                for p, enc in _dh(val)
+            )
+        except Exception:
+            return str(val)
+
+    def _get_body(msg):
+        body = ''
+        for part in msg.walk():
+            if part.get_content_type() == 'text/plain':
+                payload = part.get_payload(decode=True)
+                if payload:
+                    body = payload.decode(part.get_content_charset() or 'utf-8', errors='replace')
+                    break
+        if not body:
+            for part in msg.walk():
+                if part.get_content_type() == 'text/html':
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        html = payload.decode(part.get_content_charset() or 'utf-8', errors='replace')
+                        body = _re.sub(r'<br\s*/?>', '\n', html, flags=_re.IGNORECASE)
+                        body = _re.sub(r'<[^>]+>', '', body)
+                        break
+        return body
+
+    # Parsear y ordenar por fecha
+    parsed = []
+    for f in archivos:
+        if not f.filename.lower().endswith('.eml'):
+            continue
+        raw = f.read()
+        if not raw:
+            continue
+        try:
+            msg = _eml.message_from_bytes(raw)
+            date_str = msg.get('Date', '')
+            try:
+                fecha = _parse_dt(date_str)
+            except Exception:
+                from datetime import datetime, timezone
+                fecha = datetime.min.replace(tzinfo=timezone.utc)
+            parsed.append((fecha, f.filename, msg))
+        except Exception:
+            continue
+
+    parsed.sort(key=lambda x: x[0])  # más antiguo primero
+
+    creados = []
+    duplicados = []
+    errores = []
+    usuario = session.get('usuario', '')
+
+    for fecha, filename, msg in parsed:
+        try:
+            asunto = _decode_header(msg.get('Subject', ''))
+            body   = _get_body(msg)
+            if not body:
+                errores.append({'archivo': filename, 'error': 'Sin texto'})
+                continue
+
+            body = body.replace('\r\n', '\n').replace('\r', '\n')
+
+            nombre = apellido = email_lead = telefono = ciudad = region = ''
+            consumo_estimado = tipo_proyecto = ''
+
+            for block in body.split('\n\n'):
+                block = block.strip()
+                if not block:
+                    continue
+                lines = [l.strip() for l in block.split('\n') if l.strip()]
+                if len(lines) < 2:
+                    continue
+                q = lines[0].lower()
+                a = lines[1]
+                if not a:
+                    continue
+                if any(k in q for k in ('nombre', 'name')):
+                    parts = a.split()
+                    nombre   = parts[0] if parts else a
+                    apellido = ' '.join(parts[1:]) if len(parts) > 1 else ''
+                elif any(k in q for k in ('email', 'correo', 'e-mail')):
+                    email_lead = a.strip()
+                elif any(k in q for k in ('tel', 'whatsapp', 'phone', 'fono', 'celular')):
+                    telefono = _re.sub(r'\s+', '', a)
+                elif any(k in q for k in ('ciudad', 'indica', 'localidad', 'city')):
+                    ciudad = a
+                elif any(k in q for k in ('regi', 'region', 'región')):
+                    region = a
+                elif any(k in q for k in ('pagas', 'electricidad', 'boleta', 'luz', 'gasto')):
+                    consumo_estimado = a
+                elif any(k in q for k in ('donde', 'dónde', 'evaluar', 'soluci', 'instala', 'proyecto', 'residencial', 'comercial')):
+                    tipo_proyecto = ('Residencial'
+                                     if any(w in a.lower() for w in ('casa', 'residencial', 'hogar', 'departamento'))
+                                     else 'Comercial')
+
+            if not email_lead:
+                m = _re.search(r'[\w\.\-]+@[\w\.\-]+\.\w+', body)
+                if m:
+                    email_lead = m.group(0)
+
+            if not nombre:
+                nombre = 'Lead Web'
+
+            if email_lead:
+                existing = db.get_lead_by_email(email_lead)
+                if existing:
+                    db.add_historial_lead(existing['id'], 'EML duplicado', usuario,
+                                          f'EML batch: {filename} — email ya existía.')
+                    duplicados.append({'archivo': filename, 'nombre': existing.get('nombre', ''),
+                                       'email': email_lead, 'lead_id': existing['id']})
+                    continue
+
+            notas_parts = []
+            if tipo_proyecto:    notas_parts.append(f'Tipo proyecto: {tipo_proyecto}')
+            if consumo_estimado: notas_parts.append(f'Consumo estimado: {consumo_estimado}')
+            if ciudad:           notas_parts.append(f'Ciudad: {ciudad}')
+            if region:           notas_parts.append(f'Región: {region}')
+            if asunto:           notas_parts.append(f'Asunto EML: {asunto}')
+
+            lead_data = {
+                'nombre': nombre, 'apellido': apellido,
+                'email': email_lead, 'telefono': telefono,
+                'ciudad': ciudad, 'region': region,
+                'tipo_proyecto': tipo_proyecto, 'consumo_estimado': consumo_estimado,
+                'empresa': '', 'origen': 'formulario_web',
+                'notas': '\n'.join(notas_parts),
+                'etapa': 'Nuevo Lead', 'creado_por': usuario,
+            }
+            ok, lead_id = db.add_lead(lead_data)
+            if ok:
+                db.add_historial_lead(lead_id, 'EML importado', usuario,
+                                      f'Importado desde archivo: {filename}')
+                creados.append({'archivo': filename, 'nombre': nombre, 'apellido': apellido,
+                                'email': email_lead, 'telefono': telefono,
+                                'tipo_proyecto': tipo_proyecto, 'id': lead_id})
+            else:
+                errores.append({'archivo': filename, 'error': str(lead_id)})
+
+        except Exception as e:
+            errores.append({'archivo': filename, 'error': str(e)})
+
+    return jsonify({
+        'ok': True,
+        'creados':    creados,
+        'duplicados': duplicados,
+        'errores':    errores,
+        'resumen':    f'{len(creados)} creados · {len(duplicados)} duplicados · {len(errores)} errores',
+    })
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  TRABAJADORES
 # ══════════════════════════════════════════════════════════════════════════════

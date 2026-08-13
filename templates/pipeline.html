@@ -74,8 +74,8 @@
   <div style="display:flex;gap:8px">
     <button class="btn btn-secondary" id="btnCheckEmail" onclick="revisarBandeja()" title="Revisar contacto@corze.cl ahora">📬 Revisar bandeja</button>
     <button class="btn btn-secondary" onclick="abrirModalEmail()">📧 Importar email</button>
-    <button class="btn btn-secondary" onclick="document.getElementById('emlFileInput').click()" title="Subir archivo .eml de formulario web">📎 Subir EML</button>
-    <input type="file" id="emlFileInput" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="importarEML(this)">
+    <button class="btn btn-secondary" onclick="document.getElementById('emlFileInput').click()" title="Subir uno o varios archivos .eml">📎 Subir EML</button>
+    <input type="file" id="emlFileInput" accept=".eml" multiple style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="importarEML(this)">
     <button class="btn" style="background:#1a3a1a;border:1px solid #27ae6088;color:#2ecc71" onclick="abrirModoLlamadas()">📞 Modo llamadas</button>
     <button class="btn btn-primary" onclick="abrirModalNuevoLead()">➕ Nuevo Lead</button>
   </div>
@@ -894,64 +894,87 @@ async function importarEmail() {
   }
 }
 
-// ── Importar EML ─────────────────────────────────────────────────────────────
+// ── Importar EML (uno o varios) ───────────────────────────────────────────────
 async function importarEML(input) {
-  console.log('[EML] onchange fired, files:', input.files.length);
-  const file = input.files[0];
-  if (!file) { console.log('[EML] no file selected'); return; }
-  console.log('[EML] file:', file.name, file.size, 'bytes');
+  const files = Array.from(input.files || []);
   input.value = '';
+  if (!files.length) return;
 
-  showToast('⏳ Leyendo EML...', 'info', 6000);
+  // Un solo archivo → ruta original (respuesta inmediata + card en kanban)
+  if (files.length === 1) {
+    showToast('⏳ Procesando EML...', 'info', 6000);
+    const fd = new FormData();
+    fd.append('archivo', files[0]);
+    let d;
+    try {
+      const r = await fetch('/api/leads/importar-eml', { method: 'POST', body: fd });
+      d = await r.json();
+    } catch(e) { showToast('❌ Error de red: ' + e.message, 'error', 6000); return; }
 
+    if (!d.ok) { showToast('❌ ' + (d.error || 'Error procesando EML'), 'error', 8000); return; }
+
+    if (d.duplicado) {
+      showToast(`⚠️ ${d.msg}`, 'warning', 4000);
+      setTimeout(() => location.reload(), 2000);
+      return;
+    }
+
+    showToast(`✅ Lead creado: ${d.nombre}${d.email ? ' · ' + d.email : ''}`, 'success', 5000);
+    const col = document.getElementById('cards_Nuevo_Lead');
+    if (col) {
+      const lead = {
+        id: d.id, nombre: d.nombre, apellido: d.apellido || '',
+        email: d.email, telefono: d.telefono || '',
+        tipo_proyecto: d.tipo_proyecto || '', empresa: '',
+        asignado_a: '', etapa: 'Nuevo Lead',
+        created_at: new Date().toISOString().slice(0,10),
+      };
+      col.insertAdjacentHTML('afterbegin', buildCard(lead));
+      leadsData.unshift(lead);
+      recalcularContadores();
+    }
+    return;
+  }
+
+  // Múltiples archivos → ruta batch (ordena por fecha en servidor)
+  showToast(`⏳ Importando ${files.length} EML ordenados por fecha...`, 'info', 15000);
   const fd = new FormData();
-  fd.append('archivo', file);
+  files.forEach(f => fd.append('archivos', f));
 
   let d;
   try {
-    const r = await fetch('/api/leads/importar-eml', { method: 'POST', body: fd });
-    const text = await r.text();
-    try { d = JSON.parse(text); }
-    catch(e) { showToast('❌ Respuesta inválida del servidor: ' + text.slice(0,120), 'error', 8000); return; }
-  } catch(e) {
-    showToast('❌ Error de red: ' + e.message, 'error', 6000);
-    return;
-  }
+    const r = await fetch('/api/leads/importar-eml-batch', { method: 'POST', body: fd });
+    d = await r.json();
+  } catch(e) { showToast('❌ Error de red: ' + e.message, 'error', 6000); return; }
 
-  if (!d.ok) {
-    showToast('❌ ' + (d.error || 'Error procesando EML'), 'error', 8000);
-    return;
-  }
+  if (!d.ok) { showToast('❌ ' + (d.error || 'Error en batch'), 'error', 8000); return; }
 
-  if (d.duplicado) {
-    showToast(`⚠️ ${d.msg} — recargando para mostrar lead existente`, 'warning', 3000);
-    setTimeout(() => location.reload(), 1500);
-    return;
-  }
-
-  // Lead nuevo creado — agregar al kanban directamente
-  showToast(`✅ Lead creado: ${d.nombre}${d.email ? ' · ' + d.email : ''}`, 'success', 5000);
+  // Agregar cards al kanban para los creados
   const col = document.getElementById('cards_Nuevo_Lead');
-  if (col) {
-    const lead = {
-      id: d.id, nombre: d.nombre, apellido: d.apellido || '',
-      email: d.email, telefono: d.telefono || '',
-      tipo_proyecto: d.tipo_proyecto || '', empresa: '',
-      asignado_a: '', etapa: 'Nuevo Lead',
-      created_at: new Date().toISOString().slice(0,10),
-    };
-    col.insertAdjacentHTML('afterbegin', buildCard(lead));
-    leadsData.unshift(lead);
-    recalcularContadores();
-    const newCard = col.firstElementChild;
-    if (newCard) {
-      newCard.style.boxShadow = '0 0 0 3px #2ECC71, 0 4px 24px rgba(46,204,113,.5)';
-      newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => { newCard.style.boxShadow = ''; }, 4000);
+  (d.creados || []).forEach(lead => {
+    if (col) {
+      const l = {
+        id: lead.id, nombre: lead.nombre, apellido: lead.apellido || '',
+        email: lead.email, telefono: lead.telefono || '',
+        tipo_proyecto: lead.tipo_proyecto || '', empresa: '',
+        asignado_a: '', etapa: 'Nuevo Lead',
+        created_at: new Date().toISOString().slice(0,10),
+      };
+      col.insertAdjacentHTML('afterbegin', buildCard(l));
+      leadsData.unshift(l);
     }
-  } else {
-    setTimeout(() => location.reload(), 1000);
-  }
+  });
+  if (col) recalcularContadores();
+
+  // Resumen
+  const { creados = [], duplicados = [], errores = [] } = d;
+  let tipo = creados.length ? 'success' : (duplicados.length ? 'warning' : 'error');
+  let msg  = `📎 ${d.resumen}`;
+  if (errores.length) msg += ` — Errores: ${errores.map(e => e.archivo).join(', ')}`;
+  showToast(msg, tipo, 8000);
+
+  // Si hay nuevos, recargar tras 3s para mostrar orden correcto
+  if (creados.length > 0) setTimeout(() => location.reload(), 3000);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
