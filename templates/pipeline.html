@@ -176,6 +176,7 @@
     <button class="btn btn-secondary" onclick="abrirModalEmail()">📧 Importar email</button>
     <button class="btn btn-secondary" onclick="document.getElementById('emlFileInput').click()" title="Subir uno o varios archivos .eml">📎 Subir EML</button>
     <input type="file" id="emlFileInput" accept=".eml" multiple style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="importarEML(this)">
+    <button class="btn btn-secondary" onclick="window.open('/admin/pipeline/informe','_blank')" title="Generar informe ejecutivo PDF">📊 Resumen</button>
     <button class="btn" style="background:#1a3a1a;border:1px solid #27ae6088;color:#2ecc71" onclick="abrirModoLlamadas()">📞 Modo llamadas</button>
     <button class="btn btn-primary" onclick="abrirModalNuevoLead()">➕ Nuevo Lead</button>
   </div>

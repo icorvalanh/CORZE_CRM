@@ -3855,6 +3855,153 @@ def pipeline():
                            leads=leads, etapas=ETAPAS_PIPELINE,
                            trabajadores=trabajadores)
 
+@app.route('/admin/pipeline/informe')
+@login_required
+def pipeline_informe():
+    from datetime import datetime
+    from collections import Counter
+
+    leads = db.get_all_leads()
+    stats = db.get_corze_dashboard_stats()
+    now   = datetime.now()
+
+    ETAPAS_PERDIDAS = {'Cerrado', 'Cliente Perdido'}
+    ETAPAS_GANADAS  = {'Contrato Firmado', 'En Instalación',
+                       'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2'}
+    ETAPAS_CALIFIC  = {'Contactado', 'Esperando Cuenta Luz',
+                       'Visita Técnica Agendada', 'Presupuesto Pendiente',
+                       'Presupuesto Enviado', 'En Negociación', 'Aprobada',
+                       'Contrato Firmado'}
+
+    def dias_sin_contacto(lead):
+        notas   = lead.get('notas_historial') or []
+        last_s  = notas[-1].get('fecha', '') if notas else lead.get('created_at', '')
+        if not last_s: return None
+        try:
+            return max(0, (now - datetime.strptime(last_s[:16], '%Y-%m-%d %H:%M')).days)
+        except Exception:
+            return None
+
+    leads_activos    = [l for l in leads if l.get('etapa') not in ETAPAS_PERDIDAS]
+    leads_perdidos   = [l for l in leads if l.get('etapa') == 'Cliente Perdido']
+    leads_ganados    = [l for l in leads if l.get('etapa') in ETAPAS_GANADAS]
+    leads_calificados = [l for l in leads if l.get('etapa') in ETAPAS_CALIFIC]
+
+    # Contact-freshness buckets (only active leads)
+    freshness = {'fresh': 0, 'ok': 0, 'warn': 0, 'risk': 0, 'critical': 0}
+    leads_riesgo_full = []
+    for l in leads_activos:
+        d = dias_sin_contacto(l)
+        l['_dias'] = d
+        if d is None or d <= 3:  freshness['fresh']    += 1
+        elif d <= 7:              freshness['ok']       += 1
+        elif d <= 14:             freshness['warn']     += 1
+        elif d <= 30:             freshness['risk']     += 1; leads_riesgo_full.append(l)
+        else:                     freshness['critical'] += 1; leads_riesgo_full.append(l)
+
+    leads_en_riesgo = sorted(leads_riesgo_full,
+                             key=lambda x: (x['_dias'] or 0), reverse=True)[:25]
+
+    etapa_counts  = dict(Counter(l.get('etapa', '—') for l in leads))
+    tipo_counts   = dict(Counter((l.get('tipo_proyecto') or 'Sin especificar') for l in leads_activos))
+    origen_counts = dict(Counter((l.get('origen') or 'manual') for l in leads))
+
+    # Funnel (active stages in ETAPAS_PIPELINE order)
+    funnel = [(e, etapa_counts.get(e, 0)) for e in ETAPAS_PIPELINE
+              if e not in ETAPAS_PERDIDAS and etapa_counts.get(e, 0) > 0]
+    max_funnel = max((v for _, v in funnel), default=1)
+
+    return render_template('informe_pipeline.html',
+        stats=stats,
+        leads_total=len(leads),
+        leads_activos=leads_activos,
+        leads_perdidos=leads_perdidos,
+        leads_ganados=leads_ganados,
+        leads_calificados=leads_calificados,
+        leads_en_riesgo=leads_en_riesgo,
+        freshness=freshness,
+        etapa_counts=etapa_counts,
+        tipo_counts=tipo_counts,
+        origen_counts=origen_counts,
+        funnel=funnel,
+        max_funnel=max_funnel,
+        fecha_informe=now.strftime('%d de %B de %Y'),
+        hora_informe=now.strftime('%H:%M'),
+        usuario=session.get('usuario', ''),
+        page='pipeline',
+    )
+
+
+@app.route('/api/pipeline/analisis-ia', methods=['POST'])
+@login_required
+def api_pipeline_analisis_ia():
+    import json as _json
+    from datetime import datetime
+    leads = db.get_all_leads()
+    stats = db.get_corze_dashboard_stats()
+    sem   = stats.get('semaforo', {})
+    now   = datetime.now()
+
+    def dias_sin_contacto(lead):
+        notas  = lead.get('notas_historial') or []
+        last_s = notas[-1].get('fecha', '') if notas else lead.get('created_at', '')
+        if not last_s: return None
+        try:
+            return max(0, (now - datetime.strptime(last_s[:16], '%Y-%m-%d %H:%M')).days)
+        except Exception: return None
+
+    leads_activos = [l for l in leads if l.get('etapa') not in {'Cerrado', 'Cliente Perdido'}]
+    leads_riesgo  = sum(1 for l in leads_activos if (dias_sin_contacto(l) or 0) > 14)
+
+    prompt = f"""Eres el analista de negocios de CORZE Solar, empresa de instalación de paneles solares en Chile.
+Analiza los datos del pipeline y genera un informe ejecutivo en JSON puro (sin markdown). Devuelve SOLO el JSON.
+
+Formato requerido:
+{{
+  "resumen": "3-4 oraciones sobre el estado general del negocio hoy",
+  "salud": "1-2 oraciones sobre la salud del pipeline con opinión clara",
+  "oportunidades": ["oportunidad concreta 1", "oportunidad 2", "oportunidad 3"],
+  "riesgos": ["riesgo específico 1", "riesgo 2", "riesgo 3"],
+  "acciones": ["acción inmediata 1", "acción 2", "acción 3", "acción 4", "acción 5"],
+  "proyeccion": "proyección a 30 días con estimación de contratos y montos posibles"
+}}
+
+DATOS:
+- Total leads en sistema: {len(leads)}
+- Leads activos: {len(leads_activos)}
+- Contratos ganados este mes: {stats.get('contratos_mes', 0)}
+- Tasa de conversión: {stats.get('tasa_conversion', 0)}%
+- Ingresos aprobados: ${stats.get('ingresos_aprobados', 0):,}
+- Valor pipeline total: ${stats.get('valor_pipeline', 0):,}
+- Tareas pendientes: {stats.get('tareas_pendientes', 0)}
+
+SEMÁFORO:
+- Nuevos leads sin contactar: {sem.get('pendientes', 0)}
+- Intentando contactar: {sem.get('intentando', 0)}
+- No contesta (bloqueados): {sem.get('no_contesta', 0)}
+- Esperando cuenta de luz: {sem.get('espera_cuenta', 0)}
+- Visita técnica agendada: {sem.get('visita', 0)}
+- En dimensionado/presupuesto: {sem.get('dimensionado', 0)}
+- Aprobados por cerrar: {sem.get('aprobado', 0)}
+- Proyectos finalizados: {sem.get('finalizado', 0)}
+
+RIESGO: {leads_riesgo} leads activos sin contacto hace más de 14 días."""
+
+    texto, err = _claude_call(prompt, max_tokens=1200)
+    if err:
+        return jsonify({'ok': False, 'error': err})
+    try:
+        clean = texto.strip()
+        if clean.startswith('```'):
+            clean = clean.split('\n', 1)[1].rsplit('```', 1)[0]
+        return jsonify({'ok': True, 'analisis': _json.loads(clean)})
+    except Exception:
+        return jsonify({'ok': True, 'analisis': {
+            'resumen': texto, 'salud': '', 'oportunidades': [],
+            'riesgos': [], 'acciones': [], 'proyeccion': ''
+        }})
+
+
 @app.route('/api/presupuestos', methods=['GET'])
 @login_required
 def api_presupuestos_list():

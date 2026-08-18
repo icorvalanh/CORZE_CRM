@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe Ejecutivo Pipeline — CORZE Solar</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --orange: #F5A623; --dk-orange: #D4891A;
+  --text: #1a202c; --text2: #4a5568; --text3: #a0aec0;
+  --border: #e2e8f0; --bg: #f7fafc;
+  --green: #27ae60; --red: #e74c3c; --blue: #3498db;
+  --yellow: #f39c12; --purple: #9b59b6; --teal: #1abc9c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #edf2f7; color: var(--text); font-size: 13px; line-height: 1.55; }
+
+/* ── Toolbar ───────────────────────────────────────────────────────────────── */
+.toolbar {
+  position: fixed; inset: 0 0 auto 0; z-index: 200;
+  background: #1a202c; padding: 10px 28px;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
+.tb-title { color: #f7fafc; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 9px; }
+.tb-title i { color: var(--orange); }
+.tb-btns { display: flex; gap: 8px; }
+.btn-back { background: transparent; border: 1px solid #4a5568; color: #a0aec0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.btn-back:hover { border-color: #a0aec0; }
+.btn-print { background: var(--orange); color: #fff; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 7px; }
+.btn-print:hover { background: var(--dk-orange); }
+
+/* ── Container ─────────────────────────────────────────────────────────────── */
+.wrap { max-width: 960px; margin: 0 auto; padding: 80px 20px 40px; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.card { background: #fff; border-radius: 12px; padding: 28px 32px; margin-bottom: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+
+/* ── Section header ────────────────────────────────────────────────────────── */
+.sh { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 2px solid var(--orange); }
+.sh h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--text); }
+.sh i { color: var(--orange); font-size: 16px; }
+.sh .sh-sub { font-size: 11px; color: var(--text3); font-weight: 400; margin-left: auto; text-transform: none; letter-spacing: 0; }
+
+/* ── Cover ─────────────────────────────────────────────────────────────────── */
+.cover { text-align: center; padding: 48px 32px 40px; }
+.cover-ring { width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #F5A623, #D4891A); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; box-shadow: 0 4px 20px rgba(245,166,35,.4); }
+.cover-ring img { width: 60px; height: 60px; object-fit: contain; filter: brightness(0) invert(1); }
+.cover h1 { font-size: 30px; font-weight: 900; color: var(--text); margin-bottom: 6px; }
+.cover-subtitle { font-size: 15px; color: var(--text2); margin-bottom: 4px; }
+.cover-bar { width: 60px; height: 4px; background: var(--orange); border-radius: 2px; margin: 18px auto; }
+.cover-meta { font-size: 12px; color: var(--text3); line-height: 1.8; }
+
+/* ── Metric grid ────────────────────────────────────────────────────────────── */
+.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.metric-card { background: var(--bg); border-radius: 10px; padding: 16px 14px; text-align: center; border-top: 3px solid var(--c, var(--orange)); }
+.metric-num { font-size: 30px; font-weight: 900; color: var(--c, var(--orange)); line-height: 1; margin: 6px 0 5px; }
+.metric-lbl { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+.metric-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+/* ── Semáforo ───────────────────────────────────────────────────────────────── */
+.sem-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.sem-card { border-radius: 10px; padding: 16px 12px; text-align: center; border: 1px solid rgba(0,0,0,.06); }
+.sem-num { font-size: 34px; font-weight: 900; line-height: 1; color: var(--c); }
+.sem-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text2); margin-top: 6px; }
+.sem-icon { font-size: 18px; color: var(--c); margin-bottom: 4px; }
+
+/* ── Funnel ─────────────────────────────────────────────────────────────────── */
+.funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.funnel-label { width: 200px; font-size: 11px; color: var(--text2); flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.funnel-wrap { flex: 1; background: var(--bg); border-radius: 4px; height: 22px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; transition: width .5s; }
+.funnel-count { font-size: 11px; font-weight: 700; color: var(--text); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* ── Freshness ──────────────────────────────────────────────────────────────── */
+.fresh-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.fresh-card { border-radius: 10px; padding: 14px 10px; text-align: center; border: 1px solid rgba(0,0,0,.06); }
+.fresh-num { font-size: 26px; font-weight: 900; line-height: 1; }
+.fresh-lbl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text2); margin-top: 5px; }
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+.dt { width: 100%; border-collapse: collapse; }
+.dt th { background: var(--bg); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+.dt td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
+.dt tr:last-child td { border-bottom: none; }
+.dt tbody tr:hover td { background: #fefefe; }
+
+/* ── Badges / risk dots ────────────────────────────────────────────────────── */
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; margin-right: 5px; }
+.tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+
+/* ── Split grid ─────────────────────────────────────────────────────────────── */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── Breakdown table (mini) ─────────────────────────────────────────────────── */
+.bk-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.bk-row:last-child { border-bottom: none; }
+.bk-label { font-size: 12px; color: var(--text); }
+.bk-val { font-size: 12px; font-weight: 800; color: var(--text2); }
+
+/* ── AI section ─────────────────────────────────────────────────────────────── */
+.ai-loading { display: flex; align-items: center; gap: 10px; color: var(--text3); font-style: italic; padding: 12px 0; }
+.ai-block { margin-bottom: 18px; }
+.ai-block-title { font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 7px; display: flex; align-items: center; gap: 7px; }
+.ai-block-title i { font-size: 12px; }
+.ai-text { font-size: 13px; color: var(--text); line-height: 1.75; }
+.ai-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.ai-list li { display: flex; gap: 10px; font-size: 13px; color: var(--text); }
+.ai-list li::before { content: '▸'; color: var(--orange); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+.report-footer { text-align: center; font-size: 11px; color: var(--text3); padding: 20px; margin-top: 8px; }
+
+/* ── PRINT ──────────────────────────────────────────────────────────────────── */
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: white; }
+  .toolbar { display: none !important; }
+  .wrap { padding-top: 0; }
+  .card { box-shadow: none; border: 1px solid var(--border); margin-bottom: 0; border-radius: 0; }
+  .card + .card { border-top: none; }
+  .cover { page-break-after: always; }
+  .pgbreak { page-break-before: always; }
+  .no-break { page-break-inside: avoid; }
+}
+
+@media (max-width: 700px) {
+  .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .sem-grid { grid-template-columns: repeat(2, 1fr); }
+  .fresh-grid { grid-template-columns: repeat(3, 1fr); }
+  .split { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="tb-title">
+    <i class="fas fa-chart-bar"></i>
+    Informe Ejecutivo Pipeline — CORZE Solar
+  </div>
+  <div class="tb-btns">
+    <button class="btn-back" onclick="history.back()"><i class="fas fa-arrow-left"></i> Volver</button>
+    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir / PDF</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ═══ PORTADA ═══ -->
+  <div class="card cover">
+    <div class="cover-ring">
+      <img src="/static/assets/logo_corze.png" alt="CORZE">
+    </div>
+    <h1>CORZE Solar</h1>
+    <div class="cover-subtitle">Informe Ejecutivo de Pipeline de Ventas</div>
+    <div class="cover-bar"></div>
+    <div class="cover-meta">
+      Fecha: <strong>{{ fecha_informe }}</strong> &nbsp;·&nbsp; Hora: {{ hora_informe }}<br>
+      Preparado por: <strong>{{ usuario }}</strong><br>
+      Total de leads analizados: <strong>{{ leads_total }}</strong>
+    </div>
+  </div>
+
+  <!-- ═══ ANÁLISIS IA ═══ -->
+  <div class="card">
+    <div class="sh">
+      <i class="fas fa-robot"></i>
+      <h2>Análisis Estratégico IA</h2>
+      <span class="sh-sub">Generado por Claude Haiku · Para uso en reunión directiva</span>
+    </div>
+    <div id="aiSection">
+      <div class="ai-loading">
+        <i class="fas fa-spinner fa-spin" style="color:var(--orange)"></i>
+        Generando análisis con inteligencia artificial…
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INDICADORES CLAVE ═══ -->
+  <div class="card">
+    <div class="sh">
+      <i class="fas fa-gauge-high"></i>
+      <h2>Indicadores Clave</h2>
+    </div>
+    <div class="metric-grid">
+      <div class="metric-card" style="--c:var(--orange)">
+        <div class="metric-lbl">Leads Activos</div>
+        <div class="metric-num">{{ leads_activos|length }}</div>
+        <div class="metric-sub">de {{ leads_total }} totales</div>
+      </div>
+      <div class="metric-card" style="--c:var(--green)">
+        <div class="metric-lbl">Contratos Ganados</div>
+        <div class="metric-num">{{ stats.contratos_mes }}</div>
+        <div class="metric-sub">este mes · {{ stats.contratos_total }} histórico</div>
+      </div>
+      <div class="metric-card" style="--c:var(--blue)">
+        <div class="metric-lbl">Conversión</div>
+        <div class="metric-num">{{ stats.tasa_conversion }}%</div>
+        <div class="metric-sub">leads → contrato</div>
+      </div>
+      <div class="metric-card" style="--c:var(--purple)">
+        <div class="metric-lbl">Calificados</div>
+        <div class="metric-num">{{ leads_calificados|length }}</div>
+        <div class="metric-sub">en etapas avanzadas</div>
+      </div>
+      <div class="metric-card" style="--c:var(--orange)">
+        <div class="metric-lbl">Ingresos Aprobados</div>
+        <div class="metric-num" id="mIngresos">—</div>
+        <div class="metric-sub" id="mIngresosMes">—</div>
+      </div>
+      <div class="metric-card" style="--c:var(--teal)">
+        <div class="metric-lbl">Valor Pipeline</div>
+        <div class="metric-num" id="mPipeline">—</div>
+        <div class="metric-sub">presupuestos enviados + aprobados</div>
+      </div>
+      <div class="metric-card" style="--c:{% if leads_en_riesgo|length > 10 %}var(--red){% elif leads_en_riesgo|length > 5 %}var(--yellow){% else %}var(--green){% endif %}">
+        <div class="metric-lbl">En Riesgo</div>
+        <div class="metric-num">{{ leads_en_riesgo|length }}</div>
+        <div class="metric-sub">sin contacto &gt;14 días</div>
+      </div>
+      <div class="metric-card" style="--c:var(--red)">
+        <div class="metric-lbl">Perdidos</div>
+        <div class="metric-num">{{ leads_perdidos|length }}</div>
+        <div class="metric-sub">marcados como Cliente Perdido</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SEMÁFORO ═══ -->
+  <div class="card">
+    <div class="sh">
+      <i class="fas fa-traffic-light"></i>
+      <h2>Semáforo de Pipeline</h2>
+      <span class="sh-sub">Estado actual de avance por etapa</span>
+    </div>
+    {% set sem = stats.semaforo %}
+    <div class="sem-grid">
+      <div class="sem-card" style="--c:#3B82F6;background:linear-gradient(135deg,#EBF5FB,#fff)">
+        <div class="sem-icon"><i class="fas fa-inbox"></i></div>
+        <div class="sem-num">{{ sem.pendientes }}</div>
+        <div class="sem-lbl">Pendientes</div>
+      </div>
+      <div class="sem-card" style="--c:#F5A623;background:linear-gradient(135deg,#FEF9EC,#fff)">
+        <div class="sem-icon"><i class="fas fa-phone-volume"></i></div>
+        <div class="sem-num">{{ sem.intentando }}</div>
+        <div class="sem-lbl">Intentando Contacto</div>
+      </div>
+      <div class="sem-card" style="--c:#64748B;background:linear-gradient(135deg,#F1F5F9,#fff)">
+        <div class="sem-icon"><i class="fas fa-phone-slash"></i></div>
+        <div class="sem-num">{{ sem.no_contesta }}</div>
+        <div class="sem-lbl">No Contesta</div>
+      </div>
+      <div class="sem-card" style="--c:#F59E0B;background:linear-gradient(135deg,#FFFBEB,#fff)">
+        <div class="sem-icon"><i class="fas fa-bolt"></i></div>
+        <div class="sem-num">{{ sem.espera_cuenta }}</div>
+        <div class="sem-lbl">Espera Cuenta Luz</div>
+      </div>
+      <div class="sem-card" style="--c:#22C55E;background:linear-gradient(135deg,#F0FDF4,#fff)">
+        <div class="sem-icon"><i class="fas fa-hard-hat"></i></div>
+        <div class="sem-num">{{ sem.visita }}</div>
+        <div class="sem-lbl">Visita Técnica</div>
+      </div>
+      <div class="sem-card" style="--c:#A855F7;background:linear-gradient(135deg,#FAF5FF,#fff)">
+        <div class="sem-icon"><i class="fas fa-drafting-compass"></i></div>
+        <div class="sem-num">{{ sem.dimensionado }}</div>
+        <div class="sem-lbl">Dimensionado</div>
+      </div>
+      <div class="sem-card" style="--c:#10B981;background:linear-gradient(135deg,#ECFDF5,#fff)">
+        <div class="sem-icon"><i class="fas fa-circle-check"></i></div>
+        <div class="sem-num">{{ sem.aprobado }}</div>
+        <div class="sem-lbl">Aprobado</div>
+      </div>
+      <div class="sem-card" style="--c:#14B8A6;background:linear-gradient(135deg,#F0FDFA,#fff)">
+        <div class="sem-icon"><i class="fas fa-solar-panel"></i></div>
+        <div class="sem-num">{{ sem.finalizado }}</div>
+        <div class="sem-lbl">Finalizado</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EMBUDO + FRESCURA ═══ -->
+  <div class="split">
+
+    <!-- Embudo de conversión -->
+    <div class="card" style="margin-bottom:0">
+      <div class="sh">
+        <i class="fas fa-filter"></i>
+        <h2>Embudo de Conversión</h2>
+      </div>
+      {% set bar_colors = ['#3B82F6','#F5A623','#64748B','#F59E0B','#22C55E','#A855F7','#10B981','#14B8A6','#E74C3C','#9B59B6','#1ABC9C','#F39C12','#3498DB','#27AE60','#8E44AD','#D35400','#1abc9c','#e74c3c'] %}
+      {% for etapa, count in funnel %}
+      {% set pct = (count / max_funnel * 100)|round|int %}
+      {% set ci = loop.index0 % bar_colors|length %}
+      <div class="funnel-row">
+        <div class="funnel-label" title="{{ etapa }}">{{ etapa }}</div>
+        <div class="funnel-wrap">
+          <div class="funnel-bar" style="width:{{ pct }}%;background:{{ bar_colors[ci] }}22;border-left:3px solid {{ bar_colors[ci] }}">
+          </div>
+        </div>
+        <div class="funnel-count">{{ count }}</div>
+      </div>
+      {% endfor %}
+      {% if not funnel %}<p style="color:var(--text3);font-size:12px">Sin datos</p>{% endif %}
+    </div>
+
+    <!-- Frescura de contacto -->
+    <div class="card" style="margin-bottom:0">
+      <div class="sh">
+        <i class="fas fa-clock-rotate-left"></i>
+        <h2>Frescura de Contacto</h2>
+      </div>
+      <div class="fresh-grid" style="margin-bottom:18px">
+        <div class="fresh-card" style="background:#F0FDF4">
+          <div class="fresh-num" style="color:#22C55E">{{ freshness.fresh }}</div>
+          <div class="fresh-lbl" style="color:#22C55E">0-3 días</div>
+        </div>
+        <div class="fresh-card" style="background:#FFFBEB">
+          <div class="fresh-num" style="color:#F59E0B">{{ freshness.ok }}</div>
+          <div class="fresh-lbl" style="color:#F59E0B">4-7 días</div>
+        </div>
+        <div class="fresh-card" style="background:#FFF7ED">
+          <div class="fresh-num" style="color:#EA580C">{{ freshness.warn }}</div>
+          <div class="fresh-lbl" style="color:#EA580C">8-14 días</div>
+        </div>
+        <div class="fresh-card" style="background:#FEF2F2">
+          <div class="fresh-num" style="color:#E74C3C">{{ freshness.risk }}</div>
+          <div class="fresh-lbl" style="color:#E74C3C">15-30 días</div>
+        </div>
+        <div class="fresh-card" style="background:#FDF2F8">
+          <div class="fresh-num" style="color:#9B59B6">{{ freshness.critical }}</div>
+          <div class="fresh-lbl" style="color:#9B59B6">&gt;30 días</div>
+        </div>
+      </div>
+
+      <!-- Breakdown tipo + origen -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
+        <div>
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:10px">Tipo Proyecto</div>
+          {% for tipo, n in tipo_counts.items()|sort(attribute='1',reverse=True) %}
+          <div class="bk-row">
+            <span class="bk-label">{{ tipo|title }}</span>
+            <span class="bk-val">{{ n }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:10px">Origen</div>
+          {% for origen, n in origen_counts.items()|sort(attribute='1',reverse=True) %}
+          <div class="bk-row">
+            <span class="bk-label">{{ origen|title }}</span>
+            <span class="bk-val">{{ n }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ LEADS EN RIESGO ═══ -->
+  {% if leads_en_riesgo %}
+  <div class="card pgbreak">
+    <div class="sh">
+      <i class="fas fa-triangle-exclamation" style="color:var(--red)"></i>
+      <h2>Leads en Riesgo — Sin Contacto &gt;14 Días</h2>
+      <span class="sh-sub">{{ leads_en_riesgo|length }} leads — acción urgente requerida</span>
+    </div>
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>Lead</th>
+          <th>Etapa</th>
+          <th>Teléfono</th>
+          <th>Asignado a</th>
+          <th>Días sin contacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads_en_riesgo %}
+        {% set dias = lead._dias or 0 %}
+        {% if dias > 30 %}{% set dc = '#9B59B6' %}{% elif dias > 20 %}{% set dc = '#E74C3C' %}{% else %}{% set dc = '#E67E22' %}{% endif %}
+        <tr>
+          <td><strong>{{ lead.nombre }} {{ lead.apellido or '' }}</strong>{% if lead.empresa %}<br><span style="color:var(--text3);font-size:11px">{{ lead.empresa }}</span>{% endif %}</td>
+          <td><span class="tag" style="background:#f7fafc;color:var(--text2);border:1px solid var(--border)">{{ lead.etapa }}</span></td>
+          <td style="color:var(--blue)">{{ lead.telefono or '—' }}</td>
+          <td>{{ lead.asignado_a or '—' }}</td>
+          <td>
+            <span class="dot" style="background:{{ dc }}"></span>
+            <strong style="color:{{ dc }}">{{ dias }} días</strong>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- ═══ LEADS CALIFICADOS ═══ -->
+  {% if leads_calificados %}
+  <div class="card no-break">
+    <div class="sh">
+      <i class="fas fa-star" style="color:var(--green)"></i>
+      <h2>Leads Calificados con Mayor Potencial</h2>
+      <span class="sh-sub">{{ leads_calificados|length }} leads en etapas avanzadas</span>
+    </div>
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>Lead</th>
+          <th>Etapa</th>
+          <th>Tipo</th>
+          <th>Teléfono</th>
+          <th>Reconactar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads_calificados[:20] %}
+        <tr>
+          <td><strong>{{ lead.nombre }} {{ lead.apellido or '' }}</strong>{% if lead.empresa %}<br><span style="color:var(--text3);font-size:11px">{{ lead.empresa }}</span>{% endif %}</td>
+          <td>
+            {% if lead.etapa in ['Aprobada', 'Contrato Firmado'] %}
+              <span class="tag" style="background:#F0FDF4;color:var(--green);border:1px solid #BBFFD3">{{ lead.etapa }}</span>
+            {% elif lead.etapa in ['En Negociación', 'Presupuesto Enviado'] %}
+              <span class="tag" style="background:#FEF9EC;color:var(--yellow);border:1px solid #FDE08D">{{ lead.etapa }}</span>
+            {% else %}
+              <span class="tag" style="background:#EBF5FB;color:var(--blue);border:1px solid #C5E3F7">{{ lead.etapa }}</span>
+            {% endif %}
+          </td>
+          <td>{{ (lead.tipo_proyecto or '—')|title }}</td>
+          <td style="color:var(--blue)">{{ lead.telefono or '—' }}</td>
+          <td>
+            {% if lead.reconactar_pendiente and lead.reconactar_en %}
+              <span style="color:var(--blue);font-weight:700;font-size:11px"><i class="fas fa-calendar-clock"></i> {{ lead.reconactar_en[:16] }}</span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if leads_calificados|length > 20 %}<p style="font-size:11px;color:var(--text3);margin-top:10px">... y {{ leads_calificados|length - 20 }} leads más en etapas avanzadas.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ LEADS ACTIVOS COMPLETOS ═══ -->
+  <div class="card pgbreak">
+    <div class="sh">
+      <i class="fas fa-users"></i>
+      <h2>Listado Completo de Leads Activos</h2>
+      <span class="sh-sub">{{ leads_activos|length }} leads · ordenados por etapa</span>
+    </div>
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Etapa</th>
+          <th>Tipo</th>
+          <th>Teléfono</th>
+          <th>Asesor</th>
+          <th>Último contacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads_activos|sort(attribute='etapa') %}
+        {% set dias = lead._dias %}
+        <tr>
+          <td style="color:var(--text3)">{{ loop.index }}</td>
+          <td><strong>{{ lead.nombre }} {{ lead.apellido or '' }}</strong>{% if lead.empresa %}<br><span style="color:var(--text3);font-size:10px">{{ lead.empresa }}</span>{% endif %}</td>
+          <td><span style="font-size:11px;font-weight:600;color:var(--text2)">{{ lead.etapa }}</span></td>
+          <td style="font-size:11px;color:var(--text3)">{{ (lead.tipo_proyecto or '—')|title }}</td>
+          <td style="font-size:11px;color:var(--blue)">{{ lead.telefono or '—' }}</td>
+          <td style="font-size:11px;color:var(--text3)">{{ lead.asignado_a or '—' }}</td>
+          <td>
+            {% if dias is not none %}
+              {% if dias > 14 %}<span style="color:var(--red);font-weight:700">{{ dias }}d</span>
+              {% elif dias > 7 %}<span style="color:var(--yellow);font-weight:700">{{ dias }}d</span>
+              {% elif dias > 3 %}<span style="color:var(--orange)">{{ dias }}d</span>
+              {% elif dias == 0 %}<span style="color:var(--green)">hoy</span>
+              {% elif dias == 1 %}<span style="color:var(--green)">ayer</span>
+              {% else %}<span style="color:var(--green)">{{ dias }}d</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="report-footer">
+    Informe generado el {{ fecha_informe }} a las {{ hora_informe }} · CORZE Solar CRM ·
+    Confidencial — uso interno
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+const stats = {{ stats|tojson }};
+
+function clp(n) {
+  if (!n || n === 0) return '$0';
+  if (Math.abs(n) >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (Math.abs(n) >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toLocaleString('es-CL');
+}
+
+// Fill money metrics
+document.getElementById('mIngresos').textContent  = clp(stats.ingresos_aprobados);
+document.getElementById('mIngresosMes').textContent = clp(stats.ingresos_mes) + ' este mes';
+document.getElementById('mPipeline').textContent   = clp(stats.valor_pipeline);
+
+// Load AI analysis
+(async function() {
+  const el = document.getElementById('aiSection');
+  try {
+    const r = await fetch('/api/pipeline/analisis-ia', { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) {
+      el.innerHTML = `<p style="color:var(--red);font-size:13px"><i class="fas fa-exclamation-triangle"></i> ${d.error || 'Error generando análisis.'}</p>`;
+      return;
+    }
+    const a = d.analisis;
+    const list = arr => arr && arr.length
+      ? `<ul class="ai-list">${arr.map(x => `<li>${x}</li>`).join('')}</ul>`
+      : '';
+    el.innerHTML = `
+      ${a.resumen ? `<div class="ai-block">
+        <div class="ai-block-title"><i class="fas fa-file-lines"></i> Resumen Ejecutivo</div>
+        <div class="ai-text">${a.resumen}</div>
+      </div>` : ''}
+      ${a.salud ? `<div class="ai-block">
+        <div class="ai-block-title"><i class="fas fa-heart-pulse"></i> Salud del Pipeline</div>
+        <div class="ai-text">${a.salud}</div>
+      </div>` : ''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        ${a.oportunidades && a.oportunidades.length ? `<div class="ai-block">
+          <div class="ai-block-title"><i class="fas fa-lightbulb"></i> Oportunidades</div>
+          ${list(a.oportunidades)}
+        </div>` : ''}
+        ${a.riesgos && a.riesgos.length ? `<div class="ai-block">
+          <div class="ai-block-title"><i class="fas fa-triangle-exclamation"></i> Riesgos</div>
+          ${list(a.riesgos)}
+        </div>` : ''}
+      </div>
+      ${a.acciones && a.acciones.length ? `<div class="ai-block" style="margin-top:4px">
+        <div class="ai-block-title"><i class="fas fa-bolt"></i> Plan de Acción Inmediata</div>
+        <ol style="padding-left:18px;display:flex;flex-direction:column;gap:5px">
+          ${a.acciones.map((x,i) => `<li style="font-size:13px;color:var(--text)"><strong>${i+1}.</strong> ${x}</li>`).join('')}
+        </ol>
+      </div>` : ''}
+      ${a.proyeccion ? `<div class="ai-block" style="background:linear-gradient(135deg,#FEF9EC,#fffdf6);border:1px solid #FDE08D;border-radius:10px;padding:16px 18px">
+        <div class="ai-block-title"><i class="fas fa-chart-line"></i> Proyección a 30 Días</div>
+        <div class="ai-text">${a.proyeccion}</div>
+      </div>` : ''}
+    `;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--text3);font-size:13px;font-style:italic">No se pudo cargar el análisis IA. Verifica que la clave de API de Claude esté configurada.</p>`;
+  }
+})();
+</script>
+</body>
+</html>
