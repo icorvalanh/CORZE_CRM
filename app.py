@@ -3901,6 +3901,61 @@ def api_leads_delete(doc_id):
     ok = db.delete_lead(doc_id)
     return jsonify({'ok': ok})
 
+
+@app.route('/api/leads/<doc_id>/reconactar', methods=['POST'])
+@login_required
+def api_lead_reconactar(doc_id):
+    data  = request.get_json() or {}
+    fecha = (data.get('fecha') or '').strip()
+    hora  = (data.get('hora')  or '').strip()
+    if not fecha or not hora:
+        return jsonify({'ok': False, 'error': 'Fecha y hora requeridas'})
+    dt_str = f'{fecha} {hora}'
+    lead   = db.get_lead_by_id(doc_id) or {}
+    nombre = f"{lead.get('nombre','')} {lead.get('apellido','')}".strip() or 'Cliente'
+    # Update lead
+    try:
+        db.db.collection('leads').document(doc_id).update({
+            'reconactar_en':        dt_str,
+            'reconactar_pendiente': True,
+            'updated_at':           _cl().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    # Add nota
+    nota = {
+        'texto': f'Cliente pidió que lo llamemos el {fecha} a las {hora}.',
+        'autor': session.get('usuario', 'Sistema'),
+        'fecha': _cl().strftime('%Y-%m-%d %H:%M'),
+    }
+    db.add_nota_lead(doc_id, nota)
+    # Create tarea
+    tarea_data = {
+        'titulo':      f'Llamar a {nombre}',
+        'descripcion': f'El cliente pidió ser contactado a este horario.',
+        'fecha':       fecha,
+        'hora_inicio': hora,
+        'prioridad':   'alta',
+        'estado':      'pendiente',
+        'lead_id':     doc_id,
+    }
+    db.add_tarea(tarea_data)
+    return jsonify({'ok': True, 'nota': nota, 'dt': dt_str, 'nombre': nombre})
+
+
+@app.route('/api/leads/<doc_id>/reconactar/clear', methods=['POST'])
+@login_required
+def api_lead_reconactar_clear(doc_id):
+    try:
+        db.db.collection('leads').document(doc_id).update({
+            'reconactar_en':        '',
+            'reconactar_pendiente': False,
+            'updated_at':           _cl().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
 @app.route('/api/leads/<doc_id>/mover-etapa', methods=['POST'])
 @login_required
 def api_leads_mover_etapa(doc_id):

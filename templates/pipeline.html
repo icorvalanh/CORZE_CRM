@@ -56,6 +56,53 @@
 .nota-add textarea { background:var(--card2); border:1px solid var(--border2); border-radius:8px; color:var(--white); font-size:12px; padding:8px 10px; resize:vertical; min-height:72px; outline:none; }
 .nota-add textarea:focus { border-color:var(--blue); }
 
+/* ── Contact-age semáforo ──────────────────────────────────────────────────── */
+.lead-card { transition: border-color .15s, box-shadow .5s; }
+.reconactar-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700;
+  background: #060f1a; border: 1px solid #3498db55;
+  color: #3498db; border-radius: 5px; padding: 3px 8px; margin: 4px 0;
+  animation: rPulse 2.5s ease-in-out infinite;
+}
+@keyframes rPulse {
+  0%,100% { border-color:#3498db44; }
+  50%      { border-color:#3498dbbb; box-shadow:0 0 7px #3498db33; }
+}
+
+/* ── Reconactar modal (inside callHud) ─────────────────────────────────────── */
+.rc-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 700;
+  background: rgba(0,0,0,.65); align-items: flex-end;
+}
+.rc-modal-overlay.open { display: flex; }
+.rc-modal {
+  background: #0d1117; border-radius: 20px 20px 0 0;
+  border: 1px solid #1e2a38; border-bottom: none;
+  width: 100%; padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+}
+.rc-title { font-size: 17px; font-weight: 800; color: #f7fafc; margin-bottom: 3px; }
+.rc-sub   { font-size: 13px; color: #4a5568; margin-bottom: 18px; }
+.rc-row   { display: flex; gap: 10px; margin-bottom: 12px; }
+.rc-input {
+  flex: 1; background: #161e28; border: 1px solid #1e2a38; border-radius: 10px;
+  color: #f7fafc; font-size: 15px; padding: 12px 14px; outline: none;
+  font-family: inherit; -webkit-appearance: none;
+}
+.rc-input:focus { border-color: #3498db; }
+.rc-btns  { display: flex; gap: 8px; margin-top: 14px; }
+.rc-btn   { flex: 1; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; border: none; }
+.rc-btn-cancel { background: #1e2a38; color: #a0aec0; }
+.rc-btn-confirm { background: linear-gradient(135deg, #0a1520, #0d1f35); border: 1px solid #3498db66; color: #3498db; }
+.ch-reconactar-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 13px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 700;
+  background: #060f1a; border: 1px solid #3498db44; color: #3498db;
+  margin-bottom: 14px; -webkit-tap-highlight-color: transparent;
+  transition: border-color .2s, background .2s;
+}
+.ch-reconactar-btn:active { background: #0a1520; border-color: #3498db88; }
+
 /* ── CALL HUD MOBILE ───────────────────────────────────────────────────────── */
 .ch-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0d1117;border-bottom:1px solid #1e2a38;flex-shrink:0}
 .ch-badge{font-size:11px;color:#4a5568;background:#161e28;padding:3px 10px;border-radius:20px;font-weight:700}
@@ -437,6 +484,11 @@
     <div class="ch-section-label">Cambiar etapa</div>
     <div id="callEtapaButtons" class="ch-etapa-scroll"></div>
 
+    <!-- Llamame después button -->
+    <button class="ch-reconactar-btn" onclick="openReconactarModal()">
+      <i class="fas fa-calendar-plus"></i> Me llamó — Agendar llamada de vuelta
+    </button>
+
     <!-- Recording collapsible -->
     <details class="ch-record-details">
       <summary class="ch-record-summary">
@@ -472,6 +524,25 @@
     </button>
   </div>
 
+  <!-- Reconactar modal -->
+  <div id="rcModal" class="rc-modal-overlay" onclick="if(event.target===this)closeReconactarModal()">
+    <div class="rc-modal">
+      <div class="rc-title"><i class="fas fa-calendar-clock" style="color:#3498db"></i> Agendar llamada</div>
+      <div class="rc-sub" id="rcLeadName"></div>
+      <div class="rc-row">
+        <input type="date" id="rcFecha" class="rc-input">
+        <input type="time" id="rcHora"  class="rc-input">
+      </div>
+      <div style="font-size:11px;color:#4a5568;margin-bottom:6px">Se creará una tarea en el calendario y una nota en el lead.</div>
+      <div class="rc-btns">
+        <button class="rc-btn rc-btn-cancel" onclick="closeReconactarModal()">Cancelar</button>
+        <button class="rc-btn rc-btn-confirm" onclick="confirmarReconactar()">
+          <i class="fas fa-calendar-plus"></i> Agendar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Lead list bottom sheet -->
   <div id="leadSheet" class="ch-sheet-overlay" onclick="if(event.target===this)closeLeadSheet()">
     <div class="ch-sheet">
@@ -490,6 +561,7 @@ let leadsData = {{ leads|tojson }};
 let dragId = null;
 let editLeadId = null;
 const ETAPAS = {{ etapas|tojson }};
+// Applied below after all functions are defined
 
 // ── Drag & Drop ──────────────────────────────────────────────────────────
 function onDragStart(e, card) {
@@ -775,6 +847,14 @@ async function agregarNota(leadId) {
       cont.insertAdjacentHTML('afterbegin', nuevaNota);
       if (cont.querySelector('[style*="Sin notas"]')) cont.innerHTML = nuevaNota;
     }
+    // Update contact-age indicator on the kanban card
+    const lObj = leadsData.find(l => l.id === leadId);
+    if (lObj) {
+      if (!lObj.notas_historial) lObj.notas_historial = [];
+      lObj.notas_historial.push(d.nota);
+      const kCard = document.querySelector(`.lead-card[data-id="${leadId}"]`);
+      if (kCard) _applyIndicatorToCard(kCard, lObj);
+    }
     showToast('Nota guardada', 'success');
   } else {
     showToast(d.error || 'Error guardando nota', 'error');
@@ -870,15 +950,22 @@ async function guardarLead() {
 }
 
 function buildCard(lead) {
+  const dias = getDiasSinContacto(lead);
+  const cs   = getContactStyle(dias);
+  const rb   = (lead.reconactar_pendiente && lead.reconactar_en)
+    ? `<div class="reconactar-badge"><i class="fas fa-calendar-clock"></i> Llamar ${_fmtReconactar(lead.reconactar_en)}</div>`
+    : '';
   return `<div class="lead-card" draggable="true" data-id="${lead.id}" data-etapa="${lead.etapa||'Nuevo Lead'}"
+               style="box-shadow:inset 3px 0 0 ${cs.color}"
                ondragstart="onDragStart(event,this)" onclick="abrirPanel('${lead.id}')">
     <div class="lead-name">${lead.nombre||''} ${lead.apellido||''}</div>
+    ${rb}
     ${lead.empresa ? `<div class="lead-empresa">${lead.empresa}</div>` : ''}
     ${lead.tipo_proyecto ? `<div style="margin-top:4px"><span class="lead-tipo">${lead.tipo_proyecto}</span></div>` : ''}
     ${lead.telefono ? `<div class="lead-tel">📞 ${fmtTel(lead.telefono)}</div>` : ''}
     <div class="lead-meta">
       ${lead.asignado_a ? `<div class="lead-avatar" style="background:#1A2A3A;color:var(--blue)">${lead.asignado_a[0]}</div>` : ''}
-      <span class="lead-dias">${(lead.created_at||'').slice(0,10)}</span>
+      <span class="lead-dias" title="${cs.tip}"><span style="color:${cs.color};font-size:9px">●</span>&nbsp;<span style="color:${cs.color};font-weight:700">${cs.text}</span></span>
     </div>
   </div>`;
 }
@@ -1210,7 +1297,18 @@ function renderCallLead() {
 
   document.getElementById('callProgress').textContent = `${callIdx + 1} / ${total}`;
   document.getElementById('callLeadName').textContent = `${lead.nombre || ''} ${lead.apellido || ''}`.trim() || '(Sin nombre)';
-  document.getElementById('callLeadEmpresa').textContent = lead.empresa || '';
+  // Contact age in empresa row
+  const dias = getDiasSinContacto(lead);
+  const cs   = getContactStyle(dias);
+  const dText = dias === null ? '' : (dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : dias + 'd sin contacto');
+  const rcTag = (lead.reconactar_pendiente && lead.reconactar_en)
+    ? ` &nbsp;<span style="color:#3498db;font-weight:700;font-size:11px"><i class="fas fa-calendar-clock"></i> ${_fmtReconactar(lead.reconactar_en)}</span>`
+    : '';
+  document.getElementById('callLeadEmpresa').innerHTML =
+    `${lead.empresa ? `<span>${lead.empresa}</span>` : ''}` +
+    `${lead.empresa && dText ? ' <span style="color:#2d3748">·</span> ' : ''}` +
+    `${dText ? `<span style="color:${cs.color};font-weight:700">● ${dText}</span>` : ''}` +
+    rcTag;
 
   const etapaColor = ETAPA_COLORS[lead.etapa] || '#4a5568';
   const etapaBadge = document.getElementById('callEtapaBadge');
@@ -1363,11 +1461,13 @@ async function guardarYSiguiente() {
       const d = await r.json();
       if (d.ok) {
         callSession.notas++;
-        // Update local data
         const lead = leadsData.find(l => l.id === leadId);
         if (lead) {
           if (!lead.notas_historial) lead.notas_historial = [];
           lead.notas_historial.push(d.nota);
+          // Refresh kanban card indicator
+          const kCard = document.querySelector(`.lead-card[data-id="${leadId}"]`);
+          if (kCard) _applyIndicatorToCard(kCard, lead);
         }
         showToast('Nota guardada', 'success');
       }
@@ -1618,6 +1718,147 @@ function filtrarPresupuestosLink() {
     </div>`).join('') :
     '<div style="color:var(--gray3);font-size:12px;text-align:center;padding:20px">Sin resultados</div>';
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SEMÁFORO DE SEGUIMIENTO — contact-age indicator
+// ══════════════════════════════════════════════════════════════════════════════
+
+function getDiasSinContacto(lead) {
+  const notas = lead.notas_historial || [];
+  let lastStr = null;
+  if (notas.length) lastStr = notas[notas.length - 1].fecha || null;
+  if (!lastStr) lastStr = lead.created_at || null;
+  if (!lastStr) return null;
+  const d = new Date(lastStr.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+
+function getContactStyle(dias) {
+  if (dias === null) return { color: '#2d3748', text: '—',       tip: 'Sin historial de contacto' };
+  if (dias === 0)    return { color: '#2ecc71', text: 'hoy',     tip: 'Contactado hoy' };
+  if (dias === 1)    return { color: '#2ecc71', text: 'ayer',    tip: 'Contactado ayer' };
+  if (dias <= 3)     return { color: '#82e0aa', text: dias+'d',  tip: dias+' días sin contacto' };
+  if (dias <= 7)     return { color: '#f4d03f', text: dias+'d',  tip: dias+' días sin contacto' };
+  if (dias <= 14)    return { color: '#e67e22', text: dias+'d',  tip: dias+' días sin contacto' };
+  if (dias <= 30)    return { color: '#e74c3c', text: dias+'d',  tip: dias+' días sin contacto — seguimiento urgente' };
+  return { color: '#c0392b', text: dias+'d ⚠', tip: dias+' días sin contacto — ¡atención!' };
+}
+
+function _fmtReconactar(dtStr) {
+  if (!dtStr) return '';
+  const d = new Date(dtStr.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return dtStr;
+  return d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' }) +
+    ' ' + dtStr.slice(11, 16);
+}
+
+function _applyIndicatorToCard(card, lead) {
+  const dias = getDiasSinContacto(lead);
+  const cs   = getContactStyle(dias);
+  // Left stripe via inset box-shadow (doesn't conflict with hover border)
+  card.style.boxShadow = `inset 3px 0 0 ${cs.color}`;
+  // Contact-age text in the meta row (replaces raw date)
+  const diasEl = card.querySelector('.lead-dias');
+  if (diasEl) {
+    diasEl.innerHTML = `<span style="color:${cs.color};font-size:9px">●</span>&nbsp;<span style="color:${cs.color};font-weight:700">${cs.text}</span>`;
+    diasEl.title = cs.tip;
+  }
+  // Reconactar badge
+  let rb = card.querySelector('.reconactar-badge');
+  if (lead.reconactar_pendiente && lead.reconactar_en) {
+    if (!rb) {
+      rb = document.createElement('div');
+      rb.className = 'reconactar-badge';
+      const nameEl = card.querySelector('.lead-name');
+      if (nameEl) nameEl.after(rb);
+    }
+    rb.innerHTML = `<i class="fas fa-calendar-clock"></i> Llamar ${_fmtReconactar(lead.reconactar_en)}`;
+  } else if (rb) {
+    rb.remove();
+  }
+}
+
+function applyContactIndicators() {
+  document.querySelectorAll('.lead-card[data-id]').forEach(card => {
+    const lead = leadsData.find(l => l.id === card.dataset.id);
+    if (lead) _applyIndicatorToCard(card, lead);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  RECONACTAR — "Llamame después"
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openReconactarModal() {
+  const lead = callQueue[callIdx];
+  if (!lead) { showToast('No hay lead seleccionado', 'error'); return; }
+  const nombre = ((lead.nombre || '') + ' ' + (lead.apellido || '')).trim();
+  document.getElementById('rcLeadName').textContent = nombre;
+  // Default: tomorrow, 10:00
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const ymd = tomorrow.toISOString().slice(0, 10);
+  document.getElementById('rcFecha').value = lead.reconactar_en ? lead.reconactar_en.slice(0, 10) : ymd;
+  document.getElementById('rcHora').value  = lead.reconactar_en ? lead.reconactar_en.slice(11, 16) : '10:00';
+  document.getElementById('rcModal').classList.add('open');
+}
+
+function closeReconactarModal() {
+  document.getElementById('rcModal').classList.remove('open');
+}
+
+async function confirmarReconactar() {
+  const lead  = callQueue[callIdx];
+  if (!lead) return;
+  const fecha = document.getElementById('rcFecha').value;
+  const hora  = document.getElementById('rcHora').value;
+  if (!fecha || !hora) { showToast('Selecciona fecha y hora', 'error'); return; }
+  const btn = document.querySelector('.rc-btn-confirm');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agendando...'; }
+  try {
+    const r = await fetch(`/api/leads/${lead.id}/reconactar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha, hora }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      // Update local lead data
+      lead.reconactar_en        = d.dt;
+      lead.reconactar_pendiente = true;
+      if (d.nota) {
+        if (!lead.notas_historial) lead.notas_historial = [];
+        lead.notas_historial.push(d.nota);
+      }
+      // Update kanban card
+      const card = document.querySelector(`.lead-card[data-id="${lead.id}"]`);
+      if (card) _applyIndicatorToCard(card, lead);
+      closeReconactarModal();
+      showToast(`✅ Llamada agendada para ${_fmtReconactar(d.dt)}`, 'success');
+    } else {
+      showToast(d.error || 'Error al agendar', 'error');
+    }
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-calendar-plus"></i> Agendar'; }
+  }
+}
+
+async function clearReconactar(leadId) {
+  const r = await fetch(`/api/leads/${leadId}/reconactar/clear`, { method: 'POST' });
+  const d = await r.json();
+  if (d.ok) {
+    const lead = leadsData.find(l => l.id === leadId);
+    if (lead) { lead.reconactar_en = ''; lead.reconactar_pendiente = false; }
+    const card = document.querySelector(`.lead-card[data-id="${leadId}"]`);
+    if (card && lead) _applyIndicatorToCard(card, lead);
+    showToast('Re-contactar eliminado', 'success');
+  }
+}
+
+// Apply semáforo on initial load
+setTimeout(applyContactIndicators, 0);
 
 async function confirmarLinkPresupuesto(presId, folio) {
   if (!_linkLeadId) return;
