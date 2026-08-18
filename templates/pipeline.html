@@ -215,7 +215,9 @@
       </div>
     </div>
     <div class="kanban-cards" id="cards_{{ etapa|replace(' ','_') }}">
+      {% set etapas_vendidas = ['Contrato Firmado','En Instalación','Proyecto Finalizado','Post Venta 1','Post Venta 2','Cerrado','Cliente Perdido'] %}
       {% for lead in etapa_leads %}
+      {% set es_vendida = etapa in etapas_vendidas %}
       <div class="lead-card" draggable="true" data-id="{{ lead.id }}" data-etapa="{{ etapa }}"
            ondragstart="onDragStart(event,this)" onclick="abrirPanel('{{ lead.id }}')">
         <div class="lead-name">{{ lead.nombre }} {{ lead.apellido or '' }}</div>
@@ -234,7 +236,9 @@
             {{ lead.asignado_a.split()[0][0] if lead.asignado_a else '?' }}
           </div>
           {% endif %}
-          <span class="lead-dias">{{ (lead.created_at or '')[:10] }}</span>
+          {% if not es_vendida %}
+          <span class="lead-dias"></span>
+          {% endif %}
         </div>
       </div>
       {% endfor %}
