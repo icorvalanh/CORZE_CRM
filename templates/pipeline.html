@@ -1724,7 +1724,12 @@ function filtrarPresupuestosLink() {
 //  SEMÁFORO DE SEGUIMIENTO — contact-age indicator
 // ══════════════════════════════════════════════════════════════════════════════
 
+const ETAPAS_VENDIDAS = new Set([
+  'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2'
+]);
+
 function getDiasSinContacto(lead) {
+  if (ETAPAS_VENDIDAS.has(lead.etapa)) return null;  // proyecto vendido, sin contador
   const notas = lead.notas_historial || [];
   let lastStr = null;
   if (notas.length) lastStr = notas[notas.length - 1].fecha || null;

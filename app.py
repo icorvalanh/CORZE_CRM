@@ -3887,10 +3887,13 @@ def pipeline_informe():
     leads_ganados    = [l for l in leads if l.get('etapa') in ETAPAS_GANADAS]
     leads_calificados = [l for l in leads if l.get('etapa') in ETAPAS_CALIFIC]
 
-    # Contact-freshness buckets (only active leads)
+    # Contact-freshness buckets — excluir etapas ganadas (ya son proyectos vendidos)
     freshness = {'fresh': 0, 'ok': 0, 'warn': 0, 'risk': 0, 'critical': 0}
     leads_riesgo_full = []
     for l in leads_activos:
+        if l.get('etapa') in ETAPAS_GANADAS:
+            l['_dias'] = None  # sin contador, ya está vendido
+            continue
         d = dias_sin_contacto(l)
         l['_dias'] = d
         if d is None or d <= 3:  freshness['fresh']    += 1
