@@ -951,13 +951,17 @@ async function guardarLead() {
 }
 
 function buildCard(lead) {
-  const dias = getDiasSinContacto(lead);
-  const cs   = getContactStyle(dias);
+  const vendida = ETAPAS_VENDIDAS.has(lead.etapa);
+  const dias = vendida ? null : getDiasSinContacto(lead);
+  const cs   = vendida ? null : getContactStyle(dias);
   const rb   = (lead.reconactar_pendiente && lead.reconactar_en)
     ? `<div class="reconactar-badge"><i class="fas fa-calendar-clock"></i> Llamar ${_fmtReconactar(lead.reconactar_en)}</div>`
     : '';
+  const stripeStyle = vendida ? '' : `box-shadow:inset 3px 0 0 ${cs.color}`;
+  const diasHtml    = vendida ? '' :
+    `<span class="lead-dias" title="${cs.tip}"><span style="color:${cs.color};font-size:9px">●</span>&nbsp;<span style="color:${cs.color};font-weight:700">${cs.text}</span></span>`;
   return `<div class="lead-card" draggable="true" data-id="${lead.id}" data-etapa="${lead.etapa||'Nuevo Lead'}"
-               style="box-shadow:inset 3px 0 0 ${cs.color}"
+               style="${stripeStyle}"
                ondragstart="onDragStart(event,this)" onclick="abrirPanel('${lead.id}')">
     <div class="lead-name">${lead.nombre||''} ${lead.apellido||''}</div>
     ${rb}
@@ -966,7 +970,7 @@ function buildCard(lead) {
     ${lead.telefono ? `<div class="lead-tel">📞 ${fmtTel(lead.telefono)}</div>` : ''}
     <div class="lead-meta">
       ${lead.asignado_a ? `<div class="lead-avatar" style="background:#1A2A3A;color:var(--blue)">${lead.asignado_a[0]}</div>` : ''}
-      <span class="lead-dias" title="${cs.tip}"><span style="color:${cs.color};font-size:9px">●</span>&nbsp;<span style="color:${cs.color};font-weight:700">${cs.text}</span></span>
+      ${diasHtml}
     </div>
   </div>`;
 }
@@ -1725,7 +1729,8 @@ function filtrarPresupuestosLink() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 const ETAPAS_VENDIDAS = new Set([
-  'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2'
+  'Contrato Firmado', 'En Instalación', 'Proyecto Finalizado',
+  'Post Venta 1', 'Post Venta 2', 'Cerrado', 'Cliente Perdido'
 ]);
 
 function getDiasSinContacto(lead) {
@@ -1760,15 +1765,20 @@ function _fmtReconactar(dtStr) {
 }
 
 function _applyIndicatorToCard(card, lead) {
-  const dias = getDiasSinContacto(lead);
-  const cs   = getContactStyle(dias);
-  // Left stripe via inset box-shadow (doesn't conflict with hover border)
-  card.style.boxShadow = `inset 3px 0 0 ${cs.color}`;
-  // Contact-age text in the meta row (replaces raw date)
-  const diasEl = card.querySelector('.lead-dias');
-  if (diasEl) {
-    diasEl.innerHTML = `<span style="color:${cs.color};font-size:9px">●</span>&nbsp;<span style="color:${cs.color};font-weight:700">${cs.text}</span>`;
-    diasEl.title = cs.tip;
+  const vendida = ETAPAS_VENDIDAS.has(lead.etapa);
+  if (vendida) {
+    card.style.boxShadow = '';
+    const diasEl = card.querySelector('.lead-dias');
+    if (diasEl) diasEl.innerHTML = '';
+  } else {
+    const dias = getDiasSinContacto(lead);
+    const cs   = getContactStyle(dias);
+    card.style.boxShadow = `inset 3px 0 0 ${cs.color}`;
+    const diasEl = card.querySelector('.lead-dias');
+    if (diasEl) {
+      diasEl.innerHTML = `<span style="color:${cs.color};font-size:9px">●</span>&nbsp;<span style="color:${cs.color};font-weight:700">${cs.text}</span>`;
+      diasEl.title = cs.tip;
+    }
   }
   // Reconactar badge
   let rb = card.querySelector('.reconactar-badge');

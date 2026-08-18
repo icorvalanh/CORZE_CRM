@@ -3867,7 +3867,8 @@ def pipeline_informe():
 
     ETAPAS_PERDIDAS = {'Cerrado', 'Cliente Perdido'}
     ETAPAS_GANADAS  = {'Contrato Firmado', 'En Instalación',
-                       'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2'}
+                       'Proyecto Finalizado', 'Post Venta 1', 'Post Venta 2',
+                       'Cerrado', 'Cliente Perdido'}
     ETAPAS_CALIFIC  = {'Contactado', 'Esperando Cuenta Luz',
                        'Visita Técnica Agendada', 'Presupuesto Pendiente',
                        'Presupuesto Enviado', 'En Negociación', 'Aprobada',
