@@ -1,91 +1,316 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="page-header">
-  <h1 class="page-title">Panel Corze</h1>
-  <span class="page-sub" id="lastUpdate"></span>
+<style>
+/* ── Greeting ─────────────────────────────────────────────────────────────── */
+.dash-greeting {
+  margin-bottom: 20px;
+}
+.dash-greeting h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e8eaf0;
+  margin: 0 0 2px;
+}
+.dash-greeting p {
+  font-size: 13px;
+  color: #6b7a90;
+  margin: 0;
+}
+
+/* ── Semáforo grid ─────────────────────────────────────────────────────────── */
+.semaforo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .semaforo-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .semaforo-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
+
+.sem-card {
+  border-radius: 14px;
+  padding: 18px 16px 14px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px);
+  cursor: default;
+  transition: transform .18s, box-shadow .18s;
+}
+.sem-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.sem-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .12;
+  background: var(--grad);
+  z-index: 0;
+}
+.sem-card > * { position: relative; z-index: 1; }
+
+.sem-icon {
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  color: var(--color);
+}
+.sem-num {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--color);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.sem-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+}
+.sem-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  margin-top: 4px;
+}
+.sem-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color);
+  opacity: .6;
+}
+
+/* ── Two-column layout ─────────────────────────────────────────────────────── */
+.dash-cols {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (max-width: 960px) {
+  .dash-cols { grid-template-columns: 1fr; }
+}
+
+/* ── AI panel ──────────────────────────────────────────────────────────────── */
+.ai-panel {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(245,166,35,.12);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: fit-content;
+}
+.ai-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #F5A623;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ai-panel-title i { font-size: 14px; }
+.ai-text {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #9aa4b8;
+  min-height: 80px;
+}
+.ai-text.empty { color: #4a5568; font-style: italic; }
+.ai-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: linear-gradient(135deg, #F5A62322, #D4891A11);
+  border: 1px solid #F5A62344;
+  color: #F5A623;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.ai-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F5A62344, #D4891A22);
+  border-color: #F5A623;
+}
+.ai-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ai-spinner { display: none; }
+.ai-btn.loading .ai-spinner { display: inline-block; }
+.ai-btn.loading .ai-btn-text { display: none; }
+
+/* ── Mini KPIs side ────────────────────────────────────────────────────────── */
+.mini-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mini-kpi {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 11px;
+  padding: 12px 14px;
+}
+.mini-kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: #4a5568;
+  margin-bottom: 5px;
+}
+.mini-kpi-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--c);
+}
+.mini-kpi-sub {
+  font-size: 10px;
+  color: #4a5568;
+  margin-top: 2px;
+}
+
+/* ── Chart cards ───────────────────────────────────────────────────────────── */
+.dash-chart-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 18px;
+}
+.dash-chart-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: #6b7a90;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dash-chart-title a {
+  font-size: 11px;
+  color: var(--blue);
+  text-decoration: none;
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+</style>
+
+<!-- Greeting -->
+<div class="dash-greeting">
+  <h2 id="dashGreeting">Hola, {{ usuario }}!</h2>
+  <p id="dashDate"></p>
 </div>
 
-<!-- KPIs Row 1 -->
-<div class="kpi-grid">
+<!-- Semáforo: Row 1 -->
+<div class="semaforo-grid">
+  {% set sem = stats.semaforo %}
+  {% set cards = [
+    ('pendientes',    'PENDIENTES',        'fa-inbox',           '#3B82F6', 'linear-gradient(135deg,#3B82F6,#1D4ED8)'),
+    ('intentando',    'INTENTANDO CONTACTO','fa-phone-volume',   '#F5A623', 'linear-gradient(135deg,#F5A623,#D4891A)'),
+    ('no_contesta',   'NO CONTESTA',       'fa-phone-slash',     '#64748B', 'linear-gradient(135deg,#64748B,#334155)'),
+    ('espera_cuenta', 'ESPERA CUENTA LUZ', 'fa-bolt',            '#F59E0B', 'linear-gradient(135deg,#F59E0B,#B45309)'),
+    ('visita',        'VISITA TÉCNICA',    'fa-hard-hat',        '#22C55E', 'linear-gradient(135deg,#22C55E,#15803D)'),
+    ('dimensionado',  'DIMENSIONADO',      'fa-drafting-compass','#A855F7', 'linear-gradient(135deg,#A855F7,#7C3AED)'),
+    ('aprobado',      'APROBADO',          'fa-circle-check',    '#10B981', 'linear-gradient(135deg,#10B981,#065F46)'),
+    ('finalizado',    'FINALIZADO',        'fa-solar-panel',     '#14B8A6', 'linear-gradient(135deg,#14B8A6,#0F766E)'),
+  ] %}
+  {% set total_sem = (sem.pendientes|default(0)) + (sem.intentando|default(0)) + (sem.no_contesta|default(0)) + (sem.espera_cuenta|default(0)) + (sem.visita|default(0)) + (sem.dimensionado|default(0)) + (sem.aprobado|default(0)) + (sem.finalizado|default(0)) %}
 
-  <div class="kpi-card" style="--accent:#F5A623">
-    <div class="kpi-top"><span class="kpi-icon">⚡</span><span class="kpi-label">Leads Activos</span></div>
-    <div class="kpi-value" style="color:#F5A623">{{ stats.leads_activos }}</div>
-    <div class="kpi-sub">
-      <span style="color:#D4891A">+{{ stats.leads_mes }}</span> nuevos este mes
+  {% for key, label, icon, color, grad in cards %}
+  {% set val = sem[key]|default(0) %}
+  <div class="sem-card" style="--color:{{ color }};--grad:{{ grad }}">
+    <div class="sem-icon"><i class="fas {{ icon }}"></i></div>
+    <div class="sem-num">{{ val }}</div>
+    <div class="sem-label">{{ label }}</div>
+    <div class="sem-bar">
+      <div class="sem-bar-fill" style="width:{{ [(val / [total_sem,1]|max * 100)|round|int, 100]|min }}%"></div>
     </div>
   </div>
-
-  <div class="kpi-card" style="--accent:#2ECC71">
-    <div class="kpi-top"><span class="kpi-icon">✅</span><span class="kpi-label">Proyectos Ganados</span></div>
-    <div class="kpi-value" style="color:#2ECC71">{{ stats.contratos_mes }}</div>
-    <div class="kpi-sub">este mes · <strong>{{ stats.contratos_total }}</strong> total histórico</div>
-  </div>
-
-  <div class="kpi-card" style="--accent:#1C3A6B">
-    <div class="kpi-top"><span class="kpi-icon">💰</span><span class="kpi-label">Ingresos Aprobados</span></div>
-    <div class="kpi-value" style="color:#F5A623" id="ingresosTotal"></div>
-    <div class="kpi-sub" id="ingresosMes"></div>
-  </div>
-
-  <div class="kpi-card" style="--accent:#9B59B6">
-    <div class="kpi-top"><span class="kpi-icon">🎯</span><span class="kpi-label">Conversión</span></div>
-    <div class="kpi-value" style="color:#9B59B6">{{ stats.tasa_conversion }}%</div>
-    <div class="kpi-sub">leads → contrato firmado</div>
-  </div>
-
+  {% endfor %}
 </div>
 
-<!-- KPIs Row 2 -->
-<div class="kpi-grid" style="margin-top:10px">
+<!-- Two-column: chart + AI panel -->
+<div class="dash-cols">
 
-  <div class="kpi-card kpi-sm" style="--accent:#F5A623">
-    <div class="kpi-top"><span class="kpi-icon">📄</span><span class="kpi-label">Presupuestos</span></div>
-    <div class="kpi-value kpi-value-sm" style="color:#F5A623">{{ stats.presupuestos_mes }}</div>
-    <div class="kpi-sub">este mes · <strong>{{ stats.presupuestos_total }}</strong> total</div>
-  </div>
-
-  <div class="kpi-card kpi-sm" style="--accent:#3498DB">
-    <div class="kpi-top"><span class="kpi-icon">📊</span><span class="kpi-label">Valor Pipeline</span></div>
-    <div class="kpi-value kpi-value-sm" style="color:#3498DB" id="valorPipeline"></div>
-    <div class="kpi-sub">presupuestos enviados + aprobados</div>
-  </div>
-
-  <div class="kpi-card kpi-sm" style="--accent:{% if stats.tareas_pendientes > 5 %}#E67E22{% else %}#2ECC71{% endif %}">
-    <div class="kpi-top"><span class="kpi-icon">📋</span><span class="kpi-label">Tareas Pendientes</span></div>
-    <div class="kpi-value kpi-value-sm" style="color:{% if stats.tareas_pendientes > 5 %}#E67E22{% else %}#2ECC71{% endif %}">
-      {{ stats.tareas_pendientes }}
+  <!-- Left: Pipeline chart -->
+  <div class="dash-chart-card">
+    <div class="dash-chart-title">
+      <span>Pipeline — Leads por Etapa</span>
+      <a href="/admin/pipeline">Ver completo →</a>
     </div>
-    <div class="kpi-sub">por completar</div>
+    <canvas id="chartPipeline" height="110"></canvas>
   </div>
 
-  <div class="kpi-card kpi-sm" style="--accent:#1ABC9C">
-    <div class="kpi-top"><span class="kpi-icon">🌞</span><span class="kpi-label">Pipeline Total</span></div>
-    <div class="kpi-value kpi-value-sm" style="color:#1ABC9C">{{ stats.leads_activos + stats.contratos_total }}</div>
-    <div class="kpi-sub">leads ingresados al sistema</div>
-  </div>
+  <!-- Right: AI + mini KPIs -->
+  <div style="display:flex;flex-direction:column;gap:14px">
 
+    <!-- AI Summary -->
+    <div class="ai-panel">
+      <div class="ai-panel-title">
+        <i class="fas fa-robot"></i> Análisis IA
+      </div>
+      <div class="ai-text empty" id="aiText">Haz clic en "Generar resumen" para obtener un análisis de tu pipeline.</div>
+      <button class="ai-btn" id="aiBtn" onclick="generarResumen()">
+        <i class="fas fa-spinner fa-spin ai-spinner"></i>
+        <span class="ai-btn-text"><i class="fas fa-wand-magic-sparkles"></i> Generar resumen</span>
+      </button>
+    </div>
+
+    <!-- Mini KPIs -->
+    <div class="mini-kpis">
+      <div class="mini-kpi">
+        <div class="mini-kpi-label">Conversión</div>
+        <div class="mini-kpi-val" style="--c:#A855F7">{{ stats.tasa_conversion }}%</div>
+        <div class="mini-kpi-sub">leads → contrato</div>
+      </div>
+      <div class="mini-kpi">
+        <div class="mini-kpi-label">Este mes</div>
+        <div class="mini-kpi-val" style="--c:#22C55E">{{ stats.contratos_mes }}</div>
+        <div class="mini-kpi-sub">contratos ganados</div>
+      </div>
+      <div class="mini-kpi">
+        <div class="mini-kpi-label">Presupuestos</div>
+        <div class="mini-kpi-val" style="--c:#F5A623">{{ stats.presupuestos_mes }}</div>
+        <div class="mini-kpi-sub">este mes</div>
+      </div>
+      <div class="mini-kpi">
+        <div class="mini-kpi-label">Tareas</div>
+        <div class="mini-kpi-val" style="--c:{% if stats.tareas_pendientes > 5 %}#E67E22{% else %}#22C55E{% endif %}">{{ stats.tareas_pendientes }}</div>
+        <div class="mini-kpi-sub">pendientes</div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- Gráficos -->
-<div class="charts-grid" style="margin-top:12px">
-
-  <!-- Chart 1: Leads por etapa — ancho completo -->
-  <div class="chart-card" style="grid-column:1/-1">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="chart-title" style="margin:0">Pipeline — Leads por Etapa</div>
-      <a href="/admin/pipeline" style="font-size:11px;color:var(--blue)">Ver Pipeline completo →</a>
-    </div>
-    <canvas id="chartPipeline" height="90"></canvas>
+<!-- Ingresos chart full width -->
+<div class="dash-chart-card">
+  <div class="dash-chart-title">
+    <span>Ingresos Aprobados por Mes</span>
+    <span id="ingresosTotal" style="color:#F5A623;font-weight:700;font-size:13px;text-transform:none;letter-spacing:0"></span>
   </div>
-
-  <!-- Chart 2: Ingresos por mes -->
-  <div class="chart-card" style="grid-column:1/-1">
-    <div class="chart-title">Ingresos Aprobados por Mes</div>
-    <canvas id="chartIngresos" height="100"></canvas>
-  </div>
-
+  <canvas id="chartIngresos" height="80"></canvas>
 </div>
 
 {% endblock %}
@@ -94,6 +319,17 @@
 <script>
 const stats = {{ stats | tojson }};
 
+/* ── Greeting ─────────────────────────────────────────────────────────────── */
+(function() {
+  const h = new Date().getHours();
+  const greeting = h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('dashGreeting').textContent = greeting + ', {{ usuario }}!';
+  const d = new Date();
+  const opts = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+  document.getElementById('dashDate').textContent = d.toLocaleDateString('es-CL', opts);
+})();
+
+/* ── Format ───────────────────────────────────────────────────────────────── */
 function clp(n) {
   if (!n || n === 0) return '$0';
   if (Math.abs(n) >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
@@ -101,32 +337,31 @@ function clp(n) {
   if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
   return '$' + n.toLocaleString('es-CL');
 }
-
 document.getElementById('ingresosTotal').textContent = clp(stats.ingresos_aprobados);
-document.getElementById('ingresosMes').textContent   = clp(stats.ingresos_mes) + ' este mes';
-document.getElementById('valorPipeline').textContent = clp(stats.valor_pipeline);
-document.getElementById('lastUpdate').textContent    = 'Actualizado: ' + new Date().toLocaleString('es-CL');
 
-Chart.defaults.color       = '#8A95A3';
-Chart.defaults.borderColor = '#1E2D3D';
+/* ── Chart defaults ───────────────────────────────────────────────────────── */
+Chart.defaults.color       = '#6b7a90';
+Chart.defaults.borderColor = '#1a2535';
 Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
 Chart.defaults.font.size   = 11;
 
-// ── Chart 1: Pipeline por etapa ───────────────────────────────────────────────
-const etapas   = stats.leads_por_etapa || [];
-const colores  = [
-  '#F5A623','#3498DB','#9B59B6','#2ECC71','#E67E22',
-  '#1ABC9C','#E74C3C','#F1C40F','#27AE60','#1C3A6B'
+/* ── Chart 1: Pipeline ────────────────────────────────────────────────────── */
+const etapas = stats.leads_por_etapa || [];
+const paleta = [
+  '#3B82F6','#F5A623','#64748B','#F59E0B',
+  '#22C55E','#A855F7','#10B981','#14B8A6',
+  '#E74C3C','#F1C40F','#1ABC9C','#E67E22',
+  '#9B59B6','#3498DB','#2ECC71','#E74C3C',
+  '#95A5A6','#BDC3C7'
 ];
-
 new Chart('chartPipeline', {
   type: 'bar',
   data: {
-    labels: etapas.map(e => e.etapa),
+    labels: etapas.map(e => e.etapa.length > 18 ? e.etapa.slice(0,16)+'…' : e.etapa),
     datasets: [{
       data: etapas.map(e => e.cantidad),
-      backgroundColor: colores.map(c => c + '99'),
-      borderColor:     colores,
+      backgroundColor: paleta.map(c => c + 'bb'),
+      borderColor:     paleta,
       borderWidth: 2,
       borderRadius: 6,
       borderSkipped: false,
@@ -137,28 +372,24 @@ new Chart('chartPipeline', {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1A2230',
+        backgroundColor: '#111827',
         borderColor: '#263545',
         borderWidth: 1,
         callbacks: {
+          title: (items) => etapas[items[0].dataIndex]?.etapa || '',
           label: ctx => ` ${ctx.raw} lead${ctx.raw !== 1 ? 's' : ''}`
         }
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#8A95A3', font: { size: 10 } } },
-      y: {
-        grid: { color: '#1E2D3D' },
-        ticks: { color: '#8A95A3', precision: 0 },
-        beginAtZero: true,
-      }
+      x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 35, minRotation: 20 } },
+      y: { grid: { color: '#1a2535' }, ticks: { precision: 0 }, beginAtZero: true }
     }
   }
 });
 
-// ── Chart 2: Ingresos por mes ─────────────────────────────────────────────────
+/* ── Chart 2: Ingresos ────────────────────────────────────────────────────── */
 const meses = stats.ingresos_por_mes || [];
-
 new Chart('chartIngresos', {
   type: 'bar',
   data: {
@@ -166,9 +397,9 @@ new Chart('chartIngresos', {
     datasets: [
       {
         type: 'bar',
-        label: 'Ingresos aprobados',
+        label: 'Ingresos',
         data: meses.map(m => m.ingresos),
-        backgroundColor: '#F5A62399',
+        backgroundColor: '#F5A62355',
         borderColor: '#F5A623',
         borderWidth: 2,
         borderRadius: 6,
@@ -178,10 +409,10 @@ new Chart('chartIngresos', {
         type: 'line',
         label: 'Tendencia',
         data: meses.map(m => m.ingresos),
-        borderColor: '#2ECC71',
-        backgroundColor: '#2ECC7115',
-        pointBackgroundColor: '#2ECC71',
-        pointRadius: 5,
+        borderColor: '#22C55E',
+        backgroundColor: '#22C55E10',
+        pointBackgroundColor: '#22C55E',
+        pointRadius: 4,
         tension: 0.4,
         fill: false,
         yAxisID: 'y',
@@ -194,22 +425,43 @@ new Chart('chartIngresos', {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1A2230',
+        backgroundColor: '#111827',
         borderColor: '#263545',
         borderWidth: 1,
-        callbacks: {
-          label: ctx => ` ${clp(ctx.raw)}`
-        }
+        callbacks: { label: ctx => ` ${clp(ctx.raw)}` }
       }
     },
     scales: {
-      y: {
-        grid: { color: '#1E2D3D' },
-        ticks: { color: '#8A95A3', callback: v => clp(v) },
-      },
-      x: { grid: { display: false }, ticks: { color: '#8A95A3' } }
+      y: { grid: { color: '#1a2535' }, ticks: { callback: v => clp(v) } },
+      x: { grid: { display: false } }
     }
   }
 });
+
+/* ── AI Summary ───────────────────────────────────────────────────────────── */
+async function generarResumen() {
+  const btn  = document.getElementById('aiBtn');
+  const txt  = document.getElementById('aiText');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  txt.classList.add('empty');
+  txt.textContent = '';
+  try {
+    const res  = await fetch('/api/dashboard/resumen-ia', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      txt.classList.remove('empty');
+      txt.textContent = data.resumen;
+    } else {
+      txt.textContent = 'Error: ' + (data.error || 'No se pudo generar el resumen.');
+    }
+  } catch(e) {
+    txt.textContent = 'Error de conexión. Intenta nuevamente.';
+  }
+  btn.classList.remove('loading');
+  btn.disabled = false;
+  const btnText = btn.querySelector('.ai-btn-text');
+  if (btnText) btnText.innerHTML = '<i class="fas fa-rotate-right"></i> Actualizar resumen';
+}
 </script>
 {% endblock %}

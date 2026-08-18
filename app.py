@@ -483,6 +483,37 @@ def api_export_inv():
 def api_stats():
     return jsonify(db.get_corze_dashboard_stats())
 
+
+@app.route('/api/dashboard/resumen-ia', methods=['POST'])
+@login_required
+def api_dashboard_resumen_ia():
+    stats = db.get_corze_dashboard_stats()
+    sem   = stats.get('semaforo', {})
+    prompt = f"""Eres el asistente de análisis de CORZE Solar CRM. Analiza estos datos del pipeline solar y entrega un resumen ejecutivo breve (máximo 5 oraciones), destacando lo más importante y una recomendación de acción inmediata.
+
+DATOS HOY:
+- Leads activos totales: {stats.get('leads_activos', 0)}
+- Contratos ganados este mes: {stats.get('contratos_mes', 0)}
+- Tasa de conversión: {stats.get('tasa_conversion', 0)}%
+- Ingresos aprobados: ${stats.get('ingresos_aprobados', 0):,}
+- Tareas pendientes: {stats.get('tareas_pendientes', 0)}
+
+SEMÁFORO PIPELINE:
+- Pendientes (Nuevos leads): {sem.get('pendientes', 0)}
+- Intentando contacto (Llamados 1+2): {sem.get('intentando', 0)}
+- No contesta: {sem.get('no_contesta', 0)}
+- Esperando cuenta luz: {sem.get('espera_cuenta', 0)}
+- Visita técnica agendada: {sem.get('visita', 0)}
+- Dimensionado (Presupuesto pendiente): {sem.get('dimensionado', 0)}
+- Aprobado: {sem.get('aprobado', 0)}
+- Finalizado: {sem.get('finalizado', 0)}
+
+Responde en español, de forma concisa y profesional. No uses asteriscos ni markdown."""
+    texto, err = _claude_call(prompt, max_tokens=400)
+    if err:
+        return jsonify({'ok': False, 'error': err})
+    return jsonify({'ok': True, 'resumen': texto.strip()})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

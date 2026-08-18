@@ -1681,6 +1681,17 @@ class FirebaseDB:
                 {'etapa': e, 'cantidad': etapa_count[e]} for e in ETAPAS_PIPELINE
             ]
 
+            s['semaforo'] = {
+                'pendientes':    etapa_count.get('Nuevo Lead', 0),
+                'intentando':    etapa_count.get('Intento Llamado 1', 0) + etapa_count.get('Intento Llamado 2', 0),
+                'no_contesta':   etapa_count.get('No Contesta', 0),
+                'espera_cuenta': etapa_count.get('Esperando Cuenta Luz', 0),
+                'visita':        etapa_count.get('Visita Técnica Agendada', 0),
+                'dimensionado':  etapa_count.get('Presupuesto Pendiente', 0),
+                'aprobado':      etapa_count.get('Aprobada', 0),
+                'finalizado':    etapa_count.get('Proyecto Finalizado', 0),
+            }
+
             total_leads = len(leads)
             if total_leads > 0:
                 s['tasa_conversion'] = round(s['contratos_total'] / total_leads * 100, 1)
