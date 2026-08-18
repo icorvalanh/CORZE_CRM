@@ -4,7 +4,7 @@
 {% block content %}
 <style>
 /* ── Car Hunter styles ───────────────────────────────────────────────── */
-.ch-wrap        { display:flex; gap:16px; height:calc(100vh - 80px); }
+.ch-wrap        { display:flex; gap:16px; height:calc(100vh - var(--topbar-h) - 80px); }
 .ch-panel-left  { flex:1; display:flex; flex-direction:column; min-width:0; }
 .ch-panel-right { width:340px; flex-shrink:0; background:var(--card); border-radius:12px;
                   border:1px solid var(--border); overflow-y:auto; display:none; flex-direction:column; }

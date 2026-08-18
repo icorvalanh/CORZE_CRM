@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-.kanban-wrap { display:flex; gap:10px; overflow-x:auto; padding-bottom:16px; height:calc(100vh - 160px); }
+.kanban-wrap { display:flex; gap:10px; overflow-x:auto; padding-bottom:16px; height:calc(100vh - var(--topbar-h) - 160px); }
 .kanban-col { min-width:240px; max-width:240px; background:var(--surface); border:1px solid var(--border1); border-radius:12px; display:flex; flex-direction:column; flex-shrink:0; }
 .kanban-col-header { padding:12px 14px 10px; border-bottom:1px solid var(--border1); }
 .col-title { font-size:12px; font-weight:700; color:var(--white); }
