@@ -5,112 +5,187 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Corze — {{ page|default('Admin') }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="icon" href="{{ url_for('static', filename='assets/logo_corze.png') }}" type="image/png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Corze Admin">
+<meta name="apple-mobile-web-app-title" content="Corze">
 {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-<div class="app-layout">
+<!-- Background lights -->
+<div id="bg-lights" aria-hidden="true">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="bg-orb orb3"></div>
+  <div class="bg-orb orb4"></div>
+  <svg id="flow-lines" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <linearGradient id="flg1" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stop-color="#F5A623" stop-opacity="0"/>
+        <stop offset="40%"  stop-color="#F5A623" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="#F5A623" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="flg2" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stop-color="#D4891A" stop-opacity="0"/>
+        <stop offset="50%"  stop-color="#F5A623" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="#D4891A" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path class="fl fl1" d="M-200,250 C150,80 350,420 700,200 S1100,50 1700,280"/>
+    <path class="fl fl2" d="M-200,500 C100,320 400,680 750,450 S1200,200 1700,520"/>
+    <path class="fl fl3" d="M-200,750 C200,550 450,900 800,680 S1300,420 1700,760"/>
+    <path class="fl fl4" d="M-200,150 C250,350 500,50 850,300 S1250,550 1700,180"/>
+  </svg>
+</div>
 
-  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
-  <aside class="sidebar">
+<!-- Loading screen -->
+<div id="pageLoader">
+  <div class="logo-loader-wrap">
+    <img src="{{ url_for('static', filename='assets/logo_corze.png') }}" class="logo-spin" alt="Corze">
+    <div class="logo-glow-ring"></div>
+  </div>
+  <div class="loader-text">CORZE</div>
+</div>
 
-    <div class="sidebar-logo">
-      <img src="{{ url_for('static', filename='assets/logo_corze.png') }}" alt="Corze" class="logo-img">
+<!-- Mobile sidebar overlay -->
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+      <img src="{{ url_for('static', filename='assets/logo_corze.png') }}" alt="Corze" class="sidebar-logo-img">
+      <span class="sidebar-title">Corze</span>
+    </a>
+  </div>
+
+  <div class="sidebar-body">
+
+    <!-- PRINCIPAL -->
+    <div class="sidebar-section">
+      <button class="sidebar-section-btn" onclick="toggleSection('principal')">
+        <span class="sidebar-section-label">Principal</span>
+        <i class="fas fa-chevron-down sidebar-chevron" id="chev-principal"></i>
+      </button>
+      <div class="sidebar-section-body open" id="sec-principal">
+        <ul class="sidebar-nav">
+          <li>
+            <a href="{{ url_for('dashboard') }}" class="{% if page=='dashboard' %}active{% endif %}">
+              <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('pipeline') }}" class="{% if page=='pipeline' %}active{% endif %}">
+              <i class="fas fa-users"></i> CRM / Pipeline
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('inventario_solar') }}" class="{% if page=='inventario_solar' %}active{% endif %}">
+              <i class="fas fa-solar-panel"></i> Inventario Solar
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('presupuestos') }}" class="{% if page=='presupuestos' %}active{% endif %}">
+              <i class="fas fa-file-invoice-dollar"></i> Presupuestos
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <div class="sidebar-divider"></div>
-    <p class="sidebar-section-label">MENÚ PRINCIPAL</p>
+    <!-- GESTIÓN -->
+    <div class="sidebar-section">
+      <button class="sidebar-section-btn" onclick="toggleSection('gestion')">
+        <span class="sidebar-section-label">Gestión</span>
+        <i class="fas fa-chevron-down sidebar-chevron" id="chev-gestion"></i>
+      </button>
+      <div class="sidebar-section-body open" id="sec-gestion">
+        <ul class="sidebar-nav">
+          <li>
+            <a href="{{ url_for('finanzas') }}" class="{% if page=='finanzas' %}active{% endif %}">
+              <i class="fas fa-coins"></i> Finanzas
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('tareas') }}" class="{% if page=='tareas' %}active{% endif %}">
+              <i class="fas fa-check-square"></i> Tareas
+              <span id="sidebarTaskBadge" style="display:none;background:#E74C3C;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:auto"></span>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('calendario') }}" class="{% if page=='calendario' %}active{% endif %}">
+              <i class="fas fa-calendar-alt"></i> Calendario
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('trabajadores') }}" class="{% if page=='trabajadores' %}active{% endif %}">
+              <i class="fas fa-hard-hat"></i> Trabajadores
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
 
-    <nav class="sidebar-nav">
-      <a href="{{ url_for('dashboard') }}"
-         class="nav-item {% if page=='dashboard' %}active{% endif %}">
-        <span class="nav-icon">📊</span> Dashboard
-      </a>
-      <a href="{{ url_for('inventario_solar') }}"
-         class="nav-item {% if page=='inventario_solar' %}active{% endif %}">
-        <span class="nav-icon">⚡</span> Inventario Solar
-      </a>
-      <a href="{{ url_for('presupuestos') }}"
-         class="nav-item {% if page=='presupuestos' %}active{% endif %}">
-        <span class="nav-icon">📋</span> Presupuestos
-      </a>
-      <a href="{{ url_for('pipeline') }}"
-         class="nav-item {% if page=='pipeline' %}active{% endif %}">
-        <span class="nav-icon">👥</span> CRM / Pipeline
-      </a>
-      <a href="{{ url_for('trabajadores') }}"
-         class="nav-item {% if page=='trabajadores' %}active{% endif %}">
-        <span class="nav-icon">👷</span> Trabajadores
-      </a>
+  </div>
 
-      <div class="sidebar-divider" style="margin:8px 4px"></div>
-      <p class="sidebar-section-label" style="padding-top:4px">GESTIÓN</p>
-
-      <a href="{{ url_for('finanzas') }}"
-         class="nav-item {% if page=='finanzas' %}active{% endif %}">
-        <span class="nav-icon">💰</span> Finanzas
-      </a>
-      <a href="{{ url_for('tareas') }}"
-         class="nav-item {% if page=='tareas' %}active{% endif %}"
-         style="justify-content:space-between">
-        <span style="display:flex;align-items:center;gap:10px">
-          <span class="nav-icon">✅</span> Tareas
-        </span>
-        <span id="sidebarTaskBadge" style="display:none;background:#E74C3C;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px"></span>
-      </a>
-      <a href="{{ url_for('calendario') }}"
-         class="nav-item {% if page=='calendario' %}active{% endif %}">
-        <span class="nav-icon">📅</span> Calendario
-      </a>
-    </nav>
-
-    <div class="sidebar-spacer"></div>
-    <div class="sidebar-divider"></div>
-
+  <div class="sidebar-footer">
     {% if usuario_role == 'admin' %}
-    <a href="{{ url_for('config_page') }}"
-       class="nav-item {% if page=='config' %}active{% endif %}"
-       style="margin:4px 12px;border-radius:8px">
-      <span class="nav-icon">⚙️</span> Configuración
+    <a href="{{ url_for('config_page') }}" class="sidebar-footer-link {% if page=='config' %}active{% endif %}">
+      <i class="fas fa-cog"></i> Configuración
     </a>
     {% endif %}
-
-    <div class="sidebar-divider"></div>
-
-    <div class="sidebar-user">
-      <div class="user-avatar" style="background: {{ usuario_color }}22; color: {{ usuario_color }};">
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-avatar" style="background: {{ usuario_color }}22; color: {{ usuario_color }};">
         {{ usuario_avatar }}
       </div>
-      <div class="user-info">
-        <span class="user-name">{{ usuario }}</span>
-        <span class="user-sub">Sesión activa</span>
+      <div class="sidebar-user-meta">
+        <span class="sidebar-user-name">{{ usuario }}</span>
+        <a href="{{ url_for('logout') }}" class="sidebar-logout-link">Cerrar sesión →</a>
       </div>
     </div>
+  </div>
+</nav>
 
-    <a href="{{ url_for('logout') }}" class="sidebar-logout">
-      ↩ Cerrar sesión
-    </a>
+<!-- Main content -->
+<div class="main-content" id="main-content">
 
-  </aside>
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menú">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-right">
+      <div class="topbar-user-pill">
+        <div class="topbar-avatar" style="background: {{ usuario_color }}22; color: {{ usuario_color }};">
+          {{ usuario_avatar }}
+        </div>
+        <span class="topbar-username">{{ usuario }}</span>
+      </div>
+    </div>
+  </header>
 
-  <!-- ── Main content ──────────────────────────────────────────────── -->
-  <main class="main-content">
+  <div class="page-content">
     {% block content %}{% endblock %}
-  </main>
+  </div>
 
 </div>
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}?v=226"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}?v=227"></script>
 <script>
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const loader = document.getElementById('pageLoader');
+    if (loader) loader.classList.add('hidden');
+  }, 280);
+});
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }

@@ -1,4 +1,49 @@
-// main.js — VTA Web · Utilidades globales
+// main.js — Corze CRM · Utilidades globales
+
+// ── Sidebar ───────────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const main     = document.getElementById('main-content');
+  const overlay  = document.getElementById('sidebarOverlay');
+  if (window.innerWidth <= 768) {
+    const open = sidebar.classList.toggle('mobile-open');
+    overlay && overlay.classList.toggle('active', open);
+  } else {
+    sidebar.classList.toggle('hidden');
+    main && main.classList.toggle('expanded', sidebar.classList.contains('hidden'));
+  }
+}
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.remove('mobile-open');
+  overlay && overlay.classList.remove('active');
+}
+function toggleSection(id) {
+  const body = document.getElementById('sec-' + id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  body.classList.toggle('open');
+  chev && chev.classList.toggle('rotated');
+  try {
+    const st = JSON.parse(localStorage.getItem('crzSections') || '{}');
+    st[id] = body.classList.contains('open');
+    localStorage.setItem('crzSections', JSON.stringify(st));
+  } catch(e) {}
+}
+(function restoreSections() {
+  try {
+    const st = JSON.parse(localStorage.getItem('crzSections') || '{}');
+    Object.keys(st).forEach(id => {
+      if (!st[id]) {
+        const body = document.getElementById('sec-' + id);
+        const chev = document.getElementById('chev-' + id);
+        if (body) body.classList.remove('open');
+        if (chev) chev.classList.remove('rotated');
+      }
+    });
+  } catch(e) {}
+})();
 
 function clp(n) {
   if (!n || n === 0) return '—';
