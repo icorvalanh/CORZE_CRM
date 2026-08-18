@@ -302,14 +302,26 @@
       <span id="callTimer" style="font-size:11px;font-weight:700;color:#e74c3c;display:none;background:#2d0a0a;padding:3px 10px;border-radius:6px">⏱ 0:00</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <div style="display:flex;gap:4px">
-        <button id="callFilterBtn_llamadas" onclick="setCallFilter('llamadas',this)"
-                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:700;background:#0a1f0a;border:1px solid #27ae6066;color:#2ecc71">
-          📞 Para llamar
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button id="callFilterBtn_todas_llamadas" onclick="setCallFilter('todas_llamadas',this)"
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:700;background:#0a1f0a;border:1px solid #27ae6066;color:#2ecc71;display:flex;align-items:center;gap:5px">
+          📞 Para llamar <span id="callCount_todas_llamadas" style="background:#0d2d0d;border-radius:4px;padding:0 5px;font-size:9px"></span>
+        </button>
+        <button id="callFilterBtn_nuevo" onclick="setCallFilter('nuevo',this)"
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:500;background:#1e2a38;border:1px solid #2d3748;color:#718096;display:flex;align-items:center;gap:5px">
+          🆕 Nuevos <span id="callCount_nuevo" style="background:#1e2a38;border-radius:4px;padding:0 5px;font-size:9px"></span>
+        </button>
+        <button id="callFilterBtn_nc1" onclick="setCallFilter('nc1',this)"
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:500;background:#1e2a38;border:1px solid #2d3748;color:#718096;display:flex;align-items:center;gap:5px">
+          📵 No Contesta 1 <span id="callCount_nc1" style="background:#1e2a38;border-radius:4px;padding:0 5px;font-size:9px"></span>
+        </button>
+        <button id="callFilterBtn_nc2" onclick="setCallFilter('nc2',this)"
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:500;background:#1e2a38;border:1px solid #2d3748;color:#718096;display:flex;align-items:center;gap:5px">
+          📵 No Contesta 2 <span id="callCount_nc2" style="background:#1e2a38;border-radius:4px;padding:0 5px;font-size:9px"></span>
         </button>
         <button id="callFilterBtn_todos" onclick="setCallFilter('todos',this)"
-                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:600;background:#1e2a38;border:1px solid #2d3748;color:#718096">
-          Todos
+                style="font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:500;background:#1e2a38;border:1px solid #2d3748;color:#718096;display:flex;align-items:center;gap:5px">
+          🌐 Todos <span id="callCount_todos" style="background:#1e2a38;border-radius:4px;padding:0 5px;font-size:9px"></span>
         </button>
       </div>
       <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#4a5568;cursor:pointer">
@@ -323,9 +335,6 @@
 
     <!-- Left: filters + lead list -->
     <div style="width:210px;border-right:1px solid #1e2a38;flex-shrink:0;background:#0d1117;display:flex;flex-direction:column">
-
-      <!-- Stage filter buttons -->
-      <div id="callStageFilters" style="flex-shrink:0;border-bottom:1px solid #1e2a38;padding:8px 8px 6px"></div>
 
       <!-- Lead list -->
       <div id="callLeadList" style="flex:1;overflow-y:auto"></div>
@@ -994,10 +1003,9 @@ async function importarEML(input) {
 //  MODO LLAMADAS
 // ══════════════════════════════════════════════════════════════════════════════
 
-let callQueue       = [];
-let callIdx         = 0;
-let callFilter      = 'llamadas'; // 'llamadas' = Nuevo + Intento1 + Intento2 | 'todos'
-let callStageFilter = null;       // null = todas las etapas, o string con etapa específica
+let callQueue    = [];
+let callIdx      = 0;
+let callFilter   = 'todas_llamadas'; // 'todas_llamadas' | 'nuevo' | 'nc1' | 'nc2' | 'todos'
 let callSession  = { llamadas: 0, notas: 0, saltados: 0 };
 let mediaStream  = null;
 let mediaRec     = null;
@@ -1006,7 +1014,20 @@ let timerInt     = null;
 let timerSecs    = 0;
 let callStarted  = false;
 
-const ETAPAS_LLAMADAS = ['Nuevo Lead', 'Intento Llamado 1', 'Intento Llamado 2'];
+const CALL_FILTER_ETAPAS = {
+  'todas_llamadas': ['Nuevo Lead', 'Intento Llamado 1', 'Intento Llamado 2'],
+  'nuevo':          ['Nuevo Lead'],
+  'nc1':            ['Intento Llamado 1'],
+  'nc2':            ['Intento Llamado 2'],
+  'todos':          null,
+};
+const CALL_FILTER_STYLE = {
+  'todas_llamadas': { bg:'#0a1f0a', border:'#27ae6066', color:'#2ecc71' },
+  'nuevo':          { bg:'#0a1520', border:'#3498db66', color:'#3498db' },
+  'nc1':            { bg:'#15100a', border:'#f39c1266', color:'#f39c12' },
+  'nc2':            { bg:'#150a15', border:'#a569bd66', color:'#a569bd' },
+  'todos':          { bg:'#0a0f1f', border:'#4a556866', color:'#a0aec0' },
+};
 
 const ETAPAS_QUICK = [
   { label: '📵 No contesta 1',   etapa: 'Intento Llamado 1',      color: '#5DADE2' },
@@ -1039,91 +1060,59 @@ const ETAPA_COLORS = {
 
 function setCallFilter(f, btn) {
   callFilter = f;
-  document.querySelectorAll('[id^="callFilterBtn_"]').forEach(b => {
-    b.style.background = '#1e2a38';
-    b.style.borderColor = '#2d3748';
-    b.style.color = '#718096';
+  // Reset todos los botones
+  ['todas_llamadas','nuevo','nc1','nc2','todos'].forEach(fk => {
+    const b = document.getElementById('callFilterBtn_' + fk);
+    if (b) { b.style.background='#1e2a38'; b.style.borderColor='#2d3748'; b.style.color='#718096'; b.style.fontWeight='500'; }
   });
-  btn.style.background = f === 'llamadas' ? '#0a1f0a' : '#0a0f1f';
-  btn.style.borderColor = f === 'llamadas' ? '#27ae6066' : '#3498db66';
-  btn.style.color = f === 'llamadas' ? '#2ecc71' : '#3498db';
+  // Activar el botón seleccionado
+  if (btn) {
+    const s = CALL_FILTER_STYLE[f] || CALL_FILTER_STYLE['todos'];
+    btn.style.background  = s.bg;
+    btn.style.borderColor = s.border;
+    btn.style.color       = s.color;
+    btn.style.fontWeight  = '700';
+  }
   callIdx = 0;
   rebuilCallQueue();
 }
 
 function rebuilCallQueue() {
   const onlyPhone = document.getElementById('callOnlyPhone').checked;
-  // Base pool según el filtro principal (llamadas vs todos)
-  const pool = leadsData.filter(l => {
-    if (callFilter === 'llamadas' && !ETAPAS_LLAMADAS.includes(l.etapa)) return false;
+  const etapas    = CALL_FILTER_ETAPAS[callFilter]; // null = todos
+  callQueue = leadsData.filter(l => {
+    if (etapas && !etapas.includes(l.etapa)) return false;
     if (onlyPhone && !(l.telefono && l.telefono.trim())) return false;
     return true;
   });
-  // Filtro secundario por etapa específica
-  callQueue = callStageFilter
-    ? pool.filter(l => l.etapa === callStageFilter)
-    : pool;
   callIdx = Math.min(callIdx, Math.max(0, callQueue.length - 1));
-  renderCallFilters(pool);
+  renderCallCountBadges();
   renderCallLeadList();
   renderCallLead();
 }
 
-function setCallStageFilter(etapa) {
-  callStageFilter = (callStageFilter === etapa) ? null : etapa; // toggle
-  callIdx = 0;
-  rebuilCallQueue();
-}
-
-function renderCallFilters(pool) {
-  const el = document.getElementById('callStageFilters');
-  // Contar leads por etapa dentro del pool actual
-  const counts = {};
-  pool.forEach(l => { counts[l.etapa] = (counts[l.etapa] || 0) + 1; });
-  const etapas = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-
-  const totalColor   = !callStageFilter ? '#2ecc71' : '#4a5568';
-  const totalBg      = !callStageFilter ? '#0a1f0a'  : 'transparent';
-  const totalBorder  = !callStageFilter ? '#27ae6055' : '#2d3748';
-
-  let html = `<div style="font-size:9px;color:#4a5568;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding:0 2px">Filtrar por etapa</div>
-    <button onclick="setCallStageFilter(null)"
-            style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;
-                   background:${totalBg};border:1px solid ${totalBorder};color:${totalColor};
-                   border-radius:6px;padding:5px 8px;cursor:pointer;font-size:10px;font-weight:700;margin-bottom:4px">
-      <span>Todas las etapas</span>
-      <span style="background:#1e2a38;border-radius:4px;padding:1px 6px">${pool.length}</span>
-    </button>`;
-
-  etapas.forEach(etapa => {
-    const isActive = callStageFilter === etapa;
-    const col      = ETAPA_COLORS[etapa] || '#4a5568';
-    html += `<button onclick="setCallStageFilter('${etapa.replace(/'/g, "\\'")}')"
-               style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;
-                      background:${isActive ? col + '22' : 'transparent'};
-                      border:1px solid ${isActive ? col + '66' : '#1e2a38'};
-                      color:${isActive ? col : '#718096'};
-                      border-radius:6px;padding:5px 8px;cursor:pointer;font-size:10px;
-                      font-weight:${isActive ? '700' : '500'};margin-bottom:3px;transition:all .1s">
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${etapa}</span>
-        <span style="background:#1e2a38;border-radius:4px;padding:1px 6px;flex-shrink:0;margin-left:4px">${counts[etapa]}</span>
-      </button>`;
+function renderCallCountBadges() {
+  const onlyPhone = document.getElementById('callOnlyPhone').checked;
+  const base = leadsData.filter(l => !onlyPhone || (l.telefono && l.telefono.trim()));
+  const counts = {
+    todas_llamadas: base.filter(l => ['Nuevo Lead','Intento Llamado 1','Intento Llamado 2'].includes(l.etapa)).length,
+    nuevo:          base.filter(l => l.etapa === 'Nuevo Lead').length,
+    nc1:            base.filter(l => l.etapa === 'Intento Llamado 1').length,
+    nc2:            base.filter(l => l.etapa === 'Intento Llamado 2').length,
+    todos:          base.length,
+  };
+  Object.keys(counts).forEach(fk => {
+    const el = document.getElementById('callCount_' + fk);
+    if (el) el.textContent = counts[fk];
   });
-
-  el.innerHTML = html;
 }
 
 function abrirModoLlamadas() {
   callSession = { llamadas: 0, notas: 0, saltados: 0 };
-  callIdx = 0;
-  callFilter = 'llamadas';
-  callStageFilter = null;
-  // Reset filter button styles
-  const btnL = document.getElementById('callFilterBtn_llamadas');
-  const btnT = document.getElementById('callFilterBtn_todos');
-  if (btnL) { btnL.style.background='#0a1f0a'; btnL.style.borderColor='#27ae6066'; btnL.style.color='#2ecc71'; }
-  if (btnT) { btnT.style.background='#1e2a38'; btnT.style.borderColor='#2d3748';   btnT.style.color='#718096'; }
-  rebuilCallQueue();
+  callIdx     = 0;
+  callFilter  = 'todas_llamadas';
+  const btnInicio = document.getElementById('callFilterBtn_todas_llamadas');
+  setCallFilter('todas_llamadas', btnInicio);
   document.getElementById('callHud').style.display = 'flex';
 }
 
